@@ -44,10 +44,12 @@ endpoints = {
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
+    "companies_detail":     "/companies/v2/companies/{company_id}",
 
     "deals_properties":     "/companies/v2/properties",
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
+    "deals_detail":         "/deals/v1/deal/{deal_id}",
 
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
@@ -186,7 +188,7 @@ def transform_field(value, schema):
     if "array" in schema['type']:
         tmp = []
         for v in value:
-            tmp.append(v, schema['items'])
+            tmp.append(transform_field(v, schema['items']))
 
         return tmp
 
@@ -294,20 +296,80 @@ def sync_contacts(request):
 
         vids = (r['canonical-vid'] for r in data['contacts'])
         resp = request(get_url('contacts_detail'), params={'vid': vids})
-
-
-        transformed_records = []
-        for record in resp.json().values():
-            try:
-                transformed_records.append(transform_record(record, schema))
-            except Exception as e:
-                print(e)
-                print(record)
-
-        # transformed_records = [transform_record(record, schema) for _, record in resp.json().items()]
+        transformed_records = [transform_record(record, schema) for record in resp.json().values()]
         all_records.extend(transformed_records)
         stitchstream.write_records('contacts', transformed_records)
         state['contacts'] = transformed_records[-1]['properties']['createdate']['value']
+        stitchstream.write_state(state)
+
+    return all_records
+
+
+def sync_companies(request):
+    last_sync = dateutil.parser.parse(state['companies'])
+    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
+    if days_since_sync > 30:
+        endpoint = "companies_all"
+    else:
+        endpoint = "companies_recent"
+
+    schema = get_schema(request, 'companies')
+    stitchstream.write_schema('companies', schema)
+
+    all_records = []
+    params = {'count': 250}
+    has_more = True
+    while has_more:
+        resp = request(get_url(endpoint), params=params)
+        data = resp.json()
+
+        has_more = data.get('has-more', False)
+        if has_more:
+            params['offset'] = data['offset']
+
+        transformed_records = []
+        for record in data['companies']:
+            resp = request(get_url('companies_detail', company_id=record['companyId']))
+            transformed_records.append(transform_record(resp.json(), schema))
+
+        all_records.extend(transformed_records)
+        stitchstream.write_records('companies', transformed_records)
+        state['companies'] = transformed_records[-1]['properties']['createdate']['value']
+        stitchstream.write_state(state)
+
+    return all_records
+
+
+def sync_deals(request):
+    last_sync = dateutil.parser.parse(state['deals'])
+    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
+    if days_since_sync > 30:
+        endpoint = "deals_all"
+    else:
+        endpoint = "deals_recent"
+
+    schema = get_schema(request, 'deals')
+    stitchstream.write_schema('deals', schema)
+
+    all_records = []
+    params = {'count': 250}
+    has_more = True
+    while has_more:
+        resp = request(get_url(endpoint), params=params)
+        data = resp.json()
+
+        has_more = data.get('hasMore', False)
+        if has_more:
+            params['offset'] = data['offset']
+
+        transformed_records = []
+        for record in data['deals']:
+            resp = request(get_url('deals_detail', deal_id=record['dealId']))
+            transformed_records.append(transform_record(resp.json(), schema))
+
+        all_records.extend(transformed_records)
+        stitchstream.write_records('deals', transformed_records)
+        state['deals'] = transformed_records[-1]['properties']['createdate']['value']
         stitchstream.write_state(state)
 
         has_more = False
@@ -315,15 +377,7 @@ def sync_contacts(request):
     return all_records
 
 
-def sync_companies(request):
-    pass
-
-
 def sync_contacts_by_company(request):
-    pass
-
-
-def sync_deals(request):
     pass
 
 
