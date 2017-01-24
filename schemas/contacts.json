@@ -52,10 +52,6 @@
         }
       }
     },
-    "list-memberships": {
-    },
-    "identity-profiles": {
-    },
     "merge-audits": {
       "type": ["null", "array"],
       "items": {
