@@ -1,0 +1,129 @@
+{
+  "type": "object",
+  "properties": {
+    "identities": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "vid": {
+            "type": ["null", "integer"]
+          },
+          "identity": {
+            "type": ["null", "array"],
+            "items": {
+              "type": ["null", "object"],
+              "properties": {
+                "value": {
+                  "type": ["null", "string"]
+                },
+                "type": {
+                  "type": ["null", "string"]
+                },
+                "timestamp": {
+                  "type": ["null", "integer"],
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "linkedvid": {
+            "type": ["null", "array"],
+            "items": {
+              "type": ["null", "integer"]
+            }
+          }
+        }
+      }
+    },
+    "properties": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "name": {
+            "type": ["null", "string"]
+          },
+          "value": {
+            "type": ["null", "string"]
+          },
+          "sourceVid": {
+            "type": ["null", "array"],
+            "items": {
+              "type": ["null", "integer"]
+            }
+          }
+        }
+      }
+    },
+    "listMembership": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    },
+    "vid": {
+      "type": ["null", "integer"]
+    },
+    "portalid": {
+      "type": ["null", "integer"]
+    },
+    "isContact": {
+      "type": ["null", "boolean"]
+    },
+    "vids": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    },
+    "publicToken": {
+      "type": ["null", "string"]
+    },
+    "canonicalVid": {
+      "type": ["null", "integer"]
+    },
+    "mergeAudit": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "canonicalVid": {
+            "type": ["null", "integer"]
+          },
+          "vidToMerge": {
+            "type": ["null", "integer"]
+          },
+          "timestamp": {
+            "type": ["null", "integer"],
+            "format": "date-time"
+          },
+          "userId": {
+            "type": ["null", "integer"]
+          },
+          "entityId": {
+            "type": ["null", "string"]
+          },
+          "numPropertiesMoved": {
+            "type": ["null", "integer"]
+          },
+          "email": {
+            "type": ["null", "string"]
+          },
+          "firstName": {
+            "type": ["null", "string"]
+          },
+          "lastName": {
+            "type": ["null", "string"]
+          }
+        }
+      }
+    },
+    "mergedVids": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    }
+  }
+}

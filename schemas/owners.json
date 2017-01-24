@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "properties": {
+    "portalId": {
+      "type": ["null", "integer"]
+    },
+    "ownerId": {
+      "type": ["null", "integer"]
+    },
+    "type": {
+      "type": ["null", "string"]
+    },
+    "firstName": {
+      "type": ["null", "string"]
+    },
+    "lastName": {
+      "type": ["null", "string"]
+    },
+    "email": {
+      "type": ["null", "string"]
+    },
+    "createdAt": {
+      "type": ["null", "integer"],
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": ["null", "integer"],
+      "format": "date-time"
+    },
+    "remoteList": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "portalId": {
+            "type": ["null", "integer"]
+          },
+          "ownerId": {
+            "type": ["null", "integer"]
+          },
+          "remoteId": {
+            "type": ["null", "string"]
+          },
+          "remoteType": {
+            "type": ["null", "string"]
+          },
+          "active": {
+            "type": ["null", "boolean"]
+          }
+        }
+      }
+    }
+  }
+}

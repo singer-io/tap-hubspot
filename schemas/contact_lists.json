@@ -1,0 +1,88 @@
+{
+  "type": "object",
+  "properties": {
+    "parentId": {
+      "type": ["null", "integer"]
+    },
+    "metaData": {
+      "type": ["null", "object"],
+      "properties": {
+        "processing": {
+          "type": ["null", "string"]
+        },
+        "size": {
+          "type": ["null", "integer"]
+        },
+        "error": {
+          "type": ["null", "string"]
+        },
+        "lastProcessingStateChangeAt": {
+          "type": ["null", "integer"],
+          "format": "date-time"
+        },
+        "lastSizeChangeAt": {
+          "type": ["null", "integer"],
+          "format": "date-time"
+        }
+      }
+    },
+    "dynamic": {
+      "type": ["null", "boolean"]
+    },
+    "name": {
+      "type": ["null", "string"]
+    },
+    "filters": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "filterFamily": {
+            "type": ["null", "string"]
+          },
+          "withinTimeMode": {
+            "type": ["null", "string"]
+          },
+          "checkPastVersions": {
+            "type": ["null", "boolean"]
+          },
+          "type": {
+            "type": ["null", "string"]
+          },
+          "property": {
+            "type": ["null", "string"]
+          },
+          "value": {
+            "type": ["null", "string"]
+          },
+          "operator": {
+            "type": ["null", "string"]
+          }
+        }
+      }
+    },
+    "portalId": {
+      "type": ["null", "integer"]
+    },
+    "createdAt": {
+      "type": ["null", "integer"],
+      "format": "date-time"
+    },
+    "listId": {
+      "type": ["null", "integer"]
+    },
+    "updatedAt": {
+      "type": ["null", "integer"],
+      "format": "date-time"
+    },
+    "internalListId": {
+      "type": ["null", "integer"]
+    },
+    "deleteable": {
+      "type": ["null", "boolean"]
+    },
+    "listType": {
+      "type": ["null", "string"]
+    }
+  }
+}

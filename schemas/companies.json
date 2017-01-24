@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "portalId": {
+      "type": ["null", "integer"]
+    },
+    "companyId": {
+      "type": ["null", "integer"]
+    },
+    "isDeleted": {
+      "type": ["null", "boolean"]
+    }
+  }
+}

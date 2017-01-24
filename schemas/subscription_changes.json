@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": ["null", "integer"],
+      "format": "date-time"
+    },
+    "portalId": {
+      "type": ["null", "integer"]
+    },
+    "recipient": {
+      "type": ["null", "string"]
+    },
+    "changes": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "change": {
+            "type": ["null", "string"]
+          },
+          "source": {
+            "type": ["null", "string"]
+          },
+          "portalId": {
+            "type": ["null", "integer"]
+          },
+          "changeType": {
+            "type": ["null", "string"]
+          },
+          "causedByEvent": {
+            "type": ["null", "object"],
+            "properties": {
+              "id": {
+                "type": ["null", "string"]
+              },
+              "created": {
+                "type": ["null", "integer"],
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
