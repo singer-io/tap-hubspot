@@ -25,6 +25,67 @@
     "profile-url": {
       "type": ["null", "string"]
     },
+    "identity-profiles": {
+        "type": ["null", "array"],
+        "items": {
+            "type": ["null", "object"],
+            "properties": {
+                "deleted-changed-timestamp": {
+                    "type": ["null", "integer"],
+                    "format": "date-time"
+                },
+                "saved-at-timestamp": {
+                    "type": ["null", "integer"],
+                    "format": "date-time"
+                },
+                "vid": {
+                    "type": ["null", "integer"]
+                },
+                "identities": {
+                    "type": ["null", "array"],
+                    "items": {
+                        "type": ["null", "object"],
+                        "properties": {
+                            "timestamp": {
+                                "type": ["null", "integer"],
+                                "format": "date-time"
+                            },
+                            "type": {
+                                "type": ["null", "string"]
+                            },
+                            "value": {
+                                "type": ["null", "string"]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "list-memberships": {
+        "type": ["null", "array"],
+        "items": {
+            "type": ["null", "object"],
+            "properties": {
+                "internal-list-id": {
+                    "type": ["null", "integer"]
+                },
+                "is-member": {
+                    "type": ["null", "boolean"]
+                },
+                "static-list-id": {
+                    "type": ["null", "integer"]
+                },
+                "timestamp": {
+                    "type": ["null", "integer"],
+                    "format": "date-time"
+                },
+                "vid": {
+                    "type": ["null", "integer"]
+                }
+            }
+        }
+    },
     "form-submission": {
       "type": ["null", "array"],
       "items": {

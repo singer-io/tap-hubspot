@@ -172,6 +172,20 @@
     },
     "formType": {
       "type": ["null", "string"]
+    },
+    "metaData": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "name": {
+            "type": ["null", "string"]
+          },
+          "value": {
+            "type": ["null", "string"]
+          }
+        }
+      }
     }
   }
 }
