@@ -14,14 +14,14 @@ import stitchstream
 
 
 CLIENT_ID = "688261c2-cf70-11e5-9eb6-31930a91f78c"
+API_KEY = None
+REFRESH_TOKEN = None
 
 base_url = "https://api.hubapi.com"
 default_start_date = datetime.datetime(2000, 1, 1).isoformat()
-# default_start_date = datetime.datetime(2017, 2, 1).isoformat()
 
 # logging.config.fileConfig("/etc/stitch/logging.conf")
-# logger = logging.getLogger("stitch.streamer")
-logger = logging.getLogger()
+logger = logging.getLogger("stitch.streamer")
 
 entities = [
     "contacts",
@@ -113,17 +113,17 @@ def parse_custom_schema(entity_name, data):
     return {field['name']: func(field['type']) for field in data}
 
 
-def get_custom_schema(request, entity_name):
+def get_custom_schema(entity_name):
     data = request(get_url(entity_name + "_properties")).json()
     return parse_custom_schema(entity_name, data)
 
 
-def get_schema(request, entity_name):
+def get_schema(entity_name):
     with open("schemas/{}.json".format(entity_name)) as f:
         schema = json.loads(f.read())
 
     if entity_name in ["contacts", "companies", "deals"]:
-        custom_schema = get_custom_schema(request, entity_name)
+        custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
             "type": ["null", "object"],
             "properties": custom_schema,
@@ -182,14 +182,12 @@ def transform_record(record, schema):
             if field_name in record}
 
 
-def get_apikey(config_file):
-    with open(config_file) as f:
-        config = json.load(f)
-
-    refresh_token = config['refresh_token']
-    data = {"grant_type": "refresh_token",
-            "client_id": CLIENT_ID,
-            "refresh_token": refresh_token}
+def get_api_key():
+    data = {
+        "grant_type": "refresh_token",
+        "client_id": CLIENT_ID,
+        "refresh_token": REFRESH_TOKEN,
+    }
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     resp = requests.post("https://api.hubapi.com/auth/v1/refresh", headers=headers, data=data).json()
     return resp['access_token']
@@ -202,31 +200,28 @@ def load_state(state_file):
     state.update(state)
 
 
-def mk_request(apikey, auth_key="access_token"):
-    session = requests.Session()
+@backoff.on_exception(backoff.expo,
+                        (requests.exceptions.RequestException),
+                        max_tries=5,
+                        giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500,
+                        factor=2)
+def request(url, params=None):
+    global API_KEY
+    _params = {"access_token": API_KEY}
+    if params is not None:
+        _params.update(params)
 
-    @backoff.on_exception(backoff.expo,
-                          (requests.exceptions.RequestException),
-                          max_tries=5,
-                          giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500,
-                          factor=2)
-    def request(url, params=None):
-        _params = {auth_key: apikey}
-        if params is not None:
-            _params.update(params)
+    response = requests.get(url, params=_params)
+    if response.status_code == 401:
+        API_KEY = get_api_key()
+        return request(url, params)
 
-        response = session.get(url, params=_params)
-        if response.status_code == 401:
-            # might need to refresh the token
-            pass
-
+    else:
         response.raise_for_status()
         return response
 
-    return request
 
-
-def do_check(request):
+def do_check():
     try:
         request(get_url('contacts_recent'))
     except requests.exceptions.RequestException as e:
@@ -235,7 +230,7 @@ def do_check(request):
         sys.exit(-1)
 
 
-def sync_contacts(request):
+def sync_contacts():
     last_sync = dateutil.parser.parse(state['contacts'])
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
@@ -247,8 +242,8 @@ def sync_contacts(request):
         endpoint = "contacts_recent"
         logger.error("Syncing recent contacts")
 
-    schema = get_schema(request, 'contacts')
-    # stitchstream.write_schema('contacts', schema)
+    schema = get_schema('contacts')
+    stitchstream.write_schema('contacts', schema)
 
     params = {
         'showListMemberships': True,
@@ -286,18 +281,17 @@ def sync_contacts(request):
             resp = request(get_url('contacts_detail'), params={'vid': vids})
             transformed_records = [transform_record(record, schema) for record in resp.json().values()]
 
-
             logger.error("Persisting {} contacts".format(len(transformed_records)))
-            # stitchstream.write_records('contacts', transformed_records)
+            stitchstream.write_records('contacts', transformed_records)
             persisted_count += len(vids)
 
     state['contacts'] = datetime.datetime.utcnow().isoformat()
-    # stitchstream.write_state(state)
+    stitchstream.write_state(state)
     logger.error("Persisted {} of {} contacts".format(persisted_count, fetched_count))
     return persisted_count
 
 
-def sync_companies(request):
+def sync_companies():
     last_sync = dateutil.parser.parse(state['companies'])
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
@@ -311,8 +305,8 @@ def sync_companies(request):
         path_key = "results"
         logger.error("Syncing recent companies")
 
-    schema = get_schema(request, 'companies')
-    # stitchstream.write_schema('companies', schema)
+    schema = get_schema('companies')
+    stitchstream.write_schema('companies', schema)
 
     params = {'count': 250}
     has_more = True
@@ -346,17 +340,16 @@ def sync_companies(request):
                 transformed_records.append(transformed_record)
 
         logger.error("Persisting {} companies".format(len(transformed_records)))
-        # stitchstream.write_records('companies', transformed_records)
-
+        stitchstream.write_records('companies', transformed_records)
         persisted_count += len(transformed_records)
 
     state['companies'] = datetime.datetime.utcnow().isoformat()
-    # stitchstream.write_state(state)
+    stitchstream.write_state(state)
     logger.error("Persisted {} of {} companies".format(persisted_count, fetched_count))
     return persisted_count
 
 
-def sync_deals(request):
+def sync_deals():
     last_sync = dateutil.parser.parse(state['deals'])
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
@@ -366,8 +359,8 @@ def sync_deals(request):
         endpoint = "deals_recent"
         logger.error("Syncing recent deals")
 
-    schema = get_schema(request, 'deals')
-    # stitchstream.write_schema('deals', schema)
+    schema = get_schema('deals')
+    stitchstream.write_schema('deals', schema)
 
     params = {'count': 250}
     has_more = True
@@ -400,22 +393,19 @@ def sync_deals(request):
             if not modified_time or modified_time >= last_sync:
                 transformed_records.append(transformed_record)
 
-        state['deals'] = transformed_records[-1]['properties']['createdate']['value']
-
         logger.error("Persisting {} deals".format(len(transformed_records)))
-        # stitchstream.write_records('deals', transformed_records)
-
+        stitchstream.write_records('deals', transformed_records)
         persisted_count += len(transformed_records)
 
     state['deals'] = datetime.datetime.utcnow().isoformat()
-    # stitchstream.write_state(state)
+    stitchstream.write_state(state)
     logger.error("Persisted {} of {} deals".format(persisted_count, fetched_count))
     return persisted_count
 
 
-def sync_campaigns(request):
-    schema = get_schema(request, 'campaigns')
-    # stitchstream.write_schema('campaigns', schema)
+def sync_campaigns():
+    schema = get_schema('campaigns')
+    stitchstream.write_schema('campaigns', schema)
 
     logger.error("Syncing all campaigns")
 
@@ -439,8 +429,7 @@ def sync_campaigns(request):
             transformed_records.append(transform_record(resp.json(), schema))
 
         logger.error("Persisting {} campaigns".format(len(transformed_records)))
-        # stitchstream.write_records('campaigns', transformed_records)
-
+        stitchstream.write_records('campaigns', transformed_records)
         persisted_count += len(data['campaigns'])
 
     # campaigns don't have any created/modified dates to update state with
@@ -448,12 +437,12 @@ def sync_campaigns(request):
     return persisted_count
 
 
-def sync_no_details(request, entity_type, entity_path, state_path):
+def sync_no_details(entity_type, entity_path, state_path):
     last_sync = dateutil.parser.parse(state[entity_type])
     start_timestamp = int(last_sync.timestamp() * 1000)
 
-    schema = get_schema(request, entity_type)
-    # stitchstream.write_schema(entity_type, schema)
+    schema = get_schema(entity_type)
+    stitchstream.write_schema(entity_type, schema)
 
     logger.error("Syncing {} from {}".format(entity_type, last_sync))
 
@@ -476,33 +465,32 @@ def sync_no_details(request, entity_type, entity_path, state_path):
         logger.error("Grabbed {} {}".format(len(data[entity_path]), entity_type))
 
         transformed_records = [transform_record(record, schema) for record in data[entity_path]]
-        state[entity_type] = transformed_records[-1][state_path]
 
         logger.error("Persisting {} {} up to {}".format(len(transformed_records), entity_type, state[entity_type]))
-        # stitchstream.write_records(entity_type, transformed_records)
-        # stitchstream.write_state(state)
-
+        stitchstream.write_records(entity_type, transformed_records)
         persisted_count += len(data[entity_path])
 
+    state[entity_type] = transformed_records[-1][state_path]
+    stitchstream.write_state(state)
     logger.error("Persisted {} {}".format(persisted_count, entity_type))
     return persisted_count
 
 
-def sync_subscription_changes(request):
-    return sync_no_details(request, "subscription_changes", "timeline", "timestamp")
+def sync_subscription_changes():
+    return sync_no_details("subscription_changes", "timeline", "timestamp")
 
 
-def sync_email_events(request):
-    return sync_no_details(request, "email_events", "events", "created")
+def sync_email_events():
+    return sync_no_details("email_events", "events", "created")
 
 
-def sync_time_filtered(request, entity_type, timestamp_path, entity_path=None):
+def sync_time_filtered(entity_type, timestamp_path, entity_path=None):
     last_sync = dateutil.parser.parse(state[entity_type])
 
     logger.error("Syncing all {}".format(entity_type))
 
-    schema = get_schema(request, entity_type)
-    # stitchstream.write_schema(entity_type, schema)
+    schema = get_schema(entity_type)
+    stitchstream.write_schema(entity_type, schema)
 
     resp = request(get_url(entity_type))
     records = resp.json()
@@ -519,25 +507,23 @@ def sync_time_filtered(request, entity_type, timestamp_path, entity_path=None):
             transformed_records.append(transformed_record)
 
     if len(transformed_records) > 0:
-        state[entity_type] = transformed_records[-1][timestamp_path]
-
         logger.error("Persisting {} {} up to {}".format(len(transformed_records), entity_type, state[entity_type]))
-        # stitchstream.write_records(entity_type, transformed_records)
-        # stitchstream.write_state(state)
-
+        stitchstream.write_records(entity_type, transformed_records)
         persisted_count = len(transformed_records)
 
+    state[entity_type] = transformed_records[-1][timestamp_path]
+    stitchstream.write_state(state)
     logger.error("Persisted {} of {} {}".format(persisted_count, fetched_count, entity_type))
     return persisted_count
 
 
-def sync_contact_lists(request):
+def sync_contact_lists():
     last_sync = dateutil.parser.parse(state['contact_lists'])
 
     logger.error("Syncing all contact lists")
 
-    schema = get_schema(request, 'contact_lists')
-    # stitchstream.write_schema('contact_lists', schema)
+    schema = get_schema('contact_lists')
+    stitchstream.write_schema('contact_lists', schema)
 
     params = {'count': 250}
     has_more = True
@@ -562,51 +548,52 @@ def sync_contact_lists(request):
                 transformed_records.append(transformed_record)
 
         if len(transformed_records) > 0:
-            state['contact_lists'] = transformed_records[-1]['updatedAt']
-
             logger.error("Persisting {} contact lists up to {}".format(len(transformed_records), state['contact_lists']))
-            # stitchstream.write_records('contact_lists', transformed_records)
-            # stitchstream.write_state(state)
-
+            stitchstream.write_records('contact_lists', transformed_records)
             persisted_count += len(transformed_records)
 
+    state['contact_lists'] = transformed_records[-1]['updatedAt']
+    stitchstream.write_state(state)
     logger.error("Persisted {} of {} contact lists".format(persisted_count, fetched_count))
     return persisted_count
 
 
-def sync_forms(request):
-    return sync_time_filtered(request, "forms", "updatedAt")
+def sync_forms():
+    return sync_time_filtered("forms", "updatedAt")
 
 
-def sync_workflows(request):
-    return sync_time_filtered(request, "workflows", "updatedAt", "workflows")
+def sync_workflows():
+    return sync_time_filtered("workflows", "updatedAt", "workflows")
 
 
-def sync_keywords(request):
-    return sync_time_filtered(request, "keywords", "created_at", "keywords")
+def sync_keywords():
+    return sync_time_filtered("keywords", "created_at", "keywords")
 
 
-def sync_owners(request):
-    return sync_time_filtered(request, "owners", "updatedAt")
+def sync_owners():
+    return sync_time_filtered("owners", "updatedAt")
 
 
-def do_sync(request):
+def do_sync():
     persisted_count = 0
-    # persisted_count += sync_contacts(request)
-    # persisted_count += sync_companies(request)
-    # persisted_count += sync_deals(request)
-    persisted_count += sync_campaigns(request)
-    persisted_count += sync_subscription_changes(request)
-    persisted_count += sync_email_events(request)
-    persisted_count += sync_contact_lists(request)
-    persisted_count += sync_forms(request)
-    persisted_count += sync_workflows(request)
-    persisted_count += sync_keywords(request)
-    persisted_count += sync_owners(request)
+    persisted_count += sync_contacts()
+    persisted_count += sync_companies()
+    persisted_count += sync_deals()
+    persisted_count += sync_campaigns()
+    persisted_count += sync_subscription_changes()
+    persisted_count += sync_email_events()
+    persisted_count += sync_contact_lists()
+    persisted_count += sync_forms()
+    persisted_count += sync_workflows()
+    persisted_count += sync_keywords()
+    persisted_count += sync_owners()
     return persisted_count
 
 
 def main():
+    global REFRESH_TOKEN
+    global API_KEY
+
     parser = argparse.ArgumentParser()
     parser.add_argument('func', choices=['check', 'sync'])
     parser.add_argument('-c', '--config', help='Config file', required=True)
@@ -618,23 +605,25 @@ def main():
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
 
     if args.state:
         logger.error("Loading state from " + args.state)
         load_state(args.state)
 
     logger.error("Refreshing oath token")
-    apikey = get_apikey(args.config)
-    request = mk_request(apikey)
+
+    with open(args.config) as f:
+        config = json.load(f)
+
+    REFRESH_TOKEN = config['refresh_token']
+    API_KEY = get_api_key()
 
     if args.func == 'check':
-        do_check(request)
+        do_check()
 
     elif args.func == 'sync':
         logger.error("Starting sync")
-        persisted_count = do_sync(request)
+        persisted_count = do_sync()
         logger.error("Sync completed. Persisted {} records".format(persisted_count))
 
 
