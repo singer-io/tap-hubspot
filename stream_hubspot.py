@@ -13,6 +13,7 @@ import requests
 import stitchstream
 
 
+QUIET = False
 CLIENT_ID = "688261c2-cf70-11e5-9eb6-31930a91f78c"
 API_KEY = None
 REFRESH_TOKEN = None
@@ -67,6 +68,18 @@ endpoints = {
     "keywords":             "/keywords/v1/keywords",
     "owners":               "/owners/v2/owners",
 }
+
+
+def stream(method, data, entity_type=None):
+    if not QUIET:
+        if method == "state":
+            stitchstream.write_state(data)
+        elif method == "schema":
+            stitchstream.write_schema(entity_type, data)
+        elif method == "records":
+            stitchstream.write_records(entity_type, data)
+        else:
+            raise ValueError("Unknown method {}".format(method))
 
 
 def get_field_type_schema(field_type):
@@ -205,16 +218,16 @@ def load_state(state_file):
                         max_tries=5,
                         giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500,
                         factor=2)
-def request(url, params=None):
+def request(url, params=None, reauth=False):
     global API_KEY
     _params = {"access_token": API_KEY}
     if params is not None:
         _params.update(params)
 
     response = requests.get(url, params=_params)
-    if response.status_code == 401:
+    if response.status_code == 401 and not reauth:
         API_KEY = get_api_key()
-        return request(url, params)
+        return request(url, params, reauth=True)
 
     else:
         response.raise_for_status()
@@ -243,7 +256,7 @@ def sync_contacts():
         logger.error("Syncing recent contacts")
 
     schema = get_schema('contacts')
-    stitchstream.write_schema('contacts', schema)
+    stream("schema", schema, "contacts")
 
     params = {
         'showListMemberships': True,
@@ -282,11 +295,11 @@ def sync_contacts():
             transformed_records = [transform_record(record, schema) for record in resp.json().values()]
 
             logger.error("Persisting {} contacts".format(len(transformed_records)))
-            stitchstream.write_records('contacts', transformed_records)
+            stream("records", transformed_records, "contacts")
             persisted_count += len(vids)
 
     state['contacts'] = datetime.datetime.utcnow().isoformat()
-    stitchstream.write_state(state)
+    stream("state", state)
     logger.error("Persisted {} of {} contacts".format(persisted_count, fetched_count))
     return persisted_count
 
@@ -306,7 +319,7 @@ def sync_companies():
         logger.error("Syncing recent companies")
 
     schema = get_schema('companies')
-    stitchstream.write_schema('companies', schema)
+    stream("schema", schema, "companies")
 
     params = {'count': 250}
     has_more = True
@@ -340,11 +353,11 @@ def sync_companies():
                 transformed_records.append(transformed_record)
 
         logger.error("Persisting {} companies".format(len(transformed_records)))
-        stitchstream.write_records('companies', transformed_records)
+        stream("records", transformed_records, "companies")
         persisted_count += len(transformed_records)
 
     state['companies'] = datetime.datetime.utcnow().isoformat()
-    stitchstream.write_state(state)
+    stream("state", state)
     logger.error("Persisted {} of {} companies".format(persisted_count, fetched_count))
     return persisted_count
 
@@ -360,7 +373,7 @@ def sync_deals():
         logger.error("Syncing recent deals")
 
     schema = get_schema('deals')
-    stitchstream.write_schema('deals', schema)
+    stream("schema", schema, "deals")
 
     params = {'count': 250}
     has_more = True
@@ -394,18 +407,18 @@ def sync_deals():
                 transformed_records.append(transformed_record)
 
         logger.error("Persisting {} deals".format(len(transformed_records)))
-        stitchstream.write_records('deals', transformed_records)
+        stream("records", transformed_records, "deals")
         persisted_count += len(transformed_records)
 
     state['deals'] = datetime.datetime.utcnow().isoformat()
-    stitchstream.write_state(state)
+    stream("state", state)
     logger.error("Persisted {} of {} deals".format(persisted_count, fetched_count))
     return persisted_count
 
 
 def sync_campaigns():
     schema = get_schema('campaigns')
-    stitchstream.write_schema('campaigns', schema)
+    stream("schema", schema, "campaigns")
 
     logger.error("Syncing all campaigns")
 
@@ -429,7 +442,7 @@ def sync_campaigns():
             transformed_records.append(transform_record(resp.json(), schema))
 
         logger.error("Persisting {} campaigns".format(len(transformed_records)))
-        stitchstream.write_records('campaigns', transformed_records)
+        stream("records", transformed_records, "campaigns")
         persisted_count += len(data['campaigns'])
 
     # campaigns don't have any created/modified dates to update state with
@@ -442,7 +455,7 @@ def sync_no_details(entity_type, entity_path, state_path):
     start_timestamp = int(last_sync.timestamp() * 1000)
 
     schema = get_schema(entity_type)
-    stitchstream.write_schema(entity_type, schema)
+    stream("schema", schema, entity_type)
 
     logger.error("Syncing {} from {}".format(entity_type, last_sync))
 
@@ -467,11 +480,11 @@ def sync_no_details(entity_type, entity_path, state_path):
         transformed_records = [transform_record(record, schema) for record in data[entity_path]]
 
         logger.error("Persisting {} {} up to {}".format(len(transformed_records), entity_type, state[entity_type]))
-        stitchstream.write_records(entity_type, transformed_records)
+        stream("records", transformed_records, entity_type)
         persisted_count += len(data[entity_path])
 
     state[entity_type] = transformed_records[-1][state_path]
-    stitchstream.write_state(state)
+    stream("state", state)
     logger.error("Persisted {} {}".format(persisted_count, entity_type))
     return persisted_count
 
@@ -490,7 +503,7 @@ def sync_time_filtered(entity_type, timestamp_path, entity_path=None):
     logger.error("Syncing all {}".format(entity_type))
 
     schema = get_schema(entity_type)
-    stitchstream.write_schema(entity_type, schema)
+    stream("schema", schema, entity_type)
 
     resp = request(get_url(entity_type))
     records = resp.json()
@@ -508,11 +521,11 @@ def sync_time_filtered(entity_type, timestamp_path, entity_path=None):
 
     if len(transformed_records) > 0:
         logger.error("Persisting {} {} up to {}".format(len(transformed_records), entity_type, state[entity_type]))
-        stitchstream.write_records(entity_type, transformed_records)
+        stream("records", transformed_records, entity_type)
         persisted_count = len(transformed_records)
 
     state[entity_type] = transformed_records[-1][timestamp_path]
-    stitchstream.write_state(state)
+    stream("state", state)
     logger.error("Persisted {} of {} {}".format(persisted_count, fetched_count, entity_type))
     return persisted_count
 
@@ -523,7 +536,7 @@ def sync_contact_lists():
     logger.error("Syncing all contact lists")
 
     schema = get_schema('contact_lists')
-    stitchstream.write_schema('contact_lists', schema)
+    stream("schema", schema, "contact_lists")
 
     params = {'count': 250}
     has_more = True
@@ -549,11 +562,11 @@ def sync_contact_lists():
 
         if len(transformed_records) > 0:
             logger.error("Persisting {} contact lists up to {}".format(len(transformed_records), state['contact_lists']))
-            stitchstream.write_records('contact_lists', transformed_records)
+            stream("records", transformed_records, "contact_lists")
             persisted_count += len(transformed_records)
 
     state['contact_lists'] = transformed_records[-1]['updatedAt']
-    stitchstream.write_state(state)
+    stream("state", state)
     logger.error("Persisted {} of {} contact lists".format(persisted_count, fetched_count))
     return persisted_count
 
@@ -593,6 +606,7 @@ def do_sync():
 def main():
     global REFRESH_TOKEN
     global API_KEY
+    global QUIET
 
     parser = argparse.ArgumentParser()
     parser.add_argument('func', choices=['check', 'sync'])
@@ -600,8 +614,12 @@ def main():
     parser.add_argument('-s', '--state', help='State file')
     parser.add_argument('-d', '--debug', dest='debug', action='store_true',
                         help='Sets the log level to DEBUG (default INFO)')
-    parser.set_defaults(debug=False)
+    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+                        help='Do not output to stdout (no persisting)')
+    parser.set_defaults(debug=False, quiet=False)
     args = parser.parse_args()
+
+    QUIET = args.quiet
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
