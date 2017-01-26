@@ -17,6 +17,7 @@ CLIENT_ID = "688261c2-cf70-11e5-9eb6-31930a91f78c"
 QUIET = False
 API_KEY = None
 REFRESH_TOKEN = None
+GET_COUNT = 0
 
 logging.config.fileConfig("/etc/stitch/logging.conf")
 logger = logging.getLogger("stitch.streamer")
@@ -206,11 +207,13 @@ def load_state(state_file):
                         factor=2)
 def request(url, params=None, reauth=False):
     global API_KEY
+    global GET_COUNT
     _params = {"access_token": API_KEY}
     if params is not None:
         _params.update(params)
 
     response = requests.get(url, params=_params)
+    GET_COUNT += 1
     if response.status_code == 401 and not reauth:
         API_KEY = get_api_key()
         return request(url, params, reauth=True)
@@ -567,16 +570,27 @@ def sync_owners():
 def do_sync():
     persisted_count = 0
     persisted_count += sync_contacts()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_companies()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_deals()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_campaigns()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_subscription_changes()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_email_events()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_contact_lists()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_forms()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_workflows()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_keywords()
+    logger.info("# API requests: {}".format(GET_COUNT))
     persisted_count += sync_owners()
+    logger.info("# API requests: {}".format(GET_COUNT))
     return persisted_count
 
 
