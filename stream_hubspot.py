@@ -126,7 +126,7 @@ def get_custom_schema(entity_name):
 
 
 def get_schema(entity_name):
-    with open("schemas/{}.json".format(entity_name)) as f:
+    with open("stream_hubspot/{}.json".format(entity_name)) as f:
         schema = json.loads(f.read())
 
     if entity_name in ["contacts", "companies", "deals"]:
