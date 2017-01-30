@@ -7,7 +7,7 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-name=stitchdata/stream-hubspot
+name=platform.hubspot
 version=$1
 repo=218546966473.dkr.ecr.us-east-1.amazonaws.com
 docker build -t $name:$version -f Dockerfile ../..

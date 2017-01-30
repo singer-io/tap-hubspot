@@ -9,5 +9,5 @@ RUN python3 setup.py install
 CMD stitch-orchestrator sync \
   --streamer stream-hubspot \
   --persister persist-stitch \
-  --client-id $CLIENT_ID \
---connection-id $CONNECTION_ID
+  --client-id $STITCH_CLIENT_ID \
+  --connection-id $STITCH_CONNECTION_ID
