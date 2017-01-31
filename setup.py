@@ -11,7 +11,7 @@ setup(name='stream-hubspot',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['stream_hubspot'],
       install_requires=[
-          'stitchstream-python>=0.4.1',
+          'stitchstream-python>=0.5.0',
           'requests==2.12.4',
           'backoff==1.3.2',
           'python-dateutil==2.6.0',
