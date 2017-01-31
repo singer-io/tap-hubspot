@@ -31,7 +31,7 @@
       }
     },
     "created": {
-      "type": ["null", "integer"],
+      "type": ["null", "string"],
       "format": "date-time"
     },
     "emailCampaignId": {
@@ -70,7 +70,7 @@
       "type": ["null", "object"],
       "properties": {
         "created": {
-          "type": ["null", "integer"],
+          "type": ["null", "string"],
           "format": "date-time"
         },
         "id": {

@@ -31,11 +31,11 @@
             "type": ["null", "object"],
             "properties": {
                 "deleted-changed-timestamp": {
-                    "type": ["null", "integer"],
+                    "type": ["null", "string"],
                     "format": "date-time"
                 },
                 "saved-at-timestamp": {
-                    "type": ["null", "integer"],
+                    "type": ["null", "string"],
                     "format": "date-time"
                 },
                 "vid": {
@@ -47,7 +47,7 @@
                         "type": ["null", "object"],
                         "properties": {
                             "timestamp": {
-                                "type": ["null", "integer"],
+                                "type": ["null", "string"],
                                 "format": "date-time"
                             },
                             "type": {
@@ -77,7 +77,7 @@
                     "type": ["null", "integer"]
                 },
                 "timestamp": {
-                    "type": ["null", "integer"],
+                    "type": ["null", "string"],
                     "format": "date-time"
                 },
                 "vid": {
@@ -95,7 +95,7 @@
             "type": ["null", "string"]
           },
           "timestamp": {
-            "type": ["null", "integer"],
+            "type": ["null", "string"],
             "format": "date-time"
           },
           "form-id": {
@@ -125,7 +125,7 @@
             "type": ["null", "integer"]
           },
           "timestamp": {
-            "type": ["null", "integer"],
+            "type": ["null", "string"],
             "format": "date-time"
           },
           "user-id": {

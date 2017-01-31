@@ -14,11 +14,11 @@
       "type": ["null", "boolean"]
     },
     "insertedAt": {
-      "type": ["null", "integer"],
+      "type": ["null", "string"],
       "format": "date-time"
     },
     "updatedAt": {
-      "type": ["null", "integer"],
+      "type": ["null", "string"],
       "format": "date-time"
     },
     "personaTagIds": {
