@@ -126,7 +126,10 @@ def get_custom_schema(entity_name):
 
 
 def get_schema(entity_name):
-    with open("stream_hubspot/{}.json".format(entity_name)) as f:
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        "stream_hubspot",
+                        "{}.json".format(entity_name))
+    with open(path) as f:
         schema = json.loads(f.read())
 
     if entity_name in ["contacts", "companies", "deals"]:
