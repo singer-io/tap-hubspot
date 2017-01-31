@@ -67,7 +67,7 @@ endpoints = {
 def update_state(key, dt):
     if isinstance(dt, datetime.datetime):
         dt = dt.strftime(DATETIME_FMT)
-        
+
     if dt > state[key]:
         state[key] = dt
 
@@ -330,7 +330,7 @@ def sync_companies():
                     transformed_record['properties']['hs_lastmodifieddate']['value'],
                     DATETIME_FMT)
                 update_state('companies', modified_time)
-                
+
             elif 'createdate' in transformed_record['properties']:
                 modified_time = datetime.datetime.strptime(
                     transformed_record['properties']['createdate']['value'],
