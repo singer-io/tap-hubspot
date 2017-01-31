@@ -18,11 +18,12 @@ QUIET = False
 API_KEY = None
 REFRESH_TOKEN = None
 GET_COUNT = 0
+DATETIME_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 logging.config.fileConfig("/etc/stitch/logging.conf")
 logger = logging.getLogger("stitch.streamer")
 
-default_start_date = datetime.datetime(2000, 1, 1).isoformat()
+default_start_date = datetime.datetime(2000, 1, 1).strftime(DATETIME_FMT)
 state = {
     "contacts": default_start_date,
     "companies": default_start_date,
@@ -90,7 +91,7 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "boolean"]}
 
     elif field_type == "datetime":
-        return {"type": ["null", "integer"], "format": "date-time"}
+        return {"type": ["null", "string"], "format": "date-time"}
 
     elif field_type == "number":
         return {"type": ["null", "number"]}
@@ -145,7 +146,7 @@ def get_schema(entity_name):
 def transform_timestamp(timestamp, iso=True):
     dt = datetime.datetime.utcfromtimestamp(int(timestamp) * 0.001)
     if iso:
-        dt = dt.isoformat()
+        dt = dt.strftime(DATETIME_FMT)
 
     return dt
 
@@ -158,7 +159,7 @@ def transform_field(value, schema):
 
         return tmp
 
-    if "object" in schema['type']:
+    elif "object" in schema['type']:
         tmp = {}
         for field_name, field_schema in schema['properties'].items():
             if field_name in value:
@@ -166,17 +167,15 @@ def transform_field(value, schema):
 
         return tmp
 
-    if "integer" in schema['type'] and value:
-        value = int(value)
-
-    if "number" in schema['type'] and value:
-        value = float(value)
-
-    if "format" in schema:
+    elif "format" in schema:
         if schema['format'] == "date-time" and value:
-            value = transform_timestamp(value)
+            return transform_timestamp(value)
 
-    return value
+    elif "integer" in schema['type'] and value:
+        return int(value)
+
+    elif "number" in schema['type'] and value:
+        return float(value)
 
 
 def transform_record(record, schema):
@@ -281,7 +280,7 @@ def sync_contacts():
             stream("records", transformed_records, "contacts")
             persisted_count += len(vids)
 
-    state['contacts'] = datetime.datetime.utcnow().isoformat()
+    state['contacts'] = datetime.datetime.utcnow().strftime(DATETIME_FMT)
     stream("state", state)
     logger.info("Persisted {} of {} contacts".format(persisted_count, fetched_count))
     return persisted_count
@@ -339,7 +338,7 @@ def sync_companies():
         stream("records", transformed_records, "companies")
         persisted_count += len(transformed_records)
 
-    state['companies'] = datetime.datetime.utcnow().isoformat()
+    state['companies'] = datetime.datetime.utcnow().strftime(DATETIME_FMT)
     stream("state", state)
     logger.info("Persisted {} of {} companies".format(persisted_count, fetched_count))
     return persisted_count
@@ -393,7 +392,7 @@ def sync_deals():
         stream("records", transformed_records, "deals")
         persisted_count += len(transformed_records)
 
-    state['deals'] = datetime.datetime.utcnow().isoformat()
+    state['deals'] = datetime.datetime.utcnow().strftime(DATETIME_FMT)
     stream("state", state)
     logger.info("Persisted {} of {} deals".format(persisted_count, fetched_count))
     return persisted_count
