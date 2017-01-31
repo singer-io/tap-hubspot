@@ -3,8 +3,6 @@
 import argparse
 import datetime
 import json
-import logging
-import logging.config
 import os
 import sys
 
@@ -21,8 +19,7 @@ REFRESH_TOKEN = None
 GET_COUNT = 0
 DATETIME_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
-logging.config.fileConfig("/etc/stitch/logging.conf")
-logger = logging.getLogger("stitch.streamer")
+logger = stitchstream.get_logger()
 
 default_start_date = datetime.datetime(2000, 1, 1).strftime(DATETIME_FMT)
 state = {
@@ -67,6 +64,12 @@ endpoints = {
     "owners":               "/owners/v2/owners",
 }
 
+def update_state(key, dt):
+    if isinstance(dt, datetime.datetime):
+        dt = dt.strftime(DATETIME_FMT)
+        
+    if dt > state[key]:
+        state[key] = dt
 
 def get_url(endpoint, **kwargs):
     if endpoint not in endpoints:
@@ -270,19 +273,16 @@ def sync_contacts():
 
             if not modified_time or modified_time >= last_sync:
                 vids.append(contact['canonical-vid'])
+                update_state('contacts', modified_time)
 
         if len(vids) > 0:
             logger.info("Getting details for {} contacts".format(len(vids)))
 
             resp = request(get_url('contacts_detail'), params={'vid': vids})
-            transformed_records = [transform_record(record, schema) for record in resp.json().values()]
-
-            logger.info("Persisting {} contacts".format(len(transformed_records)))
-            stream("records", transformed_records, "contacts")
-            persisted_count += len(vids)
-
-        state['contacts'] = datetime.datetime.utcnow().strftime(DATETIME_FMT)
-        stream("state", state)
+            for record in resp.json().values():
+                stitchstream.write_record('contacts', transform_record(record, schema))
+                persisted_count += 1
+    stream("state", state)
 
     logger.info("Persisted {} of {} contacts".format(persisted_count, fetched_count))
     return persisted_count
@@ -329,6 +329,8 @@ def sync_companies():
                 modified_time = datetime.datetime.strptime(
                     transformed_record['properties']['hs_lastmodifieddate']['value'],
                     DATETIME_FMT)
+                update_state('companies', modified_time)
+                
             elif 'createdate' in transformed_record['properties']:
                 modified_time = datetime.datetime.strptime(
                     transformed_record['properties']['createdate']['value'],
@@ -337,14 +339,9 @@ def sync_companies():
                 modified_time = None
 
             if not modified_time or modified_time >= last_sync:
-                transformed_records.append(transformed_record)
-
-            stream("records", [transformed_record], "companies")
-            persisted_count += 1
-
-        state['companies'] = datetime.datetime.utcnow().strftime(DATETIME_FMT)
-        stream("state", state)
-
+                stitchstream.write_record('companies', transformed_record)
+                persisted_count += 1
+    stream("state", state)
     logger.info("Persisted {} of {} companies".format(persisted_count, fetched_count))
     return persisted_count
 
@@ -386,6 +383,7 @@ def sync_deals():
                 modified_time = datetime.datetime.strptime(
                     transformed_record['properties']['hs_lastmodifieddate']['value'],
                     DATETIME_FMT)
+                update_state('deals', modified_time)
             elif 'createdate' in transformed_record['properties']:
                 modified_time = datetime.datetime.strptime(
                     transformed_record['properties']['createdate']['value'],
@@ -394,14 +392,9 @@ def sync_deals():
                 modified_time = None
 
             if not modified_time or modified_time >= last_sync:
-                transformed_records.append(transformed_record)
-
-            stream("records", [transformed_record], "deals")
-            persisted_count += 1
-
-        state['deals'] = datetime.datetime.utcnow().strftime(DATETIME_FMT)
-        stream("state", state)
-
+                stitchstream.write_record('deals', transformed_record)
+                persisted_count += 1
+    stream("state", state)
     logger.info("Persisted {} of {} deals".format(persisted_count, fetched_count))
     return persisted_count
 
@@ -429,12 +422,8 @@ def sync_campaigns():
         transformed_records = []
         for record in data['campaigns']:
             resp = request(get_url('campaigns_detail', campaign_id=record['id']))
-            transformed_records.append(transform_record(resp.json(), schema))
-
-        logger.info("Persisting {} campaigns".format(len(transformed_records)))
-        stream("records", transformed_records, "campaigns")
-        persisted_count += len(data['campaigns'])
-
+            stitchstream.write_record('campaigns', transform_record(resp.json(), schema))
+            persisted_count += 1
     # campaigns don't have any created/modified dates to update state with
     logger.info("Persisted {} campaigns".format(persisted_count))
     return persisted_count
@@ -466,15 +455,13 @@ def sync_no_details(entity_type, entity_path, state_path):
 
         logger.info("Grabbed {} {}".format(len(data[entity_path]), entity_type))
 
-        transformed_records = [transform_record(record, schema) for record in data[entity_path]]
+        for record in data[entity_path]:
+            transformed = transform_record(record, schema)
+            stitchstream.write_record(entity_type, transformed)
+            persisted_count += 1
+            update_state(entity_type, transformed[state_path])
 
-        logger.info("Persisting {} {} up to {}".format(len(transformed_records), entity_type, state[entity_type]))
-        stream("records", transformed_records, entity_type)
-        persisted_count += len(transformed_records)
-
-        state[entity_type] = transformed_records[-1][state_path]
-        stream("state", state)
-
+    stream("state", state)
     logger.info("Persisted {} {}".format(persisted_count, entity_type))
     return persisted_count
 
@@ -508,6 +495,7 @@ def sync_time_filtered(entity_type, timestamp_path, entity_path=None):
         transformed_record = transform_record(record, schema)
         ts = datetime.datetime.strptime(transformed_record[timestamp_path], DATETIME_FMT)
         if ts >= last_sync:
+            update_state(entity_type, ts)
             transformed_records.append(transformed_record)
 
     if len(transformed_records) > 0:
@@ -515,7 +503,6 @@ def sync_time_filtered(entity_type, timestamp_path, entity_path=None):
         stream("records", transformed_records, entity_type)
         persisted_count = len(transformed_records)
 
-    state[entity_type] = transformed_records[-1][timestamp_path]
     stream("state", state)
     logger.info("Persisted {} of {} {}".format(persisted_count, fetched_count, entity_type))
     return persisted_count
@@ -550,6 +537,7 @@ def sync_contact_lists():
             transformed_record = transform_record(record, schema)
             ts = datetime.datetime.strptime(transformed_record['updatedAt'], DATETIME_FMT)
             if ts >= last_sync:
+                update_state('contact_lists', ts)
                 transformed_records.append(transformed_record)
 
         if len(transformed_records) > 0:
