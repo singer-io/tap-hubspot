@@ -226,7 +226,7 @@ def request(url, params=None, reauth=False):
 
 
 def sync_contacts():
-    last_sync = dateutil.parser.parse(state['contacts'])
+    last_sync = datetime.datetime.strptime(state['contacts'], DATETIME_FMT)
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
         recent = False
@@ -287,7 +287,7 @@ def sync_contacts():
 
 
 def sync_companies():
-    last_sync = dateutil.parser.parse(state['companies'])
+    last_sync = datetime.datetime.strptime(state['companies'], DATETIME_FMT)
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
         endpoint = "companies_all"
@@ -345,7 +345,7 @@ def sync_companies():
 
 
 def sync_deals():
-    last_sync = dateutil.parser.parse(state['deals'])
+    last_sync = datetime.datetime.strptime(state['deals'], DATETIME_FMT)
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
         endpoint = "deals_all"
