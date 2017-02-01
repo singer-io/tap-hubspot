@@ -610,7 +610,6 @@ def main():
     global QUIET
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('func', choices=['check', 'sync'])
     parser.add_argument('-c', '--config', help='Config file', required=True)
     parser.add_argument('-s', '--state', help='State file')
     parser.add_argument('-d', '--debug', dest='debug', action='store_true',
@@ -637,18 +636,14 @@ def main():
     REFRESH_TOKEN = config['refresh_token']
     API_KEY = get_api_key()
 
-    if args.func == 'check':
-        do_check()
+    logger.info("Starting sync")
+    try:
+        persisted_count = do_sync()
+    except Exception as e:
+        logger.exception("Error ocurred during sync. Aborting.")
+        sys.exit(1)
 
-    elif args.func == 'sync':
-        logger.info("Starting sync")
-        try:
-            persisted_count = do_sync()
-        except Exception as e:
-            logger.exception("Error ocurred during sync. Aborting.")
-            sys.exit(1)
-
-        logger.info("Sync completed. Persisted {} records".format(persisted_count))
+    logger.info("Sync completed. Persisted {} records".format(persisted_count))
 
 
 if __name__ == '__main__':
