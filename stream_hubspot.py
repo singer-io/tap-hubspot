@@ -7,7 +7,6 @@ import os
 import sys
 
 import backoff
-import dateutil.parser
 import requests
 import stitchstream
 
