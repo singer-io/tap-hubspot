@@ -12,10 +12,9 @@ import stitchstream
 
 
 BASE_URL = "https://api.hubapi.com"
-STITCH_REDIRECT_URL = "???"
+STITCH_REDIRECT_URL = "???"  # TODO
 STITCH_CLIENT_ID = "688261c2-cf70-11e5-9eb6-31930a91f78c"
-STITCH_CLIENT_SECRET = None
-OAUTH_CODE = None
+STITCH_CLIENT_SECRET = None  # TODO
 
 REFRESH_TOKEN = None
 ACCESS_TOKEN = None
@@ -208,10 +207,10 @@ def _auth(payload):
     TOKEN_EXPIRES = datetime.datetime.utcnow() + datetime.timedelta(seconds=auth['expires_in'])
 
 
-def authorize():
+def authorize(oauth_code):
     _auth({
         "grant_type": "refresh_token",
-        "code": OAUTH_CODE,
+        "code": oauth_code,
     })
 
 
@@ -539,8 +538,6 @@ def do_sync():
 
 
 def main():
-    global OAUTH_CODE
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', help='Config file', required=True)
     parser.add_argument('-s', '--state', help='State file')
@@ -550,13 +547,14 @@ def main():
         logger.info("Loading state from " + args.state)
         with open(args.state) as f:
             state.update(json.load(f))
+    else:
+        logger.info("Using default state")
 
-    logger.info("Authorizing OAUTH code")
+    logger.info("Authorizing")
     with open(args.config) as f:
         config = json.load(f)
 
-    OAUTH_CODE = config['oauth_code']
-    authorize()
+    authorize(config['oauth_code'])
 
     try:
         logger.info("Starting sync")
