@@ -188,15 +188,20 @@ def transform_record(record, schema):
             if field_name in record}
 
 
-def _auth(payload):
+def refresh_token():
     global ACCESS_TOKEN
     global REFRESH_TOKEN
     global TOKEN_EXPIRES
 
-    payload["client_id"] = STITCH_CLIENT_ID
-    payload["client_secret"] = STITCH_CLIENT_SECRET
+    payload = {
+        "grant_type": "refresh_token",
+        "redirect_uri": STITCH_REDIRECT_URL,
+        "refresh_token": REFRESH_TOKEN,
+        "client_id": STITCH_CLIENT_ID,
+        "client_secret": STITCH_CLIENT_SECRET,
+    }
 
-    resp = requests.post(base_url + "/oauth/v1/token", data=data)
+    resp = requests.post(base_url + "/oauth/v1/token", data=payload)
     if resp.status_code == 400:
         # failed to auth
         sys.exit(1)
@@ -205,21 +210,6 @@ def _auth(payload):
     ACCESS_TOKEN = auth['access_token']
     REFRESH_TOKEN = auth['refresh_token']
     TOKEN_EXPIRES = datetime.datetime.utcnow() + datetime.timedelta(seconds=auth['expires_in'])
-
-
-def authorize(oauth_code):
-    _auth({
-        "grant_type": "refresh_token",
-        "code": oauth_code,
-    })
-
-
-def refresh_token():
-    _auth({
-        "grant_type": "refresh_token",
-        "redirect_uri": STITCH_REDIRECT_URL,
-        "refresh_token": REFRESH_TOKEN,
-    })
 
 
 @backoff.on_exception(backoff.expo,
@@ -538,6 +528,8 @@ def do_sync():
 
 
 def main():
+    global REFRESH_TOKEN
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', help='Config file', required=True)
     parser.add_argument('-s', '--state', help='State file')
@@ -554,7 +546,8 @@ def main():
     with open(args.config) as f:
         config = json.load(f)
 
-    authorize(config['oauth_code'])
+    REFRESH_TOKEN = config['refresh_token']
+    refresh_token()
 
     try:
         logger.info("Starting sync")
