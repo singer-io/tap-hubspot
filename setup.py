@@ -3,13 +3,18 @@
 from setuptools import setup, find_packages
 import os.path
 
-setup(name='stream-hubspot',
-      version='0.1.0',
-      description='Streams Hubspot data',
+
+with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'VERSION')) as f:
+    version = f.read().strip()
+
+
+setup(name='tap-hubspot',
+      version=version,
+      description='Taps Hubspot data',
       author='Stitch',
-      url='https://github.com/stitchstreams/stream-hubspot',
+      url='https://github.com/stitchstreams/tap-hubspot',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
-      py_modules=['stream_hubspot'],
+      py_modules=['tap_hubspot'],
       install_requires=[
           'stitchstream-python>=0.5.0',
           'requests==2.12.4',
@@ -18,11 +23,11 @@ setup(name='stream-hubspot',
       ],
       entry_points='''
           [console_scripts]
-          stream-hubspot=stream_hubspot:main
+          tap-hubspot=tap_hubspot:main
       ''',
       packages=['stream_hubspot'],
       package_data = {
-          'stream_hubspot': [
+          'schemas': [
               "campaigns.json",
               "companies.json",
               "contact_lists.json",
@@ -34,6 +39,10 @@ setup(name='stream-hubspot',
               "owners.json",
               "subscription_changes.json",
               "workflows.json",
-          ]
+          ],
+          '': [
+              'LICENSE',
+              'VERSION',
+          ],
       }
 )
