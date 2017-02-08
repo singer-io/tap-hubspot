@@ -135,9 +135,11 @@ def get_custom_schema(entity_name):
 
 
 def load_schema(entity_name):
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                        "stream_hubspot",
-                        "{}.json".format(entity_name))
+    path = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "tap_hubspot",
+        "{}.json".format(entity_name))
+
     with open(path) as f:
         schema = json.loads(f.read())
 

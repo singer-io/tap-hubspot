@@ -4,12 +4,8 @@ from setuptools import setup, find_packages
 import os.path
 
 
-with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'VERSION')) as f:
-    version = f.read().strip()
-
-
 setup(name='tap-hubspot',
-      version=version,
+      version='0.1.0',
       description='Taps Hubspot data',
       author='Stitch',
       url='https://github.com/stitchstreams/tap-hubspot',
@@ -25,9 +21,9 @@ setup(name='tap-hubspot',
           [console_scripts]
           tap-hubspot=tap_hubspot:main
       ''',
-      packages=['stream_hubspot'],
+      packages=['tap_hubspot'],
       package_data = {
-          'schemas': [
+          'tap_hubspot': [
               "campaigns.json",
               "companies.json",
               "contact_lists.json",
@@ -39,10 +35,6 @@ setup(name='tap-hubspot',
               "owners.json",
               "subscription_changes.json",
               "workflows.json",
-          ],
-          '': [
-              'LICENSE',
-              'VERSION',
           ],
       }
 )

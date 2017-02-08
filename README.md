@@ -1,4 +1,4 @@
-# stream-hubspot
+# tap-hubspot
 
 
 ---
