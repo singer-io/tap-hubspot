@@ -244,7 +244,7 @@ def sync_contacts():
         logger.info("Syncing recent contacts")
 
     schema = load_schema('contacts')
-    stream("schema", schema, "contacts")
+    stitchstream.write_schema("contacts", schema, "canonical-vid")
 
     params = {
         'showListMemberships': True,
@@ -296,7 +296,7 @@ def sync_companies():
         logger.info("Syncing recent companies")
 
     schema = load_schema('companies')
-    stitchstream.write_schema("companies", schema)
+    stitchstream.write_schema("companies", schema, "companyId")
 
     params = {'count': 250}
     has_more = True
@@ -342,7 +342,7 @@ def sync_deals():
         logger.info("Syncing recent deals")
 
     schema = load_schema('deals')
-    stream("schema", schema, "deals")
+    stitchstream.write_schema("deals", schema, ["portalId", "dealId"])
 
     params = {'count': 250}
     has_more = True
@@ -382,7 +382,7 @@ def sync_campaigns():
     logger.info("Syncing all campaigns")
 
     schema = load_schema('campaigns')
-    stream("schema", schema, "campaigns")
+    stitchstream.write_schema("campaigns", schema, ["id"])
 
     params = {'limit': 500}
     has_more = True
@@ -404,12 +404,12 @@ def sync_campaigns():
     return persisted_count
 
 
-def sync_no_details(entity_type, entity_path, state_path):
+def sync_no_details(entity_type, entity_path, state_path, key_properties):
     last_sync = datetime.datetime.strptime(state[entity_type], DATETIME_FMT)
     logger.info("Syncing {} from {}".format(entity_type, last_sync))
 
     schema = load_schema(entity_type)
-    stitchstream.write_schema(entity_type, schema)
+    stitchstream.write_schema(entity_type, schema, key_properties)
 
     params = {
         'startTimestamp': int(last_sync.timestamp() * 1000),
@@ -438,19 +438,20 @@ def sync_no_details(entity_type, entity_path, state_path):
 
 
 def sync_subscription_changes():
-    return sync_no_details("subscription_changes", "timeline", "timestamp")
+    return sync_no_details("subscription_changes", "timeline", "timestamp",
+                           ["timestamp", "portalId", "recipient"])
 
 
 def sync_email_events():
-    return sync_no_details("email_events", "events", "created")
+    return sync_no_details("email_events", "events", "created", ["id"])
 
 
-def sync_time_filtered(entity_type, timestamp_path, entity_path=None):
+def sync_time_filtered(entity_type, timestamp_path, entity_path, key_properties):
     last_sync = datetime.datetime.strptime(state[entity_type], DATETIME_FMT)
     logger.info("Syncing all {} from {}".format(entity_type, last_sync))
 
     schema = load_schema(entity_type)
-    stitchstream.write_schema(entity_type, schema)
+    stitchstream.write_schema(entity_type, schema, key_properties)
 
     resp = request(get_url(entity_type))
     records = resp.json()
@@ -472,7 +473,7 @@ def sync_contact_lists():
     logger.info("Syncing all contact lists")
 
     schema = load_schema('contact_lists')
-    stream("schema", schema, "contact_lists")
+    stitchstream.write_schema("contact_lists", schema, ["internalListId"])
 
     params = {'count': 250}
     has_more = True
@@ -498,19 +499,19 @@ def sync_contact_lists():
 
 
 def sync_forms():
-    return sync_time_filtered("forms", "updatedAt")
+    return sync_time_filtered("forms", "updatedAt", None, ["guid"])
 
 
 def sync_workflows():
-    return sync_time_filtered("workflows", "updatedAt", "workflows")
+    return sync_time_filtered("workflows", "updatedAt", "workflows", ["id"])
 
 
 def sync_keywords():
-    return sync_time_filtered("keywords", "created_at", "keywords")
+    return sync_time_filtered("keywords", "created_at", "keywords", ["keyword_guid"])
 
 
 def sync_owners():
-    return sync_time_filtered("owners", "updatedAt")
+    return sync_time_filtered("owners", "updatedAt", None, ["portalId", "ownerId"])
 
 
 def do_sync():

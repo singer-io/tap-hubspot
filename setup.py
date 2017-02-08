@@ -5,14 +5,14 @@ import os.path
 
 
 setup(name='tap-hubspot',
-      version='0.1.0',
+      version='0.2.0',
       description='Taps Hubspot data',
       author='Stitch',
       url='https://github.com/stitchstreams/tap-hubspot',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_hubspot'],
       install_requires=[
-          'stitchstream-python>=0.5.0',
+          'stitchstream-python>=0.6.0',
           'requests==2.12.4',
           'backoff==1.3.2',
           'python-dateutil==2.6.0',
