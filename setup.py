@@ -1,21 +1,18 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
-import os.path
-
+from setuptools import setup
 
 setup(name='tap-hubspot',
-      version='0.2.0',
-      description='Taps Hubspot data',
+      version='0.3.0',
+      description='Singer.io tap for extracting data from the HubSpot API',
       author='Stitch',
-      url='https://github.com/stitchstreams/tap-hubspot',
+      url='http://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_hubspot'],
       install_requires=[
-          'stitchstream-python>=0.6.0',
+          'singer-python>=0.1.0',
           'requests==2.12.4',
           'backoff==1.3.2',
-          'python-dateutil==2.6.0',
       ],
       entry_points='''
           [console_scripts]
@@ -23,7 +20,7 @@ setup(name='tap-hubspot',
       ''',
       packages=['tap_hubspot'],
       package_data = {
-          'tap_hubspot': [
+          'tap_hubspot/schemas': [
               "campaigns.json",
               "companies.json",
               "contact_lists.json",
@@ -36,5 +33,6 @@ setup(name='tap-hubspot',
               "subscription_changes.json",
               "workflows.json",
           ],
-      }
+      },
+      include_package_data=True,
 )
