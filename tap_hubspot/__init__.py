@@ -20,6 +20,7 @@ CONFIG = {
     "client_id": None,
     "client_secret": None,
     "refresh_token": None,
+    "start_date": None,
 }
 STATE = {}
 
@@ -54,7 +55,7 @@ endpoints = {
 
 def get_start(key):
     if key not in STATE:
-        STATE[key] = utils.strftime(datetime.datetime.utcnow() - datetime.timedelta(days=365))
+        STATE[key] = CONFIG['start_date']
 
     return STATE[key]
 
@@ -450,7 +451,7 @@ def main():
     args = utils.parse_args()
 
     config = utils.load_json(args.config)
-    utils.check_config(config, ["redirect_uri", "client_id", "client_secret", "refresh_token"])
+    utils.check_config(config, ["redirect_uri", "client_id", "client_secret", "refresh_token", "start_date"])
     CONFIG.update(config)
 
     if args.state:
