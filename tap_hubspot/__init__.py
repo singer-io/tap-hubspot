@@ -6,8 +6,8 @@ import backoff
 import requests
 import singer
 
-from . import utils
-from .transform import transform_row, _transform_datetime
+from tap_hubspot import utils
+from tap_hubspot.transform import transform_row, _transform_datetime
 
 
 BASE_URL = "https://api.hubapi.com"
