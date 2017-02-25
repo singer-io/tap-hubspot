@@ -9,6 +9,7 @@ import singer
 from tap_hubspot import utils
 from tap_hubspot.transform import transform_row, _transform_datetime
 
+logger = singer.get_logger()
 
 BASE_URL = "https://api.hubapi.com"
 CONFIG = {
