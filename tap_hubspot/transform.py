@@ -1,24 +1,25 @@
 import datetime
-from . import utils
+from tap_hubspot import utils
 
 
 class InvalidData(Exception):
     """Raise when data doesn't validate the schema"""
 
 
-def transform_row(row, schem):
+def transform_row(row, schema):
+    print(row)
     return _transform_field(row, schema)
 
 
 def _transform_datetime(value):
-    return utils.strftime(datetime.datetime.utcfromtimestamp(int(timestamp) * 0.001))
+    return utils.strftime(datetime.datetime.utcfromtimestamp(int(value) * 0.001))
 
 
 def _anyOf(data, schema_list):
     for schema in schema_list:
         try:
-            return transform_field(data, schema)
-        except:
+            return _transform_field(data, schema)
+        except Exception as e:
             pass
 
     raise InvalidData("{} doesn't match any of {}".format(data, schema_list))

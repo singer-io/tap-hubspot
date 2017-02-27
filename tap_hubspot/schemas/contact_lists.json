@@ -5,7 +5,7 @@
       "type": ["null", "integer"]
     },
     "metaData": {
-      "type": ["null", "object"],
+      "type": "object",
       "properties": {
         "processing": {
           "type": ["null", "string"]
@@ -33,9 +33,9 @@
       "type": ["null", "string"]
     },
     "filters": {
-      "type": ["null", "array"],
+      "type": "array",
       "items": {
-        "type": ["null", "object"],
+        "type": "object",
         "properties": {
           "filterFamily": {
             "type": ["null", "string"]

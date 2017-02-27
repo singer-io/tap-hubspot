@@ -35,14 +35,14 @@
       "type": ["null", "string"]
     },
     "formFieldGroups": {
-      "type": ["null", "array"],
+      "type": "array",
       "items": {
-        "type": ["null", "object"],
+        "type": "object",
         "properties": {
           "fields": {
-            "type": ["null", "array"],
+            "type": "array",
             "items": {
-              "type": ["null", "object"],
+              "type": "object",
               "properties": {
                 "name": {
                   "type": ["null", "string"]
@@ -69,7 +69,7 @@
                   "type": ["null", "boolean"]
                 },
                 "validation": {
-                  "type": ["null", "object"],
+                  "type": "object",
                   "properties": {
                     "name": {
                       "type": ["null", "string"]
@@ -84,7 +84,7 @@
                       "type": ["null", "boolean"]
                     },
                     "blockedEmailAddresses": {
-                      "type": ["null", "array"],
+                      "type": "array",
                       "items": {
                         "type": ["null", "string"]
                       }
@@ -122,7 +122,7 @@
             "type": ["null", "boolean"]
           },
           "richText": {
-            "type": ["null", "object"],
+            "type": "object",
             "properties": {
               "content": {
                 "type": ["null", "string"]
@@ -174,9 +174,9 @@
       "type": ["null", "string"]
     },
     "metaData": {
-      "type": ["null", "array"],
+      "type": "array",
       "items": {
-        "type": ["null", "object"],
+        "type": "object",
         "properties": {
           "name": {
             "type": ["null", "string"]

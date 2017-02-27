@@ -65,7 +65,7 @@ def get_url(endpoint, **kwargs):
     if endpoint not in endpoints:
         raise ValueError("Invalid endpoint {}".format(endpoint))
 
-    return endpoints[endpoint].format(**kwargs)
+    return BASE_URL + endpoints[endpoint].format(**kwargs)
 
 
 def get_field_type_schema(field_type):
@@ -145,12 +145,14 @@ def refresh_token():
         "client_secret": CONFIG['client_secret'],
     }
 
+    logger.info("Refreshing token")
     resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
     resp.raise_for_status()
     auth = resp.json()
     CONFIG['access_token'] = auth['access_token']
     CONFIG['refresh_token'] = auth['refresh_token']
     CONFIG['token_expires'] = datetime.datetime.utcnow() + datetime.timedelta(seconds=auth['expires_in'] - 600)
+    logger.info("Token refreshed. Expires at {}".format(CONFIG['token_expires']))
 
 
 @backoff.on_exception(backoff.expo,
@@ -163,8 +165,8 @@ def request(url, params=None):
         refresh_token()
 
     params = params or {}
-    params["access_token"] = CONFIG['access_token']
-    response = requests.get(url, params=params)
+    headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
+    response = requests.get(url, params=params, headers=headers)
     response.raise_for_status()
     return response
 
@@ -182,16 +184,20 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
     while True:
         data = request(url, params).json()
         if path:
-            data = data[path]
+            for row in data[path]:
+                yield row
 
-        for row in data:
-            yield row
+            if not data.get(more_key, False):
+                break
 
-        if not data.get(more_key, False):
+            for key, target in zip(offset_keys, offset_targets):
+                params[target] = data[key]
+
+        else:
+            for row in data:
+                yield row
+
             break
-
-        for key, target in zip(offset_keys, offset_targets):
-            params[target] = data[key]
 
 
 def sync_contacts():
@@ -217,8 +223,8 @@ def sync_contacts():
     vids = []
     for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
         modified_time = None
-        if 'lastmodifieddate' in contact['properties']:
-            modified_time = utils.strptime(_transform_datetime(row['properties']['lastmodifieddate']))
+        if 'lastmodifieddate' in row['properties']:
+            modified_time = utils.strptime(_transform_datetime(row['properties']['lastmodifieddate']['value']))
 
         if not modified_time or modified_time >= last_sync:
             vids.append(row['vid'])
@@ -251,7 +257,7 @@ def sync_companies():
         offset_targets = ["offset"]
 
     schema = utils.load_schema('companies')
-    stitchstream.write_schema("companies", schema, ["companyId"])
+    singer.write_schema("companies", schema, ["companyId"])
 
     url = get_url(endpoint)
     params = {'count': 250}
@@ -316,7 +322,7 @@ def sync_campaigns():
         singer.write_record("campaigns", record)
 
         if i % 500 == 0:
-            stitchstream.write_state(STATE)
+            singer.write_state(STATE)
 
 
 def sync_subscription_changes():
@@ -377,7 +383,7 @@ def sync_forms():
     singer.write_schema("forms", schema, ["guid"])
     start = get_start("forms")
 
-    data = request(get_url("forms"))
+    data = request(get_url("forms")).json()
     for row in data:
         row = transform_row(row, schema)
         if row['updatedAt'] >= start:
@@ -392,7 +398,7 @@ def sync_workflows():
     singer.write_schema("workflows", schema, ["id"])
     start = get_start("workflows")
 
-    data = request(get_url("workflows"))
+    data = request(get_url("workflows")).json()
     for row in data['workflows']:
         row = transform_row(row, schema)
         if row['updatedAt'] >= start:
@@ -407,7 +413,7 @@ def sync_keywords():
     singer.write_schema("keywords", schema, ["keyword_guid"])
     start = get_start("keywords")
 
-    data = request(get_url("keywords"))
+    data = request(get_url("keywords")).json()
     for row in data['keywords']:
         row = transform_row(row, schema)
         if row['created_at'] >= start:
@@ -422,7 +428,7 @@ def sync_owners():
     singer.write_schema("owners", schema, ["portalId", "ownerId"])
     start = get_start("owners")
 
-    data = request(get_url("owners"))
+    data = request(get_url("owners")).json()
     for row in data:
         row = transform_row(row, schema)
         if row['updatedAt'] >= start:
