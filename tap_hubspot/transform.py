@@ -7,7 +7,6 @@ class InvalidData(Exception):
 
 
 def transform_row(row, schema):
-    print(row)
     return _transform_field(row, schema)
 
 
