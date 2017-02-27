@@ -145,7 +145,7 @@ def refresh_token():
         "client_secret": CONFIG['client_secret'],
     }
 
-    resp = requests.post(base_url + "/oauth/v1/token", data=payload)
+    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
     resp.raise_for_status()
     auth = resp.json()
     CONFIG['access_token'] = auth['access_token']
