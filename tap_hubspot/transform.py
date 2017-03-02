@@ -2,10 +2,6 @@ import datetime
 from tap_hubspot import utils
 
 
-class InvalidData(Exception):
-    """Raise when data doesn't validate the schema"""
-
-
 def _transform_datetime(value):
     return utils.strftime(datetime.datetime.utcfromtimestamp(int(value) * 0.001))
 
@@ -19,7 +15,7 @@ def _transform_array(data, item_schema):
 
 
 def _transform(data, typ, schema):
-    if "format" in schema:
+    if "format" in schema and typ != "null":
         if schema["format"] == "date-time":
             data = _transform_datetime(data)
 
@@ -30,7 +26,9 @@ def _transform(data, typ, schema):
         data = _transform_array(data, schema["items"])
 
     if typ == "null":
-        if data is not None:
+        if data is None or data == "":
+            return None
+        else:
             raise ValueError("Not null")
 
     if typ == "string":
@@ -58,6 +56,9 @@ def transform(data, schema):
         types.append("null")
 
     for typ in types:
-        return _transform(data, typ, schema)
+        try:
+            return _transform(data, typ, schema)
+        except Exception as e:
+            pass
 
     raise Exception("Invalid data")

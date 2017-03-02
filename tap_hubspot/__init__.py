@@ -86,7 +86,7 @@ def get_field_type_schema(field_type):
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": ["null", "object"],
+            "type": "object",
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
@@ -95,9 +95,12 @@ def get_field_schema(field_type, extras=False):
             }
         }
     else:
-        return get_field_type_schema(field_type)
-
-    return d
+        return {
+            "type": "object",
+            "properties": {
+                "value": get_field_type_schema(field_type),
+            }
+        }
 
 
 def parse_custom_schema(entity_name, data):
@@ -109,18 +112,11 @@ def get_custom_schema(entity_name):
 
 
 def load_schema(entity_name):
-    path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        "tap_hubspot",
-        "{}.json".format(entity_name))
-
-    with open(path) as f:
-        schema = json.loads(f.read())
-
+    schema = utils.load_schema(entity_name)
     if entity_name in ["contacts", "companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
-            "type": ["null", "object"],
+            "type": "object",
             "properties": custom_schema,
         }
 
@@ -203,7 +199,7 @@ def sync_contacts():
         offset_keys = ['vid-offset', 'time-offset']
         offset_targets = ['vidOffset', 'timeOffset']
 
-    schema = utils.load_schema("contacts")
+    schema = load_schema("contacts")
     singer.write_schema("contacts", schema, ["canonical-vid"])
 
     url = get_url(endpoint)
@@ -225,10 +221,15 @@ def sync_contacts():
             for vid, record in data.items():
                 record = transform(record, schema)
                 singer.write_record("contacts", record)
-                utils.update_state(STATE, "contacts", record.get('lastmodifieddate'))
+
+                modified_time = None
+                if 'lastmodifieddate' in record['properties']:
+                    modified_time = record['properties']['lastmodifieddate']['value']
 
             singer.write_state(STATE)
             vids = []
+
+    utils.update_state(STATE, "contacts", modified_time)
 
 
 def sync_companies():
@@ -247,13 +248,14 @@ def sync_companies():
         offset_keys = ["offset"]
         offset_targets = ["offset"]
 
-    schema = utils.load_schema('companies')
+    schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"])
 
     url = get_url(endpoint)
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
         record = request(get_url("companies_detail", company_id=record['companyId'])).json()
+
         record = transform(record, schema)
 
         modified_time = None
@@ -278,7 +280,7 @@ def sync_deals():
     else:
         endpoint = "deals_recent"
 
-    schema = utils.load_schema("deals")
+    schema = load_schema("deals")
     singer.write_schema("deals", schema, ["portalId", "dealId"])
 
     url = get_url(endpoint)
@@ -302,7 +304,7 @@ def sync_deals():
 
 
 def sync_campaigns():
-    schema = utils.load_schema("campaigns")
+    schema = load_schema("campaigns")
     singer.write_schema("campaigns", schema, ["id"])
 
     url = get_url("campaigns_all")
@@ -317,7 +319,7 @@ def sync_campaigns():
 
 
 def sync_subscription_changes():
-    schema = utils.load_schema("subscription_changes")
+    schema = load_schema("subscription_changes")
     singer.write_schema("subscription_changes", schema, ["timestamp", "portalId", "recipient"])
     start = get_start("subscription_changes")
 
@@ -336,7 +338,7 @@ def sync_subscription_changes():
 
 
 def sync_email_events():
-    schema = utils.load_schema("email_events")
+    schema = load_schema("email_events")
     singer.write_schema("email_events", schema, ["id"])
     start = get_start("email_events")
 
@@ -355,7 +357,7 @@ def sync_email_events():
 
 
 def sync_contact_lists():
-    schema = utils.load_schema("contact_lists")
+    schema = load_schema("contact_lists")
     singer.write_schema("contact_lists", schema, ["internalListId"])
     start = get_start("contact_lists")
 
@@ -370,7 +372,7 @@ def sync_contact_lists():
 
 
 def sync_forms():
-    schema = utils.load_schema("forms")
+    schema = load_schema("forms")
     singer.write_schema("forms", schema, ["guid"])
     start = get_start("forms")
 
@@ -385,7 +387,7 @@ def sync_forms():
 
 
 def sync_workflows():
-    schema = utils.load_schema("workflows")
+    schema = load_schema("workflows")
     singer.write_schema("workflows", schema, ["id"])
     start = get_start("workflows")
 
@@ -400,7 +402,7 @@ def sync_workflows():
 
 
 def sync_keywords():
-    schema = utils.load_schema("keywords")
+    schema = load_schema("keywords")
     singer.write_schema("keywords", schema, ["keyword_guid"])
     start = get_start("keywords")
 
@@ -415,7 +417,7 @@ def sync_keywords():
 
 
 def sync_owners():
-    schema = utils.load_schema("owners")
+    schema = load_schema("owners")
     singer.write_schema("owners", schema, ["portalId", "ownerId"])
     start = get_start("owners")
 
