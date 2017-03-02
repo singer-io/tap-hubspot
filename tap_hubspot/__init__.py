@@ -204,7 +204,7 @@ def sync_contacts():
         offset_targets = ['vidOffset', 'timeOffset']
 
     schema = utils.load_schema("contacts")
-    singer.write_schema("contacts", schema, ["id"])
+    singer.write_schema("contacts", schema, ["canonical-vid"])
 
     url = get_url(endpoint)
     params = {
