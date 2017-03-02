@@ -6,84 +6,58 @@ class InvalidData(Exception):
     """Raise when data doesn't validate the schema"""
 
 
-def transform_row(row, schema):
-    return _transform_field(row, schema)
-
-
 def _transform_datetime(value):
     return utils.strftime(datetime.datetime.utcfromtimestamp(int(value) * 0.001))
 
 
-def _anyOf(data, schema_list):
-    for schema in schema_list:
-        try:
-            return _transform_field(data, schema)
-        except Exception as e:
-            pass
-
-    raise InvalidData("{} doesn't match any of {}".format(data, schema_list))
+def _transform_object(data, prop_schema):
+    return {k: transform(v, prop_schema[k]) for k, v in data.items() if k in prop_schema}
 
 
-def _array(data, items_schema):
-    return [_transform_field(value, items_schema) for value in data]
+def _transform_array(data, item_schema):
+    return [transform(row, item_schema) for row in data]
 
 
-def _object(data, properties_schema):
-    return {field: _transform_field(data[field], field_schema)
-            for field, field_schema in properties_schema.items()
-            if field in data}
+def _transform(data, typ, schema):
+    if "format" in schema:
+        if schema["format"] == "date-time":
+            data = _transform_datetime(data)
+
+    if typ == "object":
+        data = _transform_object(data, schema["properties"])
+
+    if typ == "array":
+        data = _transform_array(data, schema["items"])
+
+    if typ == "null":
+        if data is not None:
+            raise ValueError("Not null")
+
+    if typ == "string":
+        data = str(data)
+
+    if typ == "integer":
+        data = int(data)
+
+    if typ == "number":
+        data = float(data)
+
+    if typ == "boolean":
+        data = bool(data)
+
+    return data
 
 
-def _type_transform(value, type_schema):
-    if isinstance(type_schema, list):
-        for typ in type_schema:
-            try:
-                return _type_transform(value, typ)
-            except:
-                pass
+def transform(data, schema):
+    types = schema["type"]
+    if not isinstance(types, list):
+        types = [types]
 
-        raise InvalidData("{} doesn't match any of {}".format(value, type_schema))
+    if "null" in types:
+        types.remove("null")
+        types.append("null")
 
-    if not value:
-        if type_schema != "null":
-            raise InvalidData("Null is not allowed")
-        else:
-            return None
+    for typ in types:
+        return _transform(data, typ, schema)
 
-    if type_schema == "string":
-        return str(value)
-
-    if type_schema == "integer":
-        return int(value)
-
-    if type_schema == "number":
-        return float(value)
-
-    if type_schema == "boolean":
-        return bool(value)
-
-    raise InvalidData("Unknown type {}".format(type_schema))
-
-
-def _format_transform(value, format_schema):
-    if format_schema == "date-time":
-        return _transform_datetime(value)
-
-    raise InvalidData("Unknown format {}".format(format_schema))
-
-
-def _transform_field(value, field_schema):
-    if "anyOf" in field_schema:
-        return _anyOf(value, field_schema["anyOf"])
-
-    if field_schema["type"] == "array":
-        return _array(value, field_schema["items"])
-
-    if field_schema["type"] == "object":
-        return _object(value, field_schema["properties"])
-
-    value = _type_transform(value, field_schema["type"])
-    if "format" in field_schema:
-        value = _format_transform(value, field_schema["format"])
-
-    return value
+    raise Exception("Invalid data")

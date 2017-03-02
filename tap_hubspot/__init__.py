@@ -7,7 +7,7 @@ import requests
 import singer
 
 from tap_hubspot import utils
-from tap_hubspot.transform import transform_row, _transform_datetime
+from tap_hubspot.transform import transform, _transform_datetime
 
 logger = singer.get_logger()
 
@@ -73,17 +73,8 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "boolean"]}
 
     elif field_type == "datetime":
-        return {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "format": "date-time",
-                },
-                {
-                    "type": "null",
-                },
-            ],
-        }
+        return {"type": ["null", "string"],
+                "format": "date-time"}
 
     elif field_type == "number":
         return {"type": ["null", "number"]}
@@ -232,7 +223,7 @@ def sync_contacts():
         if len(vids) == 100:
             data = request(get_url("contacts_detail"), params={'vid': vids}).json()
             for vid, record in data.items():
-                record = transform_row(record, schema)
+                record = transform(record, schema)
                 singer.write_record("contacts", record)
                 utils.update_state(STATE, "contacts", record.get('lastmodifieddate'))
 
@@ -263,7 +254,7 @@ def sync_companies():
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
         record = request(get_url("companies_detail", company_id=record['companyId'])).json()
-        record = transform_row(record, schema)
+        record = transform(record, schema)
 
         modified_time = None
         if 'hs_lastmodifieddate' in record:
@@ -294,7 +285,7 @@ def sync_deals():
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, "deals", "hasMore", "offset", "offset")):
         record = request(get_url("deals_detail", deal_id=record['dealId'])).json()
-        record = transform_row(record, schema)
+        record = transform(record, schema)
 
         modified_time = None
         if 'hs_lastmodifieddate' in record:
@@ -318,7 +309,7 @@ def sync_campaigns():
     params = {'limit': 500}
     for i, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
         record = request(get_url("campaigns_detail", campaign_id=record['id'])).json()
-        record = transform_row(record, schema)
+        record = transform(record, schema)
         singer.write_record("campaigns", record)
 
         if i % 500 == 0:
@@ -336,7 +327,7 @@ def sync_subscription_changes():
         'limit': 1000,
     }
     for i, row in enumerate(gen_request(url, params, "timeline", "hasMore", "offset", "offset")):
-        row = transform_row(row, schema)
+        row = transform(row, schema)
         singer.write_record("subscription_changes", row)
         utils.update_state(STATE, "subscription_changes", row['timestamp'])
 
@@ -355,7 +346,7 @@ def sync_email_events():
         'limit': 1000,
     }
     for i, row in enumerate(gen_request(url, params, "events", "hasMore", "offset", "offset")):
-        row = transform_row(row, schema)
+        row = transform(row, schema)
         singer.write_record("email_events", row)
         utils.update_state(STATE, "email_events", row['created'])
 

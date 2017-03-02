@@ -86,7 +86,7 @@
             }
         }
     },
-    "form-submission": {
+    "form-submissions": {
       "type": ["null", "array"],
       "items": {
         "type": ["null", "object"],
