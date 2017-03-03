@@ -225,11 +225,11 @@ def sync_contacts():
                 modified_time = None
                 if 'lastmodifieddate' in record['properties']:
                     modified_time = record['properties']['lastmodifieddate']['value']
+                    utils.update_state(STATE, "contacts", modified_time)
 
-            singer.write_state(STATE)
             vids = []
 
-    utils.update_state(STATE, "contacts", modified_time)
+    singer.write_state(STATE)
 
 
 def sync_companies():
@@ -254,15 +254,14 @@ def sync_companies():
     url = get_url(endpoint)
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
-        record = request(get_url("companies_detail", company_id=record['companyId'])).json()
-
+        record = request(get_url("companies_detail", company_id=row['companyId'])).json()
         record = transform(record, schema)
 
         modified_time = None
         if 'hs_lastmodifieddate' in record:
-            modified_time = utils.strptime(record['hs_lastmodifieddate'])
+            modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
         elif 'createdate' in record:
-            modified_time = utils.strptime(record['createdate'])
+            modified_time = utils.strptime(record['createdate']['value'])
 
         if not modified_time or modified_time >= last_sync:
             singer.write_record("companies", record)
@@ -291,9 +290,9 @@ def sync_deals():
 
         modified_time = None
         if 'hs_lastmodifieddate' in record:
-            modified_time = utils.strptime(record['hs_lastmodifieddate'])
+            modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
         elif 'createdate' in record:
-            modified_time = utils.strptime(record['createdate'])
+            modified_time = utils.strptime(record['createdate']['value'])
 
         if not modified_time or modified_time >= last_sync:
             singer.write_record("deals", record)
@@ -314,9 +313,6 @@ def sync_campaigns():
         record = transform(record, schema)
         singer.write_record("campaigns", record)
 
-        if i % 500 == 0:
-            singer.write_state(STATE)
-
 
 def sync_subscription_changes():
     schema = load_schema("subscription_changes")
@@ -333,8 +329,7 @@ def sync_subscription_changes():
         singer.write_record("subscription_changes", row)
         utils.update_state(STATE, "subscription_changes", row['timestamp'])
 
-        if i % 1000 == 0:
-            singer.write_state(STATE)
+    singer.write_state(STATE)
 
 
 def sync_email_events():
@@ -352,8 +347,7 @@ def sync_email_events():
         singer.write_record("email_events", row)
         utils.update_state(STATE, "email_events", row['created'])
 
-        if i % 1000 == 0:
-            singer.write_state(STATE)
+    singer.write_state(STATE)
 
 
 def sync_contact_lists():
@@ -366,9 +360,6 @@ def sync_contact_lists():
     for i, row in enumerate(gen_request(url, params, "lists", "has-more", "offset", "offset")):
         row = transform_row(row, schema)
         singer.write_record("contact_lists", row)
-
-        if i % 250 == 0:
-            singer.write_state(STATE)
 
 
 def sync_forms():
