@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import sys
 
 import backoff
 import requests
@@ -10,6 +11,7 @@ from tap_hubspot import utils
 from tap_hubspot.transform import transform, _transform_datetime
 
 logger = singer.get_logger()
+session = requests.Session()
 
 BASE_URL = "https://api.hubapi.com"
 CONFIG = {
@@ -153,9 +155,15 @@ def request(url, params=None):
 
     params = params or {}
     headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
-    return response
+    req = requests.Request('GET', url, params=params, headers=headers).prepare()
+    logger.info("GET {}".format(req.url))
+    resp = session.send(req)
+
+    if resp.status_code >= 400:
+        logger.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
+        sys.exit(1)
+
+    return resp
 
 
 def gen_request(url, params, path, more_key, offset_keys, offset_targets):
