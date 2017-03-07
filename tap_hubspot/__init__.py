@@ -285,7 +285,7 @@ def sync_deals():
     url = get_url(endpoint)
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, "deals", "hasMore", "offset", "offset")):
-        record = request(get_url("deals_detail", deal_id=record['dealId'])).json()
+        record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = transform(record, schema)
 
         modified_time = None
@@ -309,7 +309,7 @@ def sync_campaigns():
     url = get_url("campaigns_all")
     params = {'limit': 500}
     for i, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
-        record = request(get_url("campaigns_detail", campaign_id=record['id'])).json()
+        record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = transform(record, schema)
         singer.write_record("campaigns", record)
 
@@ -325,9 +325,9 @@ def sync_subscription_changes():
         'limit': 1000,
     }
     for i, row in enumerate(gen_request(url, params, "timeline", "hasMore", "offset", "offset")):
-        row = transform(row, schema)
-        singer.write_record("subscription_changes", row)
-        utils.update_state(STATE, "subscription_changes", row['timestamp'])
+        record = transform(row, schema)
+        singer.write_record("subscription_changes", record)
+        utils.update_state(STATE, "subscription_changes", record['timestamp'])
 
     singer.write_state(STATE)
 
@@ -343,9 +343,9 @@ def sync_email_events():
         'limit': 1000,
     }
     for i, row in enumerate(gen_request(url, params, "events", "hasMore", "offset", "offset")):
-        row = transform(row, schema)
-        singer.write_record("email_events", row)
-        utils.update_state(STATE, "email_events", row['created'])
+        record = transform(row, schema)
+        singer.write_record("email_events", record)
+        utils.update_state(STATE, "email_events", record['created'])
 
     singer.write_state(STATE)
 
@@ -358,8 +358,8 @@ def sync_contact_lists():
     url = get_url("contact_lists")
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, "lists", "has-more", "offset", "offset")):
-        row = transform_row(row, schema)
-        singer.write_record("contact_lists", row)
+        record = transform(row, schema)
+        singer.write_record("contact_lists", record)
 
 
 def sync_forms():
@@ -369,10 +369,10 @@ def sync_forms():
 
     data = request(get_url("forms")).json()
     for row in data:
-        row = transform_row(row, schema)
-        if row['updatedAt'] >= start:
-            singer.write_record("forms", row)
-            utils.update_state(STATE, "forms", row['updatedAt'])
+        record = transform(row, schema)
+        if record['updatedAt'] >= start:
+            singer.write_record("forms", record)
+            utils.update_state(STATE, "forms", record['updatedAt'])
 
     singer.write_state(STATE)
 
@@ -384,10 +384,10 @@ def sync_workflows():
 
     data = request(get_url("workflows")).json()
     for row in data['workflows']:
-        row = transform_row(row, schema)
-        if row['updatedAt'] >= start:
-            singer.write_record("workflows", row)
-            utils.update_state(STATE, "workflows", row['updatedAt'])
+        record = transform(row, schema)
+        if record['updatedAt'] >= start:
+            singer.write_record("workflows", record)
+            utils.update_state(STATE, "workflows", record['updatedAt'])
 
     singer.write_state(STATE)
 
@@ -399,10 +399,10 @@ def sync_keywords():
 
     data = request(get_url("keywords")).json()
     for row in data['keywords']:
-        row = transform_row(row, schema)
-        if row['created_at'] >= start:
-            singer.write_record("keywords", row)
-            utils.update_state(STATE, "keywords", row['created_at'])
+        record = transform(row, schema)
+        if record['created_at'] >= start:
+            singer.write_record("keywords", record)
+            utils.update_state(STATE, "keywords", record['created_at'])
 
     singer.write_state(STATE)
 
@@ -414,10 +414,10 @@ def sync_owners():
 
     data = request(get_url("owners")).json()
     for row in data:
-        row = transform_row(row, schema)
-        if row['updatedAt'] >= start:
-            singer.write_record("owners", row)
-            utils.update_state(STATE, "owners", row['updatedAt'])
+        record = transform(row, schema)
+        if record['updatedAt'] >= start:
+            singer.write_record("owners", record)
+            utils.update_state(STATE, "owners", record['updatedAt'])
 
     singer.write_state(STATE)
 
