@@ -61,4 +61,4 @@ def transform(data, schema):
         except Exception as e:
             pass
 
-    raise Exception("Invalid data")
+    raise Exception("Invalid data: {} does not match {}".format(data, schema))
