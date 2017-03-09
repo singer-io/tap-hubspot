@@ -155,6 +155,9 @@ def request(url, params=None):
 
     params = params or {}
     headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
+    if 'user_agent' in CONFIG:
+        headers['User-Agent'] = CONFIG['user_agent']
+
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     logger.info("GET {}".format(req.url))
     resp = session.send(req)
