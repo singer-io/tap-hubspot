@@ -35,28 +35,31 @@
     "filters": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "filterFamily": {
-            "type": ["null", "string"]
-          },
-          "withinTimeMode": {
-            "type": ["null", "string"]
-          },
-          "checkPastVersions": {
-            "type": ["null", "boolean"]
-          },
-          "type": {
-            "type": ["null", "string"]
-          },
-          "property": {
-            "type": ["null", "string"]
-          },
-          "value": {
-            "type": ["null", "string"]
-          },
-          "operator": {
-            "type": ["null", "string"]
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "filterFamily": {
+              "type": ["null", "string"]
+            },
+            "withinTimeMode": {
+              "type": ["null", "string"]
+            },
+            "checkPastVersions": {
+              "type": ["null", "boolean"]
+            },
+            "type": {
+              "type": ["null", "string"]
+            },
+            "property": {
+              "type": ["null", "string"]
+            },
+            "value": {
+              "type": ["null", "string"]
+            },
+            "operator": {
+              "type": ["null", "string"]
+            }
           }
         }
       }
