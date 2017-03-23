@@ -13,6 +13,7 @@ from tap_hubspot.transform import transform, _transform_datetime
 logger = singer.get_logger()
 session = requests.Session()
 
+CHUNK_SIZE = 1000 * 60 * 60
 BASE_URL = "https://api.hubapi.com"
 CONFIG = {
     "access_token": None,
@@ -346,19 +347,27 @@ def sync_subscription_changes():
 def sync_email_events():
     schema = load_schema("email_events")
     singer.write_schema("email_events", schema, ["id"])
+
     start = get_start("email_events")
+    start_ts = int(utils.strptime(start).timestamp() * 1000)
+    now_ts = int(datetime.datetime.utcnow().timestamp() * 1000)
 
     url = get_url("email_events")
-    params = {
-        'startTimestamp': int(utils.strptime(start).timestamp() * 1000),
-        'limit': 1000,
-    }
-    for i, row in enumerate(gen_request(url, params, "events", "hasMore", "offset", "offset")):
-        record = transform(row, schema)
-        singer.write_record("email_events", record)
-        utils.update_state(STATE, "email_events", record['created'])
+    while start_ts < now_ts:
+        end_ts = start_ts + CHUNK_SIZE
+        params = {
+            'startTimestamp': start_ts,
+            'endTimestamp': end_ts,
+            'limit': 1000,
+        }
 
-    singer.write_state(STATE)
+        for row in gen_request(url, params, "events", "hasMore", "offset", "offset"):
+            record = transform(row, schema)
+            # singer.write_record("email_events", record)
+
+        utils.update_state(STATE, "email_events", datetime.datetime.utcfromtimestamp(end_ts / 1000))
+        singer.write_state(STATE)
+        start_ts = end_ts
 
 
 def sync_contact_lists():
