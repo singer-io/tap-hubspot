@@ -13,7 +13,11 @@ from tap_hubspot.transform import transform, _transform_datetime
 logger = singer.get_logger()
 session = requests.Session()
 
-CHUNK_SIZE = 1000 * 60 * 60
+CHUNK_SIZES = {
+    "email_events": 1000 * 60 * 60,
+    "subscription_changes": 1000 * 60 * 60 * 24,
+}
+
 BASE_URL = "https://api.hubapi.com"
 CONFIG = {
     "access_token": None,
@@ -326,48 +330,37 @@ def sync_campaigns():
         singer.write_record("campaigns", record)
 
 
-def sync_subscription_changes():
-    schema = load_schema("subscription_changes")
-    singer.write_schema("subscription_changes", schema, ["timestamp", "portalId", "recipient"])
-    start = get_start("subscription_changes")
+def sync_entity_chunked(entity_name, key_properties, path):
+    schema = load_schema(entity_name)
+    singer.write_schema(entity_name, schema, key_properties)
 
-    url = get_url("subscription_changes")
-    params = {
-        'startTimestamp': int(utils.strptime(start).timestamp() * 1000),
-        'limit': 1000,
-    }
-    for i, row in enumerate(gen_request(url, params, "timeline", "hasMore", "offset", "offset")):
-        record = transform(row, schema)
-        singer.write_record("subscription_changes", record)
-        utils.update_state(STATE, "subscription_changes", record['timestamp'])
-
-    singer.write_state(STATE)
-
-
-def sync_email_events():
-    schema = load_schema("email_events")
-    singer.write_schema("email_events", schema, ["id"])
-
-    start = get_start("email_events")
-    start_ts = int(utils.strptime(start).timestamp() * 1000)
+    start = get_start(entity_name)
     now_ts = int(datetime.datetime.utcnow().timestamp() * 1000)
+    start_ts = int(utils.strptime(start).timestamp() * 1000)
 
-    url = get_url("email_events")
+    url = get_url(entity_name)
     while start_ts < now_ts:
-        end_ts = start_ts + CHUNK_SIZE
+        end_ts = start_ts + CHUNK_SIZES[entity_name]
         params = {
             'startTimestamp': start_ts,
             'endTimestamp': end_ts,
             'limit': 1000,
         }
-
-        for row in gen_request(url, params, "events", "hasMore", "offset", "offset"):
+        for row in gen_request(url, params, path, "hasMore", "offset", "offset"):
             record = transform(row, schema)
-            # singer.write_record("email_events", record)
+            singer.write_record(entity_name, record)
 
-        utils.update_state(STATE, "email_events", datetime.datetime.utcfromtimestamp(end_ts / 1000))
+        utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000))
         singer.write_state(STATE)
         start_ts = end_ts
+
+
+def sync_subscription_changes():
+    sync_entity_chunked("subscription_changes", ["timestamp", "portalId", "recipient"], "timeline")
+
+
+def sync_email_events():
+    sync_entity_chunked("email_events", ["id"], "events")
 
 
 def sync_contact_lists():
@@ -444,17 +437,22 @@ def sync_owners():
 
 def do_sync():
     logger.info("Starting sync")
-    sync_contacts()
-    sync_companies()
-    sync_deals()
-    sync_campaigns()
+
+    # Do these first as they are incremental
     sync_subscription_changes()
     sync_email_events()
-    sync_contact_lists()
+
+    # Do these last as they are full table
     sync_forms()
     sync_workflows()
     sync_keywords()
     sync_owners()
+    sync_campaigns()
+    sync_contact_lists()
+    sync_contacts()
+    sync_companies()
+    sync_deals()
+
     logger.info("Sync completed")
 
 
