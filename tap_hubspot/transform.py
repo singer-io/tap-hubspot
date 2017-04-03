@@ -38,9 +38,13 @@ def _transform(data, typ, schema):
         data = str(data)
 
     if typ == "integer":
+        if isinstance(data, str):
+            data = data.replace(',', '')
         data = int(data)
 
     if typ == "number":
+        if isinstance(data, str):
+            data = data.replace(',', '')
         data = float(data)
 
     if typ == "boolean":
