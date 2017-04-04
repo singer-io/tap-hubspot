@@ -80,8 +80,9 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "boolean"]}
 
     elif field_type == "datetime":
-        return {"type": ["null", "string"],
-                "format": "date-time"}
+        # valid unix milliseconds are not returned for this type,
+        # so we have to just make these strings
+        return {"type": ["null", "string"]}
 
     elif field_type == "number":
         # A value like 'N/A' can be returned for this type,
