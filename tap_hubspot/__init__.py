@@ -6,8 +6,7 @@ import sys
 import backoff
 import requests
 import singer
-
-from tap_hubspot import utils
+from singer import utils
 from tap_hubspot.transform import transform, _transform_datetime
 
 logger = singer.get_logger()
@@ -460,14 +459,18 @@ def do_sync():
 
 
 def main():
-    args = utils.parse_args()
+    args = utils.parse_args(
+        [
+        "redirect_uri",
+        "client_id",
+        "client_secret",
+        "refresh_token",
+        "start_date"])
 
-    config = utils.load_json(args.config)
-    utils.check_config(config, ["redirect_uri", "client_id", "client_secret", "refresh_token", "start_date"])
-    CONFIG.update(config)
+    CONFIG.update(args.config)
 
     if args.state:
-        STATE.update(utils.load_json(args.state))
+        STATE.update(args.state)
 
     do_sync()
 
