@@ -298,15 +298,17 @@ def sync_deals():
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
         endpoint = "deals_all"
+        path = "deals"
     else:
         endpoint = "deals_recent"
+        path = "results"
 
     schema = load_schema("deals")
     singer.write_schema("deals", schema, ["portalId", "dealId"])
 
     url = get_url(endpoint)
     params = {'count': 250}
-    for i, row in enumerate(gen_request(url, params, "deals", "hasMore", "offset", "offset")):
+    for i, row in enumerate(gen_request(url, params, path, "hasMore", "offset", "offset")):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = transform(record, schema)
 
