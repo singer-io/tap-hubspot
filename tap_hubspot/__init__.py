@@ -8,7 +8,7 @@ import backoff
 import requests
 import singer
 from singer import utils
-from tap_hubspot.transform import transform, _transform_datetime
+from singer import transform
 
 logger = singer.get_logger()
 session = requests.Session()
@@ -233,7 +233,7 @@ def sync_contacts():
     for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
-            modified_time = utils.strptime(_transform_datetime(row['properties']['lastmodifieddate']['value']))
+            modified_time = utils.strptime(transform._transform_datetime(row['properties']['lastmodifieddate']['value'], transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
         if not modified_time or modified_time >= last_sync:
             vids.append(row['vid'])
@@ -241,7 +241,7 @@ def sync_contacts():
         if len(vids) == 100:
             data = request(get_url("contacts_detail"), params={'vid': vids}).json()
             for vid, record in data.items():
-                record = transform(record, schema)
+                record = transform.transform(record, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
                 singer.write_record("contacts", record)
 
                 modified_time = None
@@ -277,7 +277,7 @@ def sync_companies():
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
         record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-        record = transform(record, schema)
+        record = transform.transform(record, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
 
         modified_time = None
         if 'hs_lastmodifieddate' in record:
@@ -308,7 +308,7 @@ def sync_deals():
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, "deals", "hasMore", "offset", "offset")):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
-        record = transform(record, schema)
+        record = transform.transform(record, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
 
         modified_time = None
         if 'hs_lastmodifieddate' in record:
@@ -332,7 +332,7 @@ def sync_campaigns():
     params = {'limit': 500}
     for i, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
-        record = transform(record, schema)
+        record = transform.transform(record, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         singer.write_record("campaigns", record)
 
 
@@ -353,7 +353,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
             'limit': 1000,
         }
         for row in gen_request(url, params, path, "hasMore", "offset", "offset"):
-            record = transform(row, schema)
+            record = transform.transform(row, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
             singer.write_record(entity_name, record)
 
         utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000))
@@ -377,7 +377,7 @@ def sync_contact_lists():
     url = get_url("contact_lists")
     params = {'count': 250}
     for i, row in enumerate(gen_request(url, params, "lists", "has-more", "offset", "offset")):
-        record = transform(row, schema)
+        record = transform.transform(row, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         singer.write_record("contact_lists", record)
 
 
@@ -388,7 +388,7 @@ def sync_forms():
 
     data = request(get_url("forms")).json()
     for row in data:
-        record = transform(row, schema)
+        record = transform.transform(row, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         if record['updatedAt'] >= start:
             singer.write_record("forms", record)
             utils.update_state(STATE, "forms", record['updatedAt'])
@@ -403,7 +403,7 @@ def sync_workflows():
 
     data = request(get_url("workflows")).json()
     for row in data['workflows']:
-        record = transform(row, schema)
+        record = transform.transform(row, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         if record['updatedAt'] >= start:
             singer.write_record("workflows", record)
             utils.update_state(STATE, "workflows", record['updatedAt'])
@@ -418,7 +418,7 @@ def sync_keywords():
 
     data = request(get_url("keywords")).json()
     for row in data['keywords']:
-        record = transform(row, schema)
+        record = transform.transform(row, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         if record['created_at'] >= start:
             singer.write_record("keywords", record)
             utils.update_state(STATE, "keywords", record['created_at'])
@@ -433,7 +433,7 @@ def sync_owners():
 
     data = request(get_url("owners")).json()
     for row in data:
-        record = transform(row, schema)
+        record = transform.transform(row, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
         if record['updatedAt'] >= start:
             singer.write_record("owners", record)
             utils.update_state(STATE, "owners", record['updatedAt'])

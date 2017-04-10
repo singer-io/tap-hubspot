@@ -19,6 +19,10 @@
           "change": {
             "type": ["null", "string"]
           },
+          "timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
           "source": {
             "type": ["null", "string"]
           },
