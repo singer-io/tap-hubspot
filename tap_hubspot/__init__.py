@@ -43,7 +43,7 @@ endpoints = {
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
 
-    "deals_properties":     "/companies/v2/properties",
+    "deals_properties":     "/properties/v1/deals/properties",
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
