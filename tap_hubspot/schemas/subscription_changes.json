@@ -25,6 +25,9 @@
           "portalId": {
             "type": ["null", "integer"]
           },
+          "subscriptionId": {
+            "type": ["null", "integer"]
+          },
           "changeType": {
             "type": ["null", "string"]
           },
