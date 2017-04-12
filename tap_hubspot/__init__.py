@@ -10,8 +10,8 @@ import singer
 from singer import utils
 from tap_hubspot.transform import transform, _transform_datetime
 
-logger = singer.get_logger()
-session = requests.Session()
+LOGGER = singer.get_logger()
+SESSION = requests.Session()
 
 CHUNK_SIZES = {
     "email_events": 1000 * 60 * 60,
@@ -32,7 +32,7 @@ CONFIG = {
 }
 STATE = {}
 
-endpoints = {
+ENDPOINTS = {
     "contacts_properties":  "/properties/v1/contacts/properties",
     "contacts_all":         "/contacts/v1/lists/all/contacts/all",
     "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
@@ -69,10 +69,10 @@ def get_start(key):
 
 
 def get_url(endpoint, **kwargs):
-    if endpoint not in endpoints:
+    if endpoint not in ENDPOINTS:
         raise ValueError("Invalid endpoint {}".format(endpoint))
 
-    return BASE_URL + endpoints[endpoint].format(**kwargs)
+    return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
 
 def get_field_type_schema(field_type):
@@ -149,7 +149,7 @@ def refresh_token():
         "client_secret": CONFIG['client_secret'],
     }
 
-    logger.info("Refreshing token")
+    LOGGER.info("Refreshing token")
     resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
     resp.raise_for_status()
     auth = resp.json()
@@ -158,11 +158,11 @@ def refresh_token():
     CONFIG['token_expires'] = (
         datetime.datetime.utcnow() +
         datetime.timedelta(seconds=auth['expires_in'] - 600))
-    logger.info("Token refreshed. Expires at {}".format(CONFIG['token_expires']))
+    LOGGER.info("Token refreshed. Expires at %s", CONFIG['token_expires'])
 
 
-def giveup(e):
-    return e.response is not None and 400 <= e.response.status_code < 500
+def giveup(exc):
+    return exc.response is not None and 400 <= exc.response.status_code < 500
 
 
 @backoff.on_exception(backoff.expo,
@@ -180,11 +180,11 @@ def request(url, params=None):
         headers['User-Agent'] = CONFIG['user_agent']
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
-    logger.info("GET {}".format(req.url))
-    resp = session.send(req)
+    LOGGER.info("GET %s", req.url)
+    resp = SESSION.send(req)
 
     if resp.status_code >= 400:
-        logger.error("GET {} [{} - {}]".format(req.url, resp.status_code, resp.content))
+        LOGGER.error("GET %s [%s - %s]", req.url, resp.status_code, resp.content)
         sys.exit(1)
 
     return resp
@@ -251,7 +251,7 @@ def sync_contacts():
 
         if len(vids) == 100:
             data = request(get_url("contacts_detail"), params={'vid': vids}).json()
-            for vid, record in data.items():
+            for _, record in data.items():
                 record = transform(record, schema)
                 singer.write_record("contacts", record)
 
@@ -343,7 +343,7 @@ def sync_campaigns():
 
     url = get_url("campaigns_all")
     params = {'limit': 500}
-    for i, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
+    for _, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = transform(record, schema)
         singer.write_record("campaigns", record)
@@ -385,11 +385,10 @@ def sync_email_events():
 def sync_contact_lists():
     schema = load_schema("contact_lists")
     singer.write_schema("contact_lists", schema, ["internalListId"])
-    start = get_start("contact_lists")
 
     url = get_url("contact_lists")
     params = {'count': 250}
-    for i, row in enumerate(gen_request(url, params, "lists", "has-more", "offset", "offset")):
+    for _, row in enumerate(gen_request(url, params, "lists", "has-more", "offset", "offset")):
         record = transform(row, schema)
         singer.write_record("contact_lists", record)
 
@@ -455,7 +454,7 @@ def sync_owners():
 
 
 def do_sync():
-    logger.info("Starting sync")
+    LOGGER.info("Starting sync")
 
     # Do these first as they are incremental
     sync_subscription_changes()
@@ -472,7 +471,7 @@ def do_sync():
     sync_companies()
     sync_deals()
 
-    logger.info("Sync completed")
+    LOGGER.info("Sync completed")
 
 
 def main():
