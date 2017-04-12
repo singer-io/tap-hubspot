@@ -114,7 +114,11 @@ def get_field_schema(field_type, extras=False):
 
 
 def parse_custom_schema(entity_name, data):
-    return {field['name']: get_field_schema(field['type'], entity_name != "contacts") for field in data}
+    return {
+        field['name']: get_field_schema(
+            field['type'], entity_name != "contacts")
+        for field in data
+    }
 
 
 def get_custom_schema(entity_name):
@@ -151,14 +155,20 @@ def refresh_token():
     auth = resp.json()
     CONFIG['access_token'] = auth['access_token']
     CONFIG['refresh_token'] = auth['refresh_token']
-    CONFIG['token_expires'] = datetime.datetime.utcnow() + datetime.timedelta(seconds=auth['expires_in'] - 600)
+    CONFIG['token_expires'] = (
+        datetime.datetime.utcnow() +
+        datetime.timedelta(seconds=auth['expires_in'] - 600))
     logger.info("Token refreshed. Expires at {}".format(CONFIG['token_expires']))
+
+
+def giveup(e):
+    return e.response is not None and 400 <= e.response.status_code < 500
 
 
 @backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException),
                       max_tries=5,
-                      giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500,
+                      giveup=giveup,
                       factor=2)
 def request(url, params=None):
     if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
@@ -233,7 +243,8 @@ def sync_contacts():
     for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
-            modified_time = utils.strptime(_transform_datetime(row['properties']['lastmodifieddate']['value']))
+            modified_time = utils.strptime(_transform_datetime(
+                row['properties']['lastmodifieddate']['value']))
 
         if not modified_time or modified_time >= last_sync:
             vids.append(row['vid'])
@@ -466,12 +477,11 @@ def do_sync():
 
 def main():
     args = utils.parse_args(
-        [
-        "redirect_uri",
-        "client_id",
-        "client_secret",
-        "refresh_token",
-        "start_date"])
+        ["redirect_uri",
+         "client_id",
+         "client_secret",
+         "refresh_token",
+         "start_date"])
 
     CONFIG.update(args.config)
 
