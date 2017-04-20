@@ -453,24 +453,28 @@ def sync_owners():
     singer.write_state(STATE)
 
 
-def do_sync():
-    LOGGER.info("Starting sync")
-
-    # Do these first as they are incremental
-    sync_subscription_changes()
-    sync_email_events()
+STREAMS = [
+    # Do these first as they are incremental    
+    ('subscription_changes', sync_subscription_changes),
+    ('email_events', sync_email_events),
 
     # Do these last as they are full table
-    sync_forms()
-    sync_workflows()
-    sync_keywords()
-    sync_owners()
-    sync_campaigns()
-    sync_contact_lists()
-    sync_contacts()
-    sync_companies()
-    sync_deals()
+    ('forms', sync_forms),
+    ('workflows', sync_workflows),
+    ('keywords', sync_keywords),
+    ('owners', sync_owners),
+    ('campaigns', sync_campaigns),
+    ('contact_lists', sync_contact_lists),
+    ('contacts', sync_contacts),
+    ('companies', sync_companies),
+    ('deals', sync_deals)
+]
 
+def do_sync():
+    LOGGER.info("Starting sync")
+    for name, func in STREAMS:
+        LOGGER.info('Syncing %s', name)
+        func()
     LOGGER.info("Sync completed")
 
 
