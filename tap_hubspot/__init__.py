@@ -249,7 +249,7 @@ def sync_contacts():
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
             modified_time = utils.strptime(
-                transform._transform_datetime(
+                transform._transform_datetime( # pylint: disable=protected-access
                     row['properties']['lastmodifieddate']['value'],
                     transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
@@ -258,7 +258,7 @@ def sync_contacts():
 
         if len(vids) == 100:
             data = request(get_url("contacts_detail"), params={'vid': vids}).json()
-            for vid, record in data.items():
+            for _, record in data.items():
                 record = xform(record, schema)
                 singer.write_record("contacts", record)
 
@@ -395,7 +395,7 @@ def sync_contact_lists():
 
     url = get_url("contact_lists")
     params = {'count': 250}
-    for i, row in enumerate(gen_request(url, params, "lists", "has-more", "offset", "offset")):
+    for row in gen_request(url, params, "lists", "has-more", "offset", "offset"):
         record = xform(row, schema)
         singer.write_record("contact_lists", record)
 
@@ -461,7 +461,7 @@ def sync_owners():
 
 
 STREAMS = [
-    # Do these first as they are incremental    
+    # Do these first as they are incremental
     ('subscription_changes', sync_subscription_changes),
     ('email_events', sync_email_events),
 
