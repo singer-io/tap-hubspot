@@ -495,11 +495,14 @@ STREAMS = [
 ]
 
 def get_streams_to_sync(streams, state):
-    if StateFields.this_stream not in state:
-        return streams
-    else:
-        return list(itertools.dropwhile(
-            lambda x: x.name != state[StateFields.this_stream], streams))
+    target_stream = state.get(StateFields.this_stream)
+    result = streams
+    if target_stream:
+        result = list(itertools.dropwhile(
+            lambda x: x.name != target_stream, streams))
+    if not result:
+        raise Exception('Unknown stream {} in state'.format(target_stream))
+    return result
 
 
 def do_sync():
