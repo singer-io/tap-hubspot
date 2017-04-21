@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
 
 import datetime
+import itertools
 import os
 import sys
 
+import attr
 import backoff
 import requests
 import singer
 from singer import utils
 from singer import transform
 
+
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
+
+class DataFields:
+    offset = 'offset'
+
+class StateFields:
+    offset = 'offset'
+    this_stream = 'this_stream'
+
 CHUNK_SIZES = {
-    "email_events": 1000 * 60 * 60,
+    "email_events": 1000 * 60 * 60 * 24,
     "subscription_changes": 1000 * 60 * 60 * 24,
 }
 
@@ -196,32 +207,21 @@ def request(url, params=None):
 
 
 def gen_request(url, params, path, more_key, offset_keys, offset_targets):
-    if not isinstance(offset_keys, list):
-        offset_keys = [offset_keys]
-
-    if not isinstance(offset_targets, list):
-        offset_targets = [offset_targets]
 
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
     while True:
         data = request(url, params).json()
-        if path:
-            for row in data[path]:
-                yield row
 
-            if not data.get(more_key, False):
-                break
+        for row in data[path]:
+            yield row
 
-            for key, target in zip(offset_keys, offset_targets):
-                params[target] = data[key]
-
-        else:
-            for row in data:
-                yield row
-
+        if not data.get(more_key, False):
             break
+
+        for key, target in zip(offset_keys, offset_targets):
+            params[target] = data[key]
 
 
 def sync_contacts():
@@ -326,7 +326,7 @@ def sync_deals():
 
     url = get_url(endpoint)
     params = {'count': 250}
-    for i, row in enumerate(gen_request(url, params, path, "hasMore", "offset", "offset")):
+    for i, row in enumerate(gen_request(url, params, path, "hasMore", ["offset"], ["offset"])):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
 
@@ -350,7 +350,8 @@ def sync_campaigns():
 
     url = get_url("campaigns_all")
     params = {'limit': 500}
-    for _, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
+    for row in gen_request(
+            url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = xform(record, schema)
         singer.write_record("campaigns", record)
@@ -365,6 +366,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
     start_ts = int(utils.strptime(start).timestamp() * 1000)
 
     url = get_url(entity_name)
+
     while start_ts < now_ts:
         end_ts = start_ts + CHUNK_SIZES[entity_name]
         params = {
@@ -372,9 +374,20 @@ def sync_entity_chunked(entity_name, key_properties, path):
             'endTimestamp': end_ts,
             'limit': 1000,
         }
-        for row in gen_request(url, params, path, "hasMore", "offset", "offset"):
-            record = xform(row, schema)
-            singer.write_record(entity_name, record)
+
+        while True:
+            if STATE.get(StateFields.offset):
+                params[StateFields.offset] = STATE[StateFields.offset]
+            data = request(url, params).json()
+            for row in data[path]:
+                singer.write_record(entity_name, xform(row, schema))
+            if data.get('hasMore'):
+                STATE[StateFields.offset] = data[DataFields.offset]
+                LOGGER.info('Got more %s', STATE)
+                singer.write_state(STATE)
+            else:
+                STATE[StateFields.offset] = None
+                break
 
         utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000)) # pylint: disable=line-too-long
         singer.write_state(STATE)
@@ -395,7 +408,7 @@ def sync_contact_lists():
 
     url = get_url("contact_lists")
     params = {'count': 250}
-    for row in gen_request(url, params, "lists", "has-more", "offset", "offset"):
+    for row in gen_request(url, params, "lists", "has-more", ["offset"], ["offset"]):
         record = xform(row, schema)
         singer.write_record("contact_lists", record)
 
@@ -459,29 +472,47 @@ def sync_owners():
 
     singer.write_state(STATE)
 
+@attr.s
+class Stream(object):
+    name = attr.ib()
+    sync = attr.ib()
 
 STREAMS = [
     # Do these first as they are incremental
-    ('subscription_changes', sync_subscription_changes),
-    ('email_events', sync_email_events),
+    Stream('subscription_changes', sync_subscription_changes),
+    Stream('email_events', sync_email_events),
 
     # Do these last as they are full table
-    ('forms', sync_forms),
-    ('workflows', sync_workflows),
-    ('keywords', sync_keywords),
-    ('owners', sync_owners),
-    ('campaigns', sync_campaigns),
-    ('contact_lists', sync_contact_lists),
-    ('contacts', sync_contacts),
-    ('companies', sync_companies),
-    ('deals', sync_deals)
+    Stream('forms', sync_forms),
+    Stream('workflows', sync_workflows),
+    Stream('keywords', sync_keywords),
+    Stream('owners', sync_owners),
+    Stream('campaigns', sync_campaigns),
+    Stream('contact_lists', sync_contact_lists),
+    Stream('contacts', sync_contacts),
+    Stream('companies', sync_companies),
+    Stream('deals', sync_deals)
 ]
 
+def get_streams_to_sync(streams, state):
+    if StateFields.this_stream not in state:
+        return streams
+    else:
+        return list(itertools.dropwhile(
+            lambda x: x.name != state[StateFields.this_stream], streams))
+
+
 def do_sync():
-    LOGGER.info("Starting sync")
-    for name, func in STREAMS:
-        LOGGER.info('Syncing %s', name)
-        func()
+    streams = get_streams_to_sync(STREAMS, STATE)
+    LOGGER.info('Starting sync. Will sync these streams: %s',
+                [stream.name for stream in streams])
+    for stream in streams:
+        LOGGER.info('Syncing %s', stream.name)
+        STATE[StateFields.this_stream] = stream.name
+        singer.write_state(STATE)
+        stream.sync() # pylint: disable=not-callable
+    STATE[StateFields.this_stream] = None
+    singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
 
