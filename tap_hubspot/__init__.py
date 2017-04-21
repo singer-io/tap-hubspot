@@ -12,14 +12,20 @@ import singer
 from singer import utils
 from singer import transform
 
-# Fields
-THIS_STREAM = 'this_stream'
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
+
+class DataFields:
+    offset = 'offset'
+
+class StateFields:
+    offset = 'offset'
+    this_stream = 'this_stream'
+
 CHUNK_SIZES = {
-    "email_events": 1000 * 60 * 60,
+    "email_events": 1000 * 60 * 60 * 24,
     "subscription_changes": 1000 * 60 * 60 * 24,
 }
 
@@ -359,6 +365,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
     start_ts = int(utils.strptime(start).timestamp() * 1000)
 
     url = get_url(entity_name)
+    
     while start_ts < now_ts:
         end_ts = start_ts + CHUNK_SIZES[entity_name]
         params = {
@@ -366,9 +373,20 @@ def sync_entity_chunked(entity_name, key_properties, path):
             'endTimestamp': end_ts,
             'limit': 1000,
         }
-        for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
-            record = xform(row, schema)
-            singer.write_record(entity_name, record)
+
+        while True:
+            if STATE.get(StateFields.offset):
+                params[StateFields.offset] = STATE[StateFields.offset]
+            data = request(url, params).json()
+            for row in data[path]:
+                singer.write_record(entity_name, xform(row, schema))
+            if data.get('hasMore'):
+                STATE[StateFields.offset] = data[DataFields.offset]
+                LOGGER.info('Got more %s', STATE)                
+                singer.write_state(STATE)
+            else:
+                STATE[StateFields.offset] = None
+                break
 
         utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000)) # pylint: disable=line-too-long
         singer.write_state(STATE)
@@ -476,10 +494,10 @@ STREAMS = [
 ]
 
 def get_streams_to_sync(streams, state):
-    if THIS_STREAM not in state:
+    if StateFields.this_stream not in state:
         return streams
     else:
-        return itertools.dropwhile(lambda x: x.name != state[THIS_STREAM], streams)
+        return list(itertools.dropwhile(lambda x: x.name != state[StateFields.this_stream], streams))
 
 
 def do_sync():
@@ -489,10 +507,10 @@ def do_sync():
                 [stream.name for stream in streams])
     for stream in streams:
         LOGGER.info('Syncing %s', stream.name)
-        STATE[THIS_STREAM] = stream.name
+        STATE[StateFields.this_stream] = stream.name
         singer.write_state(STATE)
         stream.sync()
-    STATE[THIS_STREAM] = None
+    STATE[StateFields.this_stream] = None
     singer.write_state(STATE)    
     LOGGER.info("Sync completed")
 
