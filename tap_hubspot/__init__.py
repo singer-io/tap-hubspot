@@ -481,11 +481,19 @@ def get_streams_to_sync(streams, state):
     else:
         return itertools.dropwhile(lambda x: x.name != state[THIS_STREAM], streams)
 
+
 def do_sync():
     LOGGER.info("Starting sync")
-    for name, func in STREAMS:
-        LOGGER.info('Syncing %s', name)
-        func()
+    streams = get_streams_to_sync(STREAMS, STATE)
+    LOGGER.info('I will sync these streams: %s',
+                [stream.name for stream in streams])
+    for stream in streams:
+        LOGGER.info('Syncing %s', stream.name)
+        STATE[THIS_STREAM] = stream.name
+        singer.write_state(STATE)
+        stream.sync()
+    STATE[THIS_STREAM] = None
+    singer.write_state(STATE)    
     LOGGER.info("Sync completed")
 
 
