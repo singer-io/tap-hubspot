@@ -350,7 +350,8 @@ def sync_campaigns():
 
     url = get_url("campaigns_all")
     params = {'limit': 500}
-    for _, row in enumerate(gen_request(url, params, "campaigns", "hasMore", ["offset"], ["offset"])):
+    for row in gen_request(
+            url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = xform(record, schema)
         singer.write_record("campaigns", record)
@@ -365,7 +366,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
     start_ts = int(utils.strptime(start).timestamp() * 1000)
 
     url = get_url(entity_name)
-    
+
     while start_ts < now_ts:
         end_ts = start_ts + CHUNK_SIZES[entity_name]
         params = {
@@ -382,7 +383,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
                 singer.write_record(entity_name, xform(row, schema))
             if data.get('hasMore'):
                 STATE[StateFields.offset] = data[DataFields.offset]
-                LOGGER.info('Got more %s', STATE)                
+                LOGGER.info('Got more %s', STATE)
                 singer.write_state(STATE)
             else:
                 STATE[StateFields.offset] = None
@@ -497,7 +498,8 @@ def get_streams_to_sync(streams, state):
     if StateFields.this_stream not in state:
         return streams
     else:
-        return list(itertools.dropwhile(lambda x: x.name != state[StateFields.this_stream], streams))
+        return list(itertools.dropwhile(
+            lambda x: x.name != state[StateFields.this_stream], streams))
 
 
 def do_sync():
@@ -509,9 +511,9 @@ def do_sync():
         LOGGER.info('Syncing %s', stream.name)
         STATE[StateFields.this_stream] = stream.name
         singer.write_state(STATE)
-        stream.sync()
+        stream.sync() # pylint: disable=not-callable
     STATE[StateFields.this_stream] = None
-    singer.write_state(STATE)    
+    singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
 
