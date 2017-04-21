@@ -196,11 +196,6 @@ def request(url, params=None):
 
 
 def gen_request(url, params, path, more_key, offset_keys, offset_targets):
-    if not isinstance(offset_keys, list):
-        offset_keys = [offset_keys]
-
-    if not isinstance(offset_targets, list):
-        offset_targets = [offset_targets]
 
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
@@ -326,7 +321,7 @@ def sync_deals():
 
     url = get_url(endpoint)
     params = {'count': 250}
-    for i, row in enumerate(gen_request(url, params, path, "hasMore", "offset", "offset")):
+    for i, row in enumerate(gen_request(url, params, path, "hasMore", ["offset"], ["offset"])):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
 
@@ -350,7 +345,7 @@ def sync_campaigns():
 
     url = get_url("campaigns_all")
     params = {'limit': 500}
-    for _, row in enumerate(gen_request(url, params, "campaigns", "hasMore", "offset", "offset")):
+    for _, row in enumerate(gen_request(url, params, "campaigns", "hasMore", ["offset"], ["offset"])):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = xform(record, schema)
         singer.write_record("campaigns", record)
@@ -372,7 +367,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
             'endTimestamp': end_ts,
             'limit': 1000,
         }
-        for row in gen_request(url, params, path, "hasMore", "offset", "offset"):
+        for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
             record = xform(row, schema)
             singer.write_record(entity_name, record)
 
@@ -395,7 +390,7 @@ def sync_contact_lists():
 
     url = get_url("contact_lists")
     params = {'count': 250}
-    for row in gen_request(url, params, "lists", "has-more", "offset", "offset"):
+    for row in gen_request(url, params, "lists", "has-more", ["offset"], ["offset"]):
         record = xform(row, schema)
         singer.write_record("contact_lists", record)
 
