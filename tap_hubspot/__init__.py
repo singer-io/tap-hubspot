@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 
 import datetime
+import itertools
 import os
 import sys
 
+import attr
 import backoff
 import requests
 import singer
 from singer import utils
 from singer import transform
+
+# Fields
+THIS_STREAM = 'this_stream'
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -448,23 +453,33 @@ def sync_owners():
 
     singer.write_state(STATE)
 
+@attr.s
+class Stream(object):
+    name = attr.ib()
+    sync = attr.ib()
 
 STREAMS = [
     # Do these first as they are incremental
-    ('subscription_changes', sync_subscription_changes),
-    ('email_events', sync_email_events),
+    Stream('subscription_changes', sync_subscription_changes),
+    Stream('email_events', sync_email_events),
 
     # Do these last as they are full table
-    ('forms', sync_forms),
-    ('workflows', sync_workflows),
-    ('keywords', sync_keywords),
-    ('owners', sync_owners),
-    ('campaigns', sync_campaigns),
-    ('contact_lists', sync_contact_lists),
-    ('contacts', sync_contacts),
-    ('companies', sync_companies),
-    ('deals', sync_deals)
+    Stream('forms', sync_forms),
+    Stream('workflows', sync_workflows),
+    Stream('keywords', sync_keywords),
+    Stream('owners', sync_owners),
+    Stream('campaigns', sync_campaigns),
+    Stream('contact_lists', sync_contact_lists),
+    Stream('contacts', sync_contacts),
+    Stream('companies', sync_companies),
+    Stream('deals', sync_deals)
 ]
+
+def get_streams_to_sync(streams, state):
+    if THIS_STREAM not in state:
+        return streams
+    else:
+        return itertools.dropwhile(lambda x: x.name != state[THIS_STREAM], streams)
 
 def do_sync():
     LOGGER.info("Starting sync")
