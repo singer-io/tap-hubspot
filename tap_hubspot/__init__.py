@@ -503,9 +503,8 @@ def get_streams_to_sync(streams, state):
 
 
 def do_sync():
-    LOGGER.info("Starting sync")
     streams = get_streams_to_sync(STREAMS, STATE)
-    LOGGER.info('I will sync these streams: %s',
+    LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.name for stream in streams])
     for stream in streams:
         LOGGER.info('Syncing %s', stream.name)
