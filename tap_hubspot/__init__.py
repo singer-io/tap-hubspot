@@ -202,21 +202,15 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
 
     while True:
         data = request(url, params).json()
-        if path:
-            for row in data[path]:
-                yield row
 
-            if not data.get(more_key, False):
-                break
+        for row in data[path]:
+            yield row
 
-            for key, target in zip(offset_keys, offset_targets):
-                params[target] = data[key]
-
-        else:
-            for row in data:
-                yield row
-
+        if not data.get(more_key, False):
             break
+
+        for key, target in zip(offset_keys, offset_targets):
+            params[target] = data[key]
 
 
 def sync_contacts():
