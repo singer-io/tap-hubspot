@@ -3,12 +3,14 @@
 import datetime
 import itertools
 import os
+import re
 import sys
 
 import attr
 import backoff
 import requests
 import singer
+import singer.stats
 from singer import utils
 from singer import transform
 
@@ -180,6 +182,15 @@ def giveup(exc):
     return exc.response is not None and 400 <= exc.response.status_code < 500
 
 
+URL_SOURCE_RE = re.compile(BASE_URL + r'/(\w+)/')
+
+def parse_source_from_url(url):
+    match = URL_SOURCE_RE.match(url)
+    if match:
+        return match.group(1)
+    return None
+
+
 @backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException),
                       max_tries=5,
@@ -213,17 +224,18 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
-    while True:
-        data = request(url, params).json()
+    with singer.stats.Counter(source=parse_source_from_url(url)) as stats:
+        while True:
+            data = request(url, params).json()
+            for row in data[path]:
+                stats.add(record_count=1)
+                yield row
 
-        for row in data[path]:
-            yield row
+            if not data.get(more_key, False):
+                break
 
-        if not data.get(more_key, False):
-            break
-
-        for key, target in zip(offset_keys, offset_targets):
-            params[target] = data[key]
+            for key, target in zip(offset_keys, offset_targets):
+                params[target] = data[key]
 
 
 def sync_contacts():
@@ -247,6 +259,7 @@ def sync_contacts():
         'count': 100,
     }
     vids = []
+
     for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
@@ -295,6 +308,7 @@ def sync_companies():
 
     url = get_url(endpoint)
     params = {'count': 250}
+
     for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
         record = request(get_url("companies_detail", company_id=row['companyId'])).json()
         record = xform(record, schema)
@@ -328,6 +342,7 @@ def sync_deals():
 
     url = get_url(endpoint)
     params = {'count': 250}
+
     for i, row in enumerate(gen_request(url, params, path, "hasMore", ["offset"], ["offset"])):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
@@ -352,6 +367,7 @@ def sync_campaigns():
 
     url = get_url("campaigns_all")
     params = {'limit': 500}
+
     for row in gen_request(
             url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
@@ -369,31 +385,33 @@ def sync_entity_chunked(entity_name, key_properties, path):
 
     url = get_url(entity_name)
 
-    while start_ts < now_ts:
-        end_ts = start_ts + CHUNK_SIZES[entity_name]
-        params = {
-            'startTimestamp': start_ts,
-            'endTimestamp': end_ts,
-            'limit': 1000,
-        }
+    with singer.stats.Counter(source=entity_name) as stats:
+        while start_ts < now_ts:
+            end_ts = start_ts + CHUNK_SIZES[entity_name]
+            params = {
+                'startTimestamp': start_ts,
+                'endTimestamp': end_ts,
+                'limit': 1000,
+            }
 
-        while True:
-            if STATE.get(StateFields.offset):
-                params[StateFields.offset] = STATE[StateFields.offset]
-            data = request(url, params).json()
-            for row in data[path]:
-                singer.write_record(entity_name, xform(row, schema))
-            if data.get('hasMore'):
-                STATE[StateFields.offset] = data[DataFields.offset]
-                LOGGER.info('Got more %s', STATE)
-                singer.write_state(STATE)
-            else:
-                STATE[StateFields.offset] = None
-                break
+            while True:
+                if STATE.get(StateFields.offset):
+                    params[StateFields.offset] = STATE[StateFields.offset]
+                data = request(url, params).json()
+                for row in data[path]:
+                    stats.add(record_count=1)
+                    singer.write_record(entity_name, xform(row, schema))
+                if data.get('hasMore'):
+                    STATE[StateFields.offset] = data[DataFields.offset]
+                    LOGGER.info('Got more %s', STATE)
+                    singer.write_state(STATE)
+                else:
+                    STATE[StateFields.offset] = None
+                    break
 
-        utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000)) # pylint: disable=line-too-long
-        singer.write_state(STATE)
-        start_ts = end_ts
+            utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000)) # pylint: disable=line-too-long
+            singer.write_state(STATE)
+            start_ts = end_ts
 
 
 def sync_subscription_changes():
