@@ -37,3 +37,7 @@ class TestTapHubspot(unittest.TestCase):
         ]
         with self.assertRaises(Exception):
             get_streams_to_sync(streams, {'this_stream': 'Some bad stream'})
+
+    def test_parse_source_from_url_succeeds(self):
+        url = "https://api.hubapi.com/companies/v2/companies/recent/modified"
+        self.assertEqual('companies', parse_source_from_url(url))
