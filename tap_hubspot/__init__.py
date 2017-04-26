@@ -197,7 +197,9 @@ def request(url, params=None):
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     LOGGER.info("GET %s", req.url)
-    resp = SESSION.send(req)
+    with singer.stats.Timer(source=parse_source_from_url(url)) as stats:
+        resp = SESSION.send(req)
+        stats.http_status_code = resp.status_code
 
     if resp.status_code >= 400:
         LOGGER.error("GET %s [%s - %s]", req.url, resp.status_code, resp.content)
