@@ -196,7 +196,7 @@ def parse_source_from_url(url):
                       max_tries=5,
                       giveup=giveup,
                       factor=2)
-@utils.ratelimit(10, 1)
+@utils.ratelimit(9, 1)
 def request(url, params=None):
     if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
         refresh_token()
