@@ -179,8 +179,14 @@ def refresh_token():
 
 
 def giveup(exc):
-    return exc.response is not None and 400 <= exc.response.status_code < 500
+    return exc.response is not None \
+        and 400 <= exc.response.status_code < 500 \
+        and exc.response.status_code != 429
 
+def on_giveup(details):
+    url, params = details['args']
+    LOGGER.error("Giving up on request after {} tries with url {} and params {}".format(details['tries'], url, params))
+    sys.exit(1)
 
 URL_SOURCE_RE = re.compile(BASE_URL + r'/(\w+)/')
 
@@ -192,9 +198,10 @@ def parse_source_from_url(url):
 
 
 @backoff.on_exception(backoff.expo,
-                      (requests.exceptions.RequestException),
+                      requests.exceptions.RequestException,
                       max_tries=5,
                       giveup=giveup,
+                      on_giveup=on_giveup,
                       factor=2)
 @utils.ratelimit(9, 1)
 def request(url, params=None):
@@ -211,10 +218,7 @@ def request(url, params=None):
     with singer.stats.Timer(source=parse_source_from_url(url)) as stats:
         resp = SESSION.send(req)
         stats.http_status_code = resp.status_code
-
-    if resp.status_code >= 400:
-        LOGGER.error("GET %s [%s - %s]", req.url, resp.status_code, resp.content)
-        sys.exit(1)
+        resp.raise_for_status()
 
     return resp
 
