@@ -185,7 +185,8 @@ def giveup(exc):
 
 def on_giveup(details):
     url, params = details['args']
-    LOGGER.error("Giving up on request after {} tries with url {} and params {}".format(details['tries'], url, params))
+    LOGGER.error("Giving up on request after %s tries with url %s and params %s",
+                 details['tries'], url, params)
     sys.exit(1)
 
 URL_SOURCE_RE = re.compile(BASE_URL + r'/(\w+)/')
