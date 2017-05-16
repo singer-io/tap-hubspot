@@ -537,7 +537,15 @@ def do_sync():
         LOGGER.info('Syncing %s', stream.name)
         STATE[StateFields.this_stream] = stream.name
         singer.write_state(STATE)
-        stream.sync() # pylint: disable=not-callable
+
+        try:
+            stream.sync() # pylint: disable=not-callable
+        except requests.exceptions.HTTPError as e:
+            # 403 here means that the client doesn't have scope for this
+            # endpoint and we should pass, otherwise we reraise
+            if e.response.status_code != 403:
+                raise
+
     STATE[StateFields.this_stream] = None
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
