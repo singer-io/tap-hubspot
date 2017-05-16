@@ -540,10 +540,10 @@ def do_sync():
 
         try:
             stream.sync() # pylint: disable=not-callable
-        except requests.exceptions.HTTPError as e:
+        except requests.exceptions.HTTPError as ex:
             # 403 here means that the client doesn't have scope for this
             # endpoint and we should pass, otherwise we reraise
-            if e.response.status_code != 403:
+            if ex.response.status_code != 403:
                 raise
 
     STATE[StateFields.this_stream] = None
