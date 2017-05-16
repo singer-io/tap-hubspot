@@ -184,7 +184,12 @@ def giveup(exc):
         and exc.response.status_code != 429
 
 def on_giveup(details):
-    url, params = details['args']
+    if len(details['args']) == 2:
+        url, params = details['args']
+    else:
+        url = details['args']
+        params = {}
+
     raise Exception("Giving up on request after {} tries with url {} and params {}" \
                     .format(details['tries'], url, params))
 
