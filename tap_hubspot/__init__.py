@@ -19,6 +19,9 @@ LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
 
+class SourceUnavailableException(Exception):
+    pass
+
 class DataFields:
     offset = 'offset'
 
@@ -223,7 +226,10 @@ def request(url, params=None):
     with singer.stats.Timer(source=parse_source_from_url(url)) as stats:
         resp = SESSION.send(req)
         stats.http_status_code = resp.status_code
-        resp.raise_for_status()
+        if resp.status_code == 403:
+            raise SourceUnavailableException()
+        else:
+            resp.raise_for_status()
 
     return resp
 
@@ -545,11 +551,8 @@ def do_sync():
 
         try:
             stream.sync() # pylint: disable=not-callable
-        except requests.exceptions.HTTPError as ex:
-            # 403 here means that the client doesn't have scope for this
-            # endpoint and we should pass, otherwise we reraise
-            if ex.response.status_code != 403:
-                raise
+        except SourceUnavailableException:
+            pass
 
     STATE[StateFields.this_stream] = None
     singer.write_state(STATE)
