@@ -19,6 +19,9 @@ LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
 
+class InvalidAuthException(Exception):
+    pass
+
 class SourceUnavailableException(Exception):
     pass
 
@@ -171,6 +174,9 @@ def refresh_token():
 
     LOGGER.info("Refreshing token")
     resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+    if resp.status_code == 403:
+        raise InvalidAuthException(resp.content)
+
     resp.raise_for_status()
     auth = resp.json()
     CONFIG['access_token'] = auth['access_token']
@@ -227,7 +233,7 @@ def request(url, params=None):
         resp = SESSION.send(req)
         stats.http_status_code = resp.status_code
         if resp.status_code == 403:
-            raise SourceUnavailableException()
+            raise SourceUnavailableException(resp.content)
         else:
             resp.raise_for_status()
 
