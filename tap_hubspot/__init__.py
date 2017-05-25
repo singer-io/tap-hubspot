@@ -5,6 +5,7 @@ import itertools
 import os
 import re
 import sys
+import json
 
 import attr
 import backoff
@@ -517,22 +518,23 @@ def sync_owners():
 class Stream(object):
     name = attr.ib()
     sync = attr.ib()
+    key_properties = attr.ib()
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes),
-    Stream('email_events', sync_email_events),
+    Stream('subscription_changes', sync_subscription_changes, ["timestamp", "portalId", "recipient"]),
+    Stream('email_events', sync_email_events, ["id"]),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms),
-    Stream('workflows', sync_workflows),
-    Stream('keywords', sync_keywords),
-    Stream('owners', sync_owners),
-    Stream('campaigns', sync_campaigns),
-    Stream('contact_lists', sync_contact_lists),
-    Stream('contacts', sync_contacts),
-    Stream('companies', sync_companies),
-    Stream('deals', sync_deals)
+    Stream('forms', sync_forms, ["guid"]),
+    Stream('workflows', sync_workflows, ["id"]),
+    Stream('keywords', sync_keywords, ["keyword_guid"]),
+    Stream('owners', sync_owners, ["portalId", "ownerId"]),
+    Stream('campaigns', sync_campaigns, ["id"]),
+    Stream('contact_lists', sync_contact_lists, ["internalListId"]),
+    Stream('contacts', sync_contacts, ["canonical-vid"]),
+    Stream('companies', sync_companies, ["companyId"]),
+    Stream('deals', sync_deals, ["portalId", "dealId"])
 ]
 
 def get_streams_to_sync(streams, state):
@@ -565,6 +567,26 @@ def do_sync():
     LOGGER.info("Sync completed")
 
 
+def load_discovered_schema(stream):
+    schema = load_schema(stream.name)
+    for k in schema['properties']:
+        schema['properties'][k]['inclusion'] = 'automatic'
+    return schema
+
+
+def discover_schemas():
+    result = {'streams': {}}
+    for stream in STREAMS:
+        LOGGER.info('Loading schema for %s', stream.name)
+        result['streams'][stream.name] = load_discovered_schema(stream)
+    return result
+
+
+def do_discover():
+    LOGGER.info('Loading schemas')
+    json.dump(discover_schemas(), sys.stdout, indent=4)
+
+
 def main():
     args = utils.parse_args(
         ["redirect_uri",
@@ -578,7 +600,10 @@ def main():
     if args.state:
         STATE.update(args.state)
 
-    do_sync()
+    if args.discover:
+        do_discover()
+    else:
+        do_sync()
 
 
 if __name__ == '__main__':
