@@ -522,7 +522,8 @@ class Stream(object):
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes, ["timestamp", "portalId", "recipient"]),
+    Stream('subscription_changes', sync_subscription_changes,
+           ["timestamp", "portalId", "recipient"]),
     Stream('email_events', sync_email_events, ["id"]),
 
     # Do these last as they are full table
