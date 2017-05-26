@@ -553,7 +553,7 @@ def get_selected_streams(streams, annotated_schema):
     selected_streams = []
     for name, schema in annotated_schema['streams'].items():
         if schema.get('selected'):
-            selected_stream = next((s for s in streams if s.name==name), None)
+            selected_stream = next((s for s in streams if s.name == name), None)
             if selected_stream:
                 selected_streams.append(selected_stream)
     return selected_streams
