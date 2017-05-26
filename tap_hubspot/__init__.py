@@ -549,8 +549,19 @@ def get_streams_to_sync(streams, state):
     return result
 
 
-def do_sync():
+def get_selected_streams(streams, annotated_schema):
+    selected_streams = []
+    for name, schema in annotated_schema['streams'].items():
+        if schema.get('selected'):
+            selected_stream = next((s for s in streams if s.name==name), None)
+            if selected_stream:
+                selected_streams.append(selected_stream)
+    return selected_streams
+
+
+def do_sync(annotated_schema):
     streams = get_streams_to_sync(STREAMS, STATE)
+    streams = get_selected_streams(streams, annotated_schema)
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.name for stream in streams])
     for stream in streams:
@@ -603,8 +614,10 @@ def main():
 
     if args.discover:
         do_discover()
+    elif args.properties:
+        do_sync(args.properties)
     else:
-        do_sync()
+        LOGGER.info("No properties were selected")
 
 
 if __name__ == '__main__':
