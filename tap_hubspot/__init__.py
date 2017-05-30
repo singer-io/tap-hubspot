@@ -270,18 +270,19 @@ def gen_contacts_request(url, params, path, more_key, offset_keys, offset_target
                 stats.add(record_count=1)
                 yield row
 
-            if not data.get(more_key, False):
-                break
-
             STATE["contacts_offset"] = {}
             for key, target in zip(offset_keys, offset_targets):
                 params[target] = data[key]
                 STATE["contacts_offset"][target] = data[key]
 
+            LOGGER.critical(STATE)
             singer.write_state(STATE)
 
+            if not data.get(more_key, False):
+                break
 
-def _sync_contact_vids(vids):
+
+def _sync_contact_vids(vids, schema):
     if len(vids) == 0:
         return
 
@@ -329,12 +330,12 @@ def sync_contacts():
             vids.append(row['vid'])
 
         if len(vids) == 100:
-            _sync_contact_vids(vids)
+            _sync_contact_vids(vids, schema)
             vids = []
 
-    _sync_contact_vids(vids)
+    _sync_contact_vids(vids, schema)
 
-    STATE.pop("contacts_offset")
+    STATE.pop("contacts_offset", None)
     utils.update_state(STATE, "contacts", utils.strftime(now))
     singer.write_state(STATE)
 
