@@ -259,9 +259,42 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
                 params[target] = data[key]
 
 
+def gen_contacts_request(url, params, path, more_key, offset_keys, offset_targets):
+    if len(offset_keys) != len(offset_targets):
+        raise ValueError("Number of offset_keys must match number of offset_targets")
+
+    with singer.stats.Counter(source=parse_source_from_url(url)) as stats:
+        while True:
+            data = request(url, params).json()
+            for row in data[path]:
+                stats.add(record_count=1)
+                yield row
+
+            if not data.get(more_key, False):
+                break
+
+            STATE["contacts_offset"] = {}
+            for key, target in zip(offset_keys, offset_targets):
+                params[target] = data[key]
+                STATE["contacts_offset"][target] = data[key]
+
+            singer.write_state(STATE)
+
+
+def _sync_contact_vids(vids):
+    if len(vids) == 0:
+        return
+
+    data = request(get_url("contacts_detail"), params={'vid': vids}).json()
+    for _, record in data.items():
+        record = xform(record, schema)
+        singer.write_record("contacts", record)
+
+
 def sync_contacts():
+    now = datetime.datetime.utcnow()
     last_sync = utils.strptime(get_start("contacts"))
-    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
+    days_since_sync = (now - last_sync).days
     if days_since_sync > 30:
         endpoint = "contacts_all"
         offset_keys = ['vid-offset']
@@ -281,7 +314,10 @@ def sync_contacts():
     }
     vids = []
 
-    for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
+    if "contacts_offset" in STATE:
+        params.update(STATE["contacts_offset"])
+
+    for row in gen_contacts_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
             modified_time = utils.strptime(
@@ -293,18 +329,13 @@ def sync_contacts():
             vids.append(row['vid'])
 
         if len(vids) == 100:
-            data = request(get_url("contacts_detail"), params={'vid': vids}).json()
-            for _, record in data.items():
-                record = xform(record, schema)
-                singer.write_record("contacts", record)
-
-                modified_time = None
-                if 'lastmodifieddate' in record['properties']:
-                    modified_time = record['properties']['lastmodifieddate']['value']
-                    utils.update_state(STATE, "contacts", modified_time)
-
+            _sync_contact_vids(vids)
             vids = []
 
+    _sync_contact_vids(vids)
+
+    STATE.pop("contacts_offset")
+    utils.update_state(STATE, "contacts", utils.strftime(now))
     singer.write_state(STATE)
 
 
