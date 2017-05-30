@@ -275,7 +275,6 @@ def gen_contacts_request(url, params, path, more_key, offset_keys, offset_target
                 params[target] = data[key]
                 STATE["contacts_offset"][target] = data[key]
 
-            LOGGER.critical(STATE)
             singer.write_state(STATE)
 
             if not data.get(more_key, False):
