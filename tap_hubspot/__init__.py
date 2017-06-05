@@ -318,7 +318,7 @@ def sync_contacts():
     if "contacts_offset" in STATE:
         params.update(STATE["contacts_offset"])
 
-    for row in gen_contacts_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
+    for row in gen_contacts_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets): #pylint: disable=line-too-long
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
             modified_time = utils.strptime(
