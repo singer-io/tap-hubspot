@@ -468,7 +468,7 @@ def sync_contact_lists():
         singer.write_record("contact_lists", record)
 
     STATE["contact_lists"] = RUN_START
-    singer.write_records(STATE)
+    singer.write_state(STATE)
 
 
 def sync_forms():
