@@ -256,15 +256,16 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
                 stats.add(record_count=1)
                 yield row
 
-            STATE["offset"] = {}
-            for key, target in zip(offset_keys, offset_targets):
-                params[target] = data[key]
-                STATE["offset"][target] = data[key]
-
-            singer.write_state(STATE)
-
             if not data.get(more_key, False):
                 break
+
+            STATE["offset"] = {}
+            for key, target in zip(offset_keys, offset_targets):
+                if key in data:
+                    params[target] = data[key]
+                    STATE["offset"][target] = data[key]
+
+            singer.write_state(STATE)
 
     STATE.pop("offset", None)
     singer.write_state(STATE)
