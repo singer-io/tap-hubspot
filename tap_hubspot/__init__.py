@@ -17,6 +17,7 @@ from singer import transform
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
+RUN_START = utils.strftime(datetime.datetime.utcnow())
 
 
 class InvalidAuthException(Exception):
@@ -241,9 +242,11 @@ def request(url, params=None):
 
 
 def gen_request(url, params, path, more_key, offset_keys, offset_targets):
-
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
+
+    if STATE.get("offset"):
+        params.update(STATE["offset"])
 
     with singer.stats.Counter(source=parse_source_from_url(url)) as stats:
         while True:
@@ -252,33 +255,18 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
                 stats.add(record_count=1)
                 yield row
 
-            if not data.get(more_key, False):
-                break
-
+            STATE["offset"] = {}
             for key, target in zip(offset_keys, offset_targets):
                 params[target] = data[key]
-
-
-def gen_contacts_request(url, params, path, more_key, offset_keys, offset_targets):
-    if len(offset_keys) != len(offset_targets):
-        raise ValueError("Number of offset_keys must match number of offset_targets")
-
-    with singer.stats.Counter(source=parse_source_from_url(url)) as stats:
-        while True:
-            data = request(url, params).json()
-            for row in data[path]:
-                stats.add(record_count=1)
-                yield row
-
-            STATE["contacts_offset"] = {}
-            for key, target in zip(offset_keys, offset_targets):
-                params[target] = data[key]
-                STATE["contacts_offset"][target] = data[key]
+                STATE["offset"][target] = data[key]
 
             singer.write_state(STATE)
 
             if not data.get(more_key, False):
                 break
+
+    STATE.pop("offset", None)
+    singer.write_state(STATE)
 
 
 def _sync_contact_vids(vids, schema):
@@ -314,10 +302,7 @@ def sync_contacts():
     }
     vids = []
 
-    if "contacts_offset" in STATE:
-        params.update(STATE["contacts_offset"])
-
-    for row in gen_contacts_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
+    for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
             modified_time = utils.strptime(
@@ -333,9 +318,7 @@ def sync_contacts():
             vids = []
 
     _sync_contact_vids(vids, schema)
-
-    STATE.pop("contacts_offset", None)
-    utils.update_state(STATE, "contacts", utils.strftime(now))
+    STATE["contacts"] = RUN_START
     singer.write_state(STATE)
 
 
@@ -361,7 +344,7 @@ def sync_companies():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
+    for row in gen_request(url, params, path, more_key, offset_keys, offset_targets):
         record = request(get_url("companies_detail", company_id=row['companyId'])).json()
         record = xform(record, schema)
 
@@ -373,10 +356,9 @@ def sync_companies():
 
         if not modified_time or modified_time >= last_sync:
             singer.write_record("companies", record)
-            utils.update_state(STATE, "companies", modified_time)
 
-        if i % 250 == 0:
-            singer.write_state(STATE)
+    STATE["companies"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_deals():
@@ -395,7 +377,7 @@ def sync_deals():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    for i, row in enumerate(gen_request(url, params, path, "hasMore", ["offset"], ["offset"])):
+    for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
 
@@ -407,10 +389,9 @@ def sync_deals():
 
         if not modified_time or modified_time >= last_sync:
             singer.write_record("deals", record)
-            utils.update_state(STATE, "deals", modified_time)
 
-        if i % 250 == 0:
-            singer.write_state(STATE)
+    STATE["deals"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_campaigns():
@@ -420,11 +401,13 @@ def sync_campaigns():
     url = get_url("campaigns_all")
     params = {'limit': 500}
 
-    for row in gen_request(
-            url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
+    for row in gen_request(url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = xform(record, schema)
         singer.write_record("campaigns", record)
+
+    STATE["campaigns"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_entity_chunked(entity_name, key_properties, path):
@@ -483,6 +466,9 @@ def sync_contact_lists():
     for row in gen_request(url, params, "lists", "has-more", ["offset"], ["offset"]):
         record = xform(row, schema)
         singer.write_record("contact_lists", record)
+
+    STATE["contact_lists"] = RUN_START
+    singer.write_records(STATE)
 
 
 def sync_forms():
