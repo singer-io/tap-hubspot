@@ -34,9 +34,24 @@
       "type": ["null", "string"],
       "format": "date-time"
     },
+    "deviceType": {
+      "type": ["null", "string"]
+    },
+    "duration": {
+      "type": ["null", "integer"]
+    },
     "emailCampaignId": {
       "type": ["null", "integer"]
     },
+    "emailCampaignGroupId": {
+      "type": ["null", "integer"]
+    },
+    "filteredEvent": {
+      "type": ["null", "boolean"]
+    },
+    "from": {
+      "type": ["null", "string"]
+    },    
     "hmid": {
       "type": ["null", "string"]
     },
@@ -46,6 +61,9 @@
     "ipAddress": {
       "type": ["null", "string"]
     },
+    "linkId": {
+      "type": ["null", "integer"]
+    },    
     "location": {
       "type": ["null", "object"],
       "properties": {
@@ -64,6 +82,9 @@
       "type": ["null", "integer"]
     },
     "recipient": {
+      "type": ["null", "string"]
+    },
+    "response": {
       "type": ["null", "string"]
     },
     "sentBy": {
@@ -85,6 +106,9 @@
       "type": ["null", "string"]
     },
     "type": {
+      "type": ["null", "string"]
+    },
+    "url": {
       "type": ["null", "string"]
     },
     "userAgent": {
