@@ -443,12 +443,14 @@ def sync_entity_chunked(entity_name, key_properties, path):
                     LOGGER.info('Got more %s', STATE)
                     singer.write_state(STATE)
                 else:
-                    STATE[StateFields.offset] = None
                     break
 
             utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000)) # pylint: disable=line-too-long
             singer.write_state(STATE)
             start_ts = end_ts
+
+    STATE.pop(StateFields.offset, None)
+    singer.write_state(STATE)
 
 
 def sync_subscription_changes():
