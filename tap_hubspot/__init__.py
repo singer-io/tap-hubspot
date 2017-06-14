@@ -5,6 +5,7 @@ import itertools
 import os
 import re
 import sys
+import json
 
 import attr
 import backoff
@@ -17,7 +18,14 @@ from singer import transform
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
+RUN_START = utils.strftime(datetime.datetime.utcnow())
 
+
+class InvalidAuthException(Exception):
+    pass
+
+class SourceUnavailableException(Exception):
+    pass
 
 class DataFields:
     offset = 'offset'
@@ -168,6 +176,9 @@ def refresh_token():
 
     LOGGER.info("Refreshing token")
     resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+    if resp.status_code == 403:
+        raise InvalidAuthException(resp.content)
+
     resp.raise_for_status()
     auth = resp.json()
     CONFIG['access_token'] = auth['access_token']
@@ -184,7 +195,12 @@ def giveup(exc):
         and exc.response.status_code != 429
 
 def on_giveup(details):
-    url, params = details['args']
+    if len(details['args']) == 2:
+        url, params = details['args']
+    else:
+        url = details['args']
+        params = {}
+
     raise Exception("Giving up on request after {} tries with url {} and params {}" \
                     .format(details['tries'], url, params))
 
@@ -218,15 +234,21 @@ def request(url, params=None):
     with metrics.http_request_timer(parse_source_from_url(url)) as timer:
         resp = SESSION.send(req)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
-        resp.raise_for_status()
+        stats.http_status_code = resp.status_code
+        if resp.status_code == 403:
+            raise SourceUnavailableException(resp.content)
+        else:
+            resp.raise_for_status()
 
     return resp
 
 
 def gen_request(url, params, path, more_key, offset_keys, offset_targets):
-
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
+
+    if STATE.get("offset"):
+        params.update(STATE["offset"])
 
     with metrics.record_counter(parse_source_from_url(url)) as counter:
         while True:
@@ -238,13 +260,32 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
             if not data.get(more_key, False):
                 break
 
+            STATE["offset"] = {}
             for key, target in zip(offset_keys, offset_targets):
-                params[target] = data[key]
+                if key in data:
+                    params[target] = data[key]
+                    STATE["offset"][target] = data[key]
+
+            singer.write_state(STATE)
+
+    STATE.pop("offset", None)
+    singer.write_state(STATE)
+
+
+def _sync_contact_vids(vids, schema):
+    if len(vids) == 0:
+        return
+
+    data = request(get_url("contacts_detail"), params={'vid': vids}).json()
+    for _, record in data.items():
+        record = xform(record, schema)
+        singer.write_record("contacts", record)
 
 
 def sync_contacts():
+    now = datetime.datetime.utcnow()
     last_sync = utils.strptime(get_start("contacts"))
-    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
+    days_since_sync = (now - last_sync).days
     if days_since_sync > 30:
         endpoint = "contacts_all"
         offset_keys = ['vid-offset']
@@ -276,18 +317,11 @@ def sync_contacts():
             vids.append(row['vid'])
 
         if len(vids) == 100:
-            data = request(get_url("contacts_detail"), params={'vid': vids}).json()
-            for _, record in data.items():
-                record = xform(record, schema)
-                singer.write_record("contacts", record)
-
-                modified_time = None
-                if 'lastmodifieddate' in record['properties']:
-                    modified_time = record['properties']['lastmodifieddate']['value']
-                    utils.update_state(STATE, "contacts", modified_time)
-
+            _sync_contact_vids(vids, schema)
             vids = []
 
+    _sync_contact_vids(vids, schema)
+    STATE["contacts"] = RUN_START
     singer.write_state(STATE)
 
 
@@ -313,7 +347,7 @@ def sync_companies():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    for i, row in enumerate(gen_request(url, params, path, more_key, offset_keys, offset_targets)):
+    for row in gen_request(url, params, path, more_key, offset_keys, offset_targets):
         record = request(get_url("companies_detail", company_id=row['companyId'])).json()
         record = xform(record, schema)
 
@@ -325,10 +359,9 @@ def sync_companies():
 
         if not modified_time or modified_time >= last_sync:
             singer.write_record("companies", record)
-            utils.update_state(STATE, "companies", modified_time)
 
-        if i % 250 == 0:
-            singer.write_state(STATE)
+    STATE["companies"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_deals():
@@ -347,7 +380,7 @@ def sync_deals():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    for i, row in enumerate(gen_request(url, params, path, "hasMore", ["offset"], ["offset"])):
+    for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
 
@@ -359,10 +392,9 @@ def sync_deals():
 
         if not modified_time or modified_time >= last_sync:
             singer.write_record("deals", record)
-            utils.update_state(STATE, "deals", modified_time)
 
-        if i % 250 == 0:
-            singer.write_state(STATE)
+    STATE["deals"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_campaigns():
@@ -372,11 +404,13 @@ def sync_campaigns():
     url = get_url("campaigns_all")
     params = {'limit': 500}
 
-    for row in gen_request(
-            url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
+    for row in gen_request(url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = xform(record, schema)
         singer.write_record("campaigns", record)
+
+    STATE["campaigns"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_entity_chunked(entity_name, key_properties, path):
@@ -410,12 +444,14 @@ def sync_entity_chunked(entity_name, key_properties, path):
                     LOGGER.info('Got more %s', STATE)
                     singer.write_state(STATE)
                 else:
-                    STATE[StateFields.offset] = None
                     break
 
             utils.update_state(STATE, entity_name, datetime.datetime.utcfromtimestamp(end_ts / 1000)) # pylint: disable=line-too-long
             singer.write_state(STATE)
             start_ts = end_ts
+
+    STATE.pop(StateFields.offset, None)
+    singer.write_state(STATE)
 
 
 def sync_subscription_changes():
@@ -435,6 +471,9 @@ def sync_contact_lists():
     for row in gen_request(url, params, "lists", "has-more", ["offset"], ["offset"]):
         record = xform(row, schema)
         singer.write_record("contact_lists", record)
+
+    STATE["contact_lists"] = RUN_START
+    singer.write_state(STATE)
 
 
 def sync_forms():
@@ -500,22 +539,24 @@ def sync_owners():
 class Stream(object):
     name = attr.ib()
     sync = attr.ib()
+    key_properties = attr.ib()
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes),
-    Stream('email_events', sync_email_events),
+    Stream('subscription_changes', sync_subscription_changes,
+           ["timestamp", "portalId", "recipient"]),
+    Stream('email_events', sync_email_events, ["id"]),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms),
-    Stream('workflows', sync_workflows),
-    Stream('keywords', sync_keywords),
-    Stream('owners', sync_owners),
-    Stream('campaigns', sync_campaigns),
-    Stream('contact_lists', sync_contact_lists),
-    Stream('contacts', sync_contacts),
-    Stream('companies', sync_companies),
-    Stream('deals', sync_deals)
+    Stream('forms', sync_forms, ["guid"]),
+    Stream('workflows', sync_workflows, ["id"]),
+    Stream('keywords', sync_keywords, ["keyword_guid"]),
+    Stream('owners', sync_owners, ["portalId", "ownerId"]),
+    Stream('campaigns', sync_campaigns, ["id"]),
+    Stream('contact_lists', sync_contact_lists, ["internalListId"]),
+    Stream('contacts', sync_contacts, ["canonical-vid"]),
+    Stream('companies', sync_companies, ["companyId"]),
+    Stream('deals', sync_deals, ["portalId", "dealId"])
 ]
 
 def get_streams_to_sync(streams, state):
@@ -529,18 +570,54 @@ def get_streams_to_sync(streams, state):
     return result
 
 
-def do_sync():
+def get_selected_streams(streams, annotated_schema):
+    selected_streams = []
+    for name, schema in annotated_schema['streams'].items():
+        if schema.get('selected'):
+            selected_stream = next((s for s in streams if s.name == name), None)
+            if selected_stream:
+                selected_streams.append(selected_stream)
+    return selected_streams
+
+
+def do_sync(annotated_schema):
     streams = get_streams_to_sync(STREAMS, STATE)
+    streams = get_selected_streams(streams, annotated_schema)
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.name for stream in streams])
     for stream in streams:
         LOGGER.info('Syncing %s', stream.name)
         STATE[StateFields.this_stream] = stream.name
         singer.write_state(STATE)
-        stream.sync() # pylint: disable=not-callable
+
+        try:
+            stream.sync() # pylint: disable=not-callable
+        except SourceUnavailableException:
+            pass
+
     STATE[StateFields.this_stream] = None
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
+
+
+def load_discovered_schema(stream):
+    schema = load_schema(stream.name)
+    for k in schema['properties']:
+        schema['properties'][k]['inclusion'] = 'automatic'
+    return schema
+
+
+def discover_schemas():
+    result = {'streams': {}}
+    for stream in STREAMS:
+        LOGGER.info('Loading schema for %s', stream.name)
+        result['streams'][stream.name] = load_discovered_schema(stream)
+    return result
+
+
+def do_discover():
+    LOGGER.info('Loading schemas')
+    json.dump(discover_schemas(), sys.stdout, indent=4)
 
 
 def main():
@@ -556,7 +633,12 @@ def main():
     if args.state:
         STATE.update(args.state)
 
-    do_sync()
+    if args.discover:
+        do_discover()
+    elif args.properties:
+        do_sync(args.properties)
+    else:
+        LOGGER.info("No properties were selected")
 
 
 if __name__ == '__main__':
