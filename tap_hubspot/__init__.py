@@ -234,7 +234,6 @@ def request(url, params=None):
     with metrics.http_request_timer(parse_source_from_url(url)) as timer:
         resp = SESSION.send(req)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
-        stats.http_status_code = resp.status_code
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
         else:
