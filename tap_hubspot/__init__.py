@@ -571,7 +571,9 @@ def get_streams_to_sync(streams, state):
 
 def get_selected_streams(streams, annotated_schema):
     selected_streams = []
-    for name, schema in annotated_schema['streams'].items():
+    for stream in annotated_schema['streams']:
+        schema = stream.get('schema')
+        name = stream.get('stream')
         if schema.get('selected'):
             selected_stream = next((s for s in streams if s.name == name), None)
             if selected_stream:
@@ -607,10 +609,12 @@ def load_discovered_schema(stream):
 
 
 def discover_schemas():
-    result = {'streams': {}}
+    result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.name)
-        result['streams'][stream.name] = load_discovered_schema(stream)
+        result['streams'].append({'stream': stream.name,
+                                  'tap_stream_id': stream.name,
+                                  'schema': load_discovered_schema(stream)})
     return result
 
 
