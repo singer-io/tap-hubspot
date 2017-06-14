@@ -10,7 +10,7 @@ import attr
 import backoff
 import requests
 import singer
-import singer.stats
+import singer.metrics as metrics
 from singer import utils
 from singer import transform
 
@@ -215,9 +215,9 @@ def request(url, params=None):
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     LOGGER.info("GET %s", req.url)
-    with singer.stats.Timer(source=parse_source_from_url(url)) as stats:
+    with metrics.http_request_timer(parse_source_from_url(url)) as timer:
         resp = SESSION.send(req)
-        stats.http_status_code = resp.status_code
+        timer.tags[metrics.Tag.http_status_code] = resp.status_code
         resp.raise_for_status()
 
     return resp
@@ -228,11 +228,11 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
-    with singer.stats.Counter(source=parse_source_from_url(url)) as stats:
+    with metrics.record_counter(parse_source_from_url(url)) as counter:
         while True:
             data = request(url, params).json()
             for row in data[path]:
-                stats.add(record_count=1)
+                counter.increment()
                 yield row
 
             if not data.get(more_key, False):
@@ -389,7 +389,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
 
     url = get_url(entity_name)
 
-    with singer.stats.Counter(source=entity_name) as stats:
+    with metrics.record_counter(entity_name) as counter:
         while start_ts < now_ts:
             end_ts = start_ts + CHUNK_SIZES[entity_name]
             params = {
@@ -403,7 +403,7 @@ def sync_entity_chunked(entity_name, key_properties, path):
                     params[StateFields.offset] = STATE[StateFields.offset]
                 data = request(url, params).json()
                 for row in data[path]:
-                    stats.add(record_count=1)
+                    counter.increment()
                     singer.write_record(entity_name, xform(row, schema))
                 if data.get('hasMore'):
                     STATE[StateFields.offset] = data[DataFields.offset]
