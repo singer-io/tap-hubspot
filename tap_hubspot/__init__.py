@@ -246,8 +246,8 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
-    if STATE.get("offset"):
-        params.update(STATE["offset"])
+    if STATE.get(StateFields.offset):
+        params.update(STATE[StateFields.offset])
 
     with metrics.record_counter(parse_source_from_url(url)) as counter:
         while True:
@@ -259,15 +259,15 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
             if not data.get(more_key, False):
                 break
 
-            STATE["offset"] = {}
+            STATE[StateFields.offset] = {}
             for key, target in zip(offset_keys, offset_targets):
                 if key in data:
                     params[target] = data[key]
-                    STATE["offset"][target] = data[key]
+                    STATE[StateFields.offset][target] = data[key]
 
             singer.write_state(STATE)
 
-    STATE.pop("offset", None)
+    STATE.pop(StateFields.offset, None)
     singer.write_state(STATE)
 
 
@@ -380,6 +380,9 @@ def sync_deals():
     params = {'count': 250}
 
     for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
+        if STATE.get(StateFields.offset) == 10000:
+            STATE.pop(StateFields.offset, None)
+
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
 
