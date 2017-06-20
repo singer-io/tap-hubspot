@@ -379,10 +379,10 @@ def sync_deals():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
-        if STATE.get(StateFields.offset) == 10000:
-            STATE.pop(StateFields.offset, None)
+    if STATE.get(StateFields.offset).get('offset') == 10000:
+        STATE.pop(StateFields.offset, None)
 
+    for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
         record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
         record = xform(record, schema)
 
