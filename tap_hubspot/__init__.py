@@ -72,6 +72,9 @@ ENDPOINTS = {
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
+    "engagements_all":        "/engagements/v1/engagements/paged",
+    "engagements_detail":     "/engagements/v1/engagements/{engagement_id}",
+
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
     "contact_lists":        "/contacts/v1/lists",
@@ -536,6 +539,24 @@ def sync_owners():
             utils.update_state(STATE, "owners", record['updatedAt'])
 
     singer.write_state(STATE)
+
+
+def sync_engagements():
+    schema = load_schema("engagements")
+    singer.write_schema("engagements", schema, ["id"])
+
+    url = get_url("engagements_all")
+    params = {'limit': 250}
+    topLevelKey = "results"
+
+    for row in gen_request(url, params, topLevelKey, "hasMore", ["offset"], ["offset"]):
+        record = request(get_url("engagements_detail", engagement_id=row['engagement']['id'])).json()
+        record = xform(record, schema)
+        singer.write_record("engagements", record)
+
+    STATE["engagements"] = RUN_START
+    singer.write_state(STATE)
+
 
 @attr.s
 class Stream(object):
