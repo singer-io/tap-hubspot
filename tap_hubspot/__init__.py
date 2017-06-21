@@ -304,7 +304,7 @@ def sync_contacts():
     }
     vids = []
 
-    if STATE.get(StateFields.offset).get('offset') == 10000:
+    if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
     for row in gen_request(url, params, 'contacts', 'has-more', offset_keys, offset_targets):
@@ -349,7 +349,7 @@ def sync_companies():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    if STATE.get(StateFields.offset).get('offset') == 10000:
+    if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
     for row in gen_request(url, params, path, more_key, offset_keys, offset_targets):
@@ -385,7 +385,7 @@ def sync_deals():
     url = get_url(endpoint)
     params = {'count': 250}
 
-    if STATE.get(StateFields.offset).get('offset') == 10000:
+    if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
     for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
