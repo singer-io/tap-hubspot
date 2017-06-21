@@ -11,6 +11,7 @@ This tap:
   - [Contact Lists](http://developers.hubspot.com/docs/methods/lists/get_lists)
   - [Deals](http://developers.hubspot.com/docs/methods/deals/get_deals_modified)
   - [Email Events](http://developers.hubspot.com/docs/methods/email/get_events)
+  - [Engagements](https://developers.hubspot.com/docs/methods/engagements/get-all-engagements)
   - [Forms](http://developers.hubspot.com/docs/methods/forms/v2/get_forms)
   - [Keywords](http://developers.hubspot.com/docs/methods/keywords/get_keywords)
   - [Owners](http://developers.hubspot.com/docs/methods/owners/get_owners)
