@@ -73,7 +73,6 @@ ENDPOINTS = {
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
     "engagements_all":        "/engagements/v1/engagements/paged",
-    "engagements_detail":     "/engagements/v1/engagements/{engagement_id}",
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
@@ -548,10 +547,10 @@ def sync_engagements():
     url = get_url("engagements_all")
     params = {'limit': 250}
     topLevelKey = "results"
+    engagements = gen_request(url, params, topLevelKey, "hasMore", ["offset"], ["offset"])
 
-    for row in gen_request(url, params, topLevelKey, "hasMore", ["offset"], ["offset"]):
-        record = request(get_url("engagements_detail", engagement_id=row['engagement']['id'])).json()
-        record = xform(record, schema)
+    for engagement in engagements:
+        record = xform(engagement, schema)
         singer.write_record("engagements", record)
 
     STATE["engagements"] = RUN_START
