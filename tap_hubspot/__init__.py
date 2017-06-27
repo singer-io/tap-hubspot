@@ -244,7 +244,7 @@ def request(url, params=None):
     return resp
 
 
-def gen_request(url, params, path, more_key, offset_keys, offset_targets, response_validation_pred=None):
+def gen_request(url, params, path, more_key, offset_keys, offset_targets, validation_pred=None):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -255,8 +255,8 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets, respon
         while True:
             data = request(url, params).json()
 
-            if response_validation_pred:
-                if not response_validation_pred(data):
+            if validation_pred:
+                if not validation_pred(data):
                     raise ValidationPredFailed()
 
             for row in data[path]:
@@ -338,7 +338,7 @@ class ValidationPredFailed(Exception):
 
 # companies_recent only supports 10,000 results. If there are more than this,
 # we'll need to use the companies_all endpoint
-def can_use_recent_companies_endpoint(response):
+def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
 def sync_companies(force_all=False):
@@ -361,7 +361,7 @@ def sync_companies(force_all=False):
         more_key = "hasMore"
         offset_keys = ["offset"]
         offset_targets = ["offset"]
-        validation_pred = can_use_recent_companies_endpoint
+        validation_pred = use_recent_companies_endpoint
 
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"])
@@ -373,7 +373,9 @@ def sync_companies(force_all=False):
         STATE.pop(StateFields.offset, None)
 
     try:
-        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets, validation_pred):
+        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
+                               validation_pred):
+
             record = request(get_url("companies_detail", company_id=row['companyId'])).json()
             record = xform(record, schema)
 
@@ -573,8 +575,8 @@ def sync_engagements():
 
     url = get_url("engagements_all")
     params = {'limit': 250}
-    topLevelKey = "results"
-    engagements = gen_request(url, params, topLevelKey, "hasMore", ["offset"], ["offset"])
+    top_level_key = "results"
+    engagements = gen_request(url, params, top_level_key, "hasMore", ["offset"], ["offset"])
 
     for engagement in engagements:
         record = xform(engagement, schema)
