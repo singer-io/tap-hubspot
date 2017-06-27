@@ -1,5 +1,11 @@
-import unittest
+from contextlib import contextmanager
+from io import StringIO
+from singer import utils
 from tap_hubspot import *
+import datetime
+import json
+import requests_mock
+import unittest
 
 class TestTapHubspot(unittest.TestCase):
 
@@ -41,3 +47,231 @@ class TestTapHubspot(unittest.TestCase):
     def test_parse_source_from_url_succeeds(self):
         url = "https://api.hubapi.com/companies/v2/companies/recent/modified"
         self.assertEqual('companies', parse_source_from_url(url))
+
+# See https://stackoverflow.com/a/17981937
+@contextmanager
+def captured_output():
+    new_out, new_err = StringIO(), StringIO()
+    old_out, old_err = sys.stdout, sys.stderr
+    try:
+        sys.stdout, sys.stderr = new_out, new_err
+        yield sys.stdout, sys.stderr
+    finally:
+        sys.stdout, sys.stderr = old_out, old_err
+
+def get_first_record(stdout):
+    lines = stdout.getvalue().split("\n")
+    for line in lines:
+        try:
+            message = json.loads(line)
+            if message["type"] == "RECORD":
+                return message
+        except:
+            pass
+
+class TestTapHubspotCompanies(unittest.TestCase):
+
+    def set_config(self, older_than_30_days):
+        start_days_ago = 1
+        if older_than_30_days:
+            start_days_ago = 31
+
+        CONFIG.update({
+            "access_token": "FAKEFAKEFAKE",
+            # needs to be less more 30 days
+            "start_date": utils.strftime(
+                datetime.datetime.utcnow() -
+                datetime.timedelta(days=start_days_ago)
+            ),
+            "token_expires": (
+                datetime.datetime.utcnow() +
+                datetime.timedelta(hours=1)
+            )
+        })
+
+    def sync(self):
+        do_sync({
+            "streams": [{
+                "schema": {
+                    "selected": True
+                },
+                "stream": "companies"
+            }]
+        })
+
+    def test_companies_last_sync_less_than_30_days_ago_less_than_10k_results(self):
+        with requests_mock.Mocker() as mocker:
+            with captured_output() as (out, err):
+                STATE.clear()
+                self.set_config(False)
+
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/properties",
+                    json={}
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/recent/modified?count=250",
+                    complete_qs=True,
+                    json={
+                        "results": [],
+                        "hasMore": True,
+                        "offset": 250,
+                        "total": 400
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/recent/modified?count=250&offset=250",
+                    complete_qs=True,
+                    json={
+                        "results": [{
+                            "portalId": 62515,
+                            "companyId": 19411477,
+                            "isDeleted": False,
+                            "properties": {}
+                        }],
+                        "hasMore": False,
+                        "offset": 250,
+                        "total": 400
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/19411477",
+                    json={
+                        "portalId": 62515,
+                        "companyId": 10444744,
+                        "isDeleted": True # need to differentiate this in some way
+                    }
+                )
+
+                self.sync()
+
+        expected_record = {
+            "type": "RECORD",
+            "stream": "companies",
+            "record": {
+                "portalId": 62515,
+                "companyId": 10444744,
+                "isDeleted": True
+            }
+        }
+        self.assertEqual(get_first_record(out), expected_record)
+
+    def test_companies_last_sync_less_than_30_days_ago_more_than_10k_results(self):
+        with requests_mock.Mocker() as mocker:
+            with captured_output() as (out, err):
+                STATE.clear()
+                self.set_config(False)
+
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/properties",
+                    json={}
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/recent/modified?count=250",
+                    complete_qs=True,
+                    json={
+                        "results": [],
+                        "hasMore": True,
+                        "offset": 250,
+                        "total": 10001
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250",
+                    complete_qs=True,
+                    json={
+                        "companies": [],
+                        "has-more": True,
+                        "offset": 250
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&offset=250",
+                    complete_qs=True,
+                    json={
+                        "companies": [{
+                            "portalId": 62515,
+                            "companyId": 19411477,
+                            "isDeleted": False,
+                            "properties": {}
+                        }],
+                        "has-more": False,
+                        "offset": 500
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/19411477",
+                    json={
+                        "portalId": 62515,
+                        "companyId": 10444744,
+                        "isDeleted": True # need to differentiate this in some way
+                    }
+                )
+
+                self.sync()
+
+        expected_record = {
+            "type": "RECORD",
+            "stream": "companies",
+            "record": {
+                "portalId": 62515,
+                "companyId": 10444744,
+                "isDeleted": True
+            }
+        }
+        self.assertEqual(get_first_record(out), expected_record)
+
+    def test_companies_last_sync_more_than_30_days_ago(self):
+        with requests_mock.Mocker() as mocker:
+            with captured_output() as (out, err):
+                STATE.clear()
+                self.set_config(True)
+
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/properties",
+                    json={}
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250",
+                    complete_qs=True,
+                    json={
+                        "companies": [],
+                        "has-more": True,
+                        "offset": 250
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&offset=250",
+                    complete_qs=True,
+                    json={
+                        "companies": [{
+                            "portalId": 62515,
+                            "companyId": 19411477,
+                            "isDeleted": False,
+                            "properties": {}
+                        }],
+                        "has-more": False,
+                        "offset": 500
+                    }
+                )
+                mocker.get(
+                    "https://api.hubapi.com/companies/v2/companies/19411477",
+                    json={
+                        "portalId": 62515,
+                        "companyId": 10444744,
+                        "isDeleted": True # need to differentiate this in some way
+                    }
+                )
+
+                self.sync()
+
+        expected_record = {
+            "type": "RECORD",
+            "stream": "companies",
+            "record": {
+                "portalId": 62515,
+                "companyId": 10444744,
+                "isDeleted": True
+            }
+        }
+        self.assertEqual(get_first_record(out), expected_record)

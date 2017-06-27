@@ -244,7 +244,7 @@ def request(url, params=None):
     return resp
 
 
-def gen_request(url, params, path, more_key, offset_keys, offset_targets):
+def gen_request(url, params, path, more_key, offset_keys, offset_targets, response_validation_pred=None):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -254,6 +254,11 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets):
     with metrics.record_counter(parse_source_from_url(url)) as counter:
         while True:
             data = request(url, params).json()
+
+            if response_validation_pred:
+                if not response_validation_pred(data):
+                    raise ValidationPredFailed()
+
             for row in data[path]:
                 counter.increment()
                 yield row
@@ -328,22 +333,35 @@ def sync_contacts():
     STATE["contacts"] = RUN_START
     singer.write_state(STATE)
 
+class ValidationPredFailed(Exception):
+    pass
 
-def sync_companies():
-    last_sync = utils.strptime(get_start("companies"))
-    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
-    if days_since_sync > 30:
+# companies_recent only supports 10,000 results. If there are more than this,
+# we'll need to use the companies_all endpoint
+def can_use_recent_companies_endpoint(response):
+    return response["total"] < 10000
+
+def sync_companies(force_all=False):
+
+    if not force_all:
+        last_sync = utils.strptime(get_start("companies"))
+        days_since_sync = (datetime.datetime.utcnow() - last_sync).days
+        force_all = days_since_sync > 30
+
+    if force_all:
         endpoint = "companies_all"
         path = "companies"
         more_key = "has-more"
         offset_keys = ["offset"]
         offset_targets = ["offset"]
+        validation_pred = None
     else:
         endpoint = "companies_recent"
         path = "results"
         more_key = "hasMore"
         offset_keys = ["offset"]
         offset_targets = ["offset"]
+        validation_pred = can_use_recent_companies_endpoint
 
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"])
@@ -354,22 +372,25 @@ def sync_companies():
     if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
-    for row in gen_request(url, params, path, more_key, offset_keys, offset_targets):
-        record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-        record = xform(record, schema)
+    try:
+        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets, validation_pred):
+            record = request(get_url("companies_detail", company_id=row['companyId'])).json()
+            record = xform(record, schema)
 
-        modified_time = None
-        if 'hs_lastmodifieddate' in record:
-            modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
-        elif 'createdate' in record:
-            modified_time = utils.strptime(record['createdate']['value'])
+            modified_time = None
+            if 'hs_lastmodifieddate' in record:
+                modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
+            elif 'createdate' in record:
+                modified_time = utils.strptime(record['createdate']['value'])
 
-        if not modified_time or modified_time >= last_sync:
-            singer.write_record("companies", record)
+            if not modified_time or modified_time >= last_sync:
+                singer.write_record("companies", record)
 
-    STATE["companies"] = RUN_START
-    singer.write_state(STATE)
+        STATE["companies"] = RUN_START
+        singer.write_state(STATE)
 
+    except ValidationPredFailed:
+        return sync_companies(True)
 
 def sync_deals():
     last_sync = utils.strptime(get_start("deals"))
