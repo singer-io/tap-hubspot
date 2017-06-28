@@ -468,7 +468,8 @@ def sync_entity_chunked(catalog, entity_name, key_properties, path):
                 data = request(url, params).json()
                 for row in data[path]:
                     counter.increment()
-                    singer.write_record(entity_name, xform(row, schema), catalog.get('stream_alias'))
+                    singer.write_record(entity_name, xform(row, schema),
+                                        catalog.get('stream_alias'))
                 if data.get('hasMore'):
                     STATE[StateFields.offset] = data[DataFields.offset]
                     LOGGER.info('Got more %s', STATE)
@@ -484,7 +485,8 @@ def sync_entity_chunked(catalog, entity_name, key_properties, path):
     singer.write_state(STATE)
 
 def sync_subscription_changes(catalog):
-    sync_entity_chunked(catalog, "subscription_changes", ["timestamp", "portalId", "recipient"], "timeline")
+    sync_entity_chunked(catalog, "subscription_changes", ["timestamp", "portalId", "recipient"],
+                        "timeline")
 
 def sync_email_events(catalog):
     sync_entity_chunked(catalog, "email_events", ["id"], "events")
@@ -639,7 +641,8 @@ def do_sync(catalogs):
         singer.write_state(STATE)
 
         try:
-            catalog = [c for c in catalogs.get('streams') if c.get('stream') == stream.tap_stream_id][0]
+            catalog = [c for c in catalogs.get('streams')
+                       if c.get('stream') == stream.tap_stream_id][0]
             stream.sync(catalog) # pylint: disable=not-callable
         except SourceUnavailableException:
             pass
