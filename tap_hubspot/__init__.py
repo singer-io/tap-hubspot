@@ -277,18 +277,16 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets, valida
     STATE.pop(StateFields.offset, None)
     singer.write_state(STATE)
 
-
-def _sync_contact_vids(vids, schema):
+def _sync_contact_vids(catalog, vids, schema):
     if len(vids) == 0:
         return
 
     data = request(get_url("contacts_detail"), params={'vid': vids}).json()
     for _, record in data.items():
         record = xform(record, schema)
-        singer.write_record("contacts", record)
+        singer.write_record("contacts", record, catalog.get('stream_alias'))
 
-
-def sync_contacts():
+def sync_contacts(catalog):
     now = datetime.datetime.utcnow()
     last_sync = utils.strptime(get_start("contacts"))
     days_since_sync = (now - last_sync).days
@@ -302,7 +300,7 @@ def sync_contacts():
         offset_targets = ['vidOffset', 'timeOffset']
 
     schema = load_schema("contacts")
-    singer.write_schema("contacts", schema, ["canonical-vid"])
+    singer.write_schema("contacts", schema, ["canonical-vid"], catalog.get('stream_alias'))
 
     url = get_url(endpoint)
     params = {
@@ -326,10 +324,10 @@ def sync_contacts():
             vids.append(row['vid'])
 
         if len(vids) == 100:
-            _sync_contact_vids(vids, schema)
+            _sync_contact_vids(catalog, vids, schema)
             vids = []
 
-    _sync_contact_vids(vids, schema)
+    _sync_contact_vids(catalog, vids, schema)
     STATE["contacts"] = RUN_START
     singer.write_state(STATE)
 
@@ -341,7 +339,7 @@ class ValidationPredFailed(Exception):
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
-def sync_companies(force_all=False):
+def sync_companies(catalog, force_all=False):
 
     if not force_all:
         last_sync = utils.strptime(get_start("companies"))
@@ -364,7 +362,7 @@ def sync_companies(force_all=False):
         validation_pred = use_recent_companies_endpoint
 
     schema = load_schema('companies')
-    singer.write_schema("companies", schema, ["companyId"])
+    singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
 
     url = get_url(endpoint)
     params = {'count': 250}
@@ -384,17 +382,16 @@ def sync_companies(force_all=False):
                 modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
             elif 'createdate' in record:
                 modified_time = utils.strptime(record['createdate']['value'])
-
             if not modified_time or modified_time >= last_sync:
-                singer.write_record("companies", record)
+                singer.write_record("companies", record, catalog.get('stream_alias'))
 
         STATE["companies"] = RUN_START
         singer.write_state(STATE)
 
     except ValidationPredFailed:
-        return sync_companies(True)
+        return sync_companies(catalog, True)
 
-def sync_deals():
+def sync_deals(catalog):
     last_sync = utils.strptime(get_start("deals"))
     days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     if days_since_sync > 30:
@@ -405,7 +402,7 @@ def sync_deals():
         path = "results"
 
     schema = load_schema("deals")
-    singer.write_schema("deals", schema, ["portalId", "dealId"])
+    singer.write_schema("deals", schema, ["portalId", "dealId"], catalog.get('stream_alias'))
 
     url = get_url(endpoint)
     params = {'count': 250}
@@ -424,15 +421,15 @@ def sync_deals():
             modified_time = utils.strptime(record['createdate']['value'])
 
         if not modified_time or modified_time >= last_sync:
-            singer.write_record("deals", record)
+            singer.write_record("deals", record, catalog.get('stream_alias'))
 
     STATE["deals"] = RUN_START
     singer.write_state(STATE)
 
 
-def sync_campaigns():
+def sync_campaigns(catalog):
     schema = load_schema("campaigns")
-    singer.write_schema("campaigns", schema, ["id"])
+    singer.write_schema("campaigns", schema, ["id"], catalog.get('stream_alias'))
 
     url = get_url("campaigns_all")
     params = {'limit': 500}
@@ -440,15 +437,15 @@ def sync_campaigns():
     for row in gen_request(url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
         record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
         record = xform(record, schema)
-        singer.write_record("campaigns", record)
+        singer.write_record("campaigns", record, catalog.get('stream_alias'))
 
     STATE["campaigns"] = RUN_START
     singer.write_state(STATE)
 
 
-def sync_entity_chunked(entity_name, key_properties, path):
+def sync_entity_chunked(catalog, entity_name, key_properties, path):
     schema = load_schema(entity_name)
-    singer.write_schema(entity_name, schema, key_properties)
+    singer.write_schema(entity_name, schema, key_properties, catalog.get('stream_alias'))
 
     start = get_start(entity_name)
     now_ts = int(datetime.datetime.utcnow().timestamp() * 1000)
@@ -471,7 +468,8 @@ def sync_entity_chunked(entity_name, key_properties, path):
                 data = request(url, params).json()
                 for row in data[path]:
                     counter.increment()
-                    singer.write_record(entity_name, xform(row, schema))
+                    singer.write_record(entity_name, xform(row, schema),
+                                        catalog.get('stream_alias'))
                 if data.get('hasMore'):
                     STATE[StateFields.offset] = data[DataFields.offset]
                     LOGGER.info('Got more %s', STATE)
@@ -486,92 +484,91 @@ def sync_entity_chunked(entity_name, key_properties, path):
     STATE.pop(StateFields.offset, None)
     singer.write_state(STATE)
 
+def sync_subscription_changes(catalog):
+    sync_entity_chunked(catalog, "subscription_changes", ["timestamp", "portalId", "recipient"],
+                        "timeline")
 
-def sync_subscription_changes():
-    sync_entity_chunked("subscription_changes", ["timestamp", "portalId", "recipient"], "timeline")
+def sync_email_events(catalog):
+    sync_entity_chunked(catalog, "email_events", ["id"], "events")
 
 
-def sync_email_events():
-    sync_entity_chunked("email_events", ["id"], "events")
-
-
-def sync_contact_lists():
+def sync_contact_lists(catalog):
     schema = load_schema("contact_lists")
-    singer.write_schema("contact_lists", schema, ["internalListId"])
+    singer.write_schema("contact_lists", schema, ["internalListId"], catalog.get('stream_alias'))
 
     url = get_url("contact_lists")
     params = {'count': 250}
     for row in gen_request(url, params, "lists", "has-more", ["offset"], ["offset"]):
         record = xform(row, schema)
-        singer.write_record("contact_lists", record)
+        singer.write_record("contact_lists", record, catalog.get('stream_alias'))
 
     STATE["contact_lists"] = RUN_START
     singer.write_state(STATE)
 
 
-def sync_forms():
+def sync_forms(catalog):
     schema = load_schema("forms")
-    singer.write_schema("forms", schema, ["guid"])
+    singer.write_schema("forms", schema, ["guid"], catalog.get('stream_alias'))
     start = get_start("forms")
 
     data = request(get_url("forms")).json()
     for row in data:
         record = xform(row, schema)
         if record['updatedAt'] >= start:
-            singer.write_record("forms", record)
+            singer.write_record("forms", record, catalog.get('stream_alias'))
             utils.update_state(STATE, "forms", record['updatedAt'])
 
     singer.write_state(STATE)
 
 
-def sync_workflows():
+def sync_workflows(catalog):
     schema = load_schema("workflows")
-    singer.write_schema("workflows", schema, ["id"])
+    singer.write_schema("workflows", schema, ["id"], catalog.get('stream_alias'))
     start = get_start("workflows")
 
     data = request(get_url("workflows")).json()
     for row in data['workflows']:
         record = xform(row, schema)
         if record['updatedAt'] >= start:
-            singer.write_record("workflows", record)
+            singer.write_record("workflows", record, catalog.get('stream_alias'))
             utils.update_state(STATE, "workflows", record['updatedAt'])
 
     singer.write_state(STATE)
 
 
-def sync_keywords():
+def sync_keywords(catalog):
     schema = load_schema("keywords")
-    singer.write_schema("keywords", schema, ["keyword_guid"])
+    singer.write_schema("keywords", schema, ["keyword_guid"], catalog.get('stream_alias'))
     start = get_start("keywords")
 
     data = request(get_url("keywords")).json()
     for row in data['keywords']:
         record = xform(row, schema)
         if record['created_at'] >= start:
-            singer.write_record("keywords", record)
+            singer.write_record("keywords", record, catalog.get('stream_alias'))
             utils.update_state(STATE, "keywords", record['created_at'])
 
     singer.write_state(STATE)
 
 
-def sync_owners():
+def sync_owners(catalog):
     schema = load_schema("owners")
-    singer.write_schema("owners", schema, ["portalId", "ownerId"])
+    singer.write_schema("owners", schema, ["portalId", "ownerId"], catalog.get('stream_alias'))
     start = get_start("owners")
 
     data = request(get_url("owners")).json()
     for row in data:
         record = xform(row, schema)
         if record['updatedAt'] >= start:
-            singer.write_record("owners", record)
+            singer.write_record("owners", record, catalog.get('stream_alias'))
             utils.update_state(STATE, "owners", record['updatedAt'])
 
     singer.write_state(STATE)
 
 
-def sync_engagements():
+def sync_engagements(catalog):
     schema = load_schema("engagements")
-    singer.write_schema("engagements", schema, ["id"])
+    singer.write_schema("engagements", schema, ["id"], catalog.get('stream_alias'))
 
     url = get_url("engagements_all")
     params = {'limit': 250}
@@ -580,7 +577,7 @@ def sync_engagements():
 
     for engagement in engagements:
         record = xform(engagement, schema)
-        singer.write_record("engagements", record)
+        singer.write_record("engagements", record, catalog.get('stream_alias'))
 
     STATE["engagements"] = RUN_START
     singer.write_state(STATE)
@@ -588,7 +585,7 @@ def sync_engagements():
 
 @attr.s
 class Stream(object):
-    name = attr.ib()
+    tap_stream_id = attr.ib()
     sync = attr.ib()
     key_properties = attr.ib()
 
@@ -615,7 +612,7 @@ def get_streams_to_sync(streams, state):
     result = streams
     if target_stream:
         result = list(itertools.dropwhile(
-            lambda x: x.name != target_stream, streams))
+            lambda x: x.tap_stream_id != target_stream, streams))
     if not result:
         raise Exception('Unknown stream {} in state'.format(target_stream))
     return result
@@ -627,24 +624,26 @@ def get_selected_streams(streams, annotated_schema):
         schema = stream.get('schema')
         name = stream.get('stream')
         if schema.get('selected'):
-            selected_stream = next((s for s in streams if s.name == name), None)
+            selected_stream = next((s for s in streams if s.tap_stream_id == name), None)
             if selected_stream:
                 selected_streams.append(selected_stream)
     return selected_streams
 
 
-def do_sync(annotated_schema):
-    streams = get_streams_to_sync(STREAMS, STATE)
-    streams = get_selected_streams(streams, annotated_schema)
+def do_sync(catalogs):
+    remaining_streams = get_streams_to_sync(STREAMS, STATE)
+    selected_streams = get_selected_streams(remaining_streams, catalogs)
     LOGGER.info('Starting sync. Will sync these streams: %s',
-                [stream.name for stream in streams])
-    for stream in streams:
-        LOGGER.info('Syncing %s', stream.name)
-        STATE[StateFields.this_stream] = stream.name
+                [stream.tap_stream_id for stream in selected_streams])
+    for stream in selected_streams:
+        LOGGER.info('Syncing %s', stream.tap_stream_id)
+        STATE[StateFields.this_stream] = stream.tap_stream_id
         singer.write_state(STATE)
 
         try:
-            stream.sync() # pylint: disable=not-callable
+            catalog = [c for c in catalogs.get('streams')
+                       if c.get('stream') == stream.tap_stream_id][0]
+            stream.sync(catalog) # pylint: disable=not-callable
         except SourceUnavailableException:
             pass
 
@@ -654,7 +653,7 @@ def do_sync(annotated_schema):
 
 
 def load_discovered_schema(stream):
-    schema = load_schema(stream.name)
+    schema = load_schema(stream.tap_stream_id)
     for k in schema['properties']:
         schema['properties'][k]['inclusion'] = 'automatic'
     return schema
@@ -663,9 +662,9 @@ def load_discovered_schema(stream):
 def discover_schemas():
     result = {'streams': []}
     for stream in STREAMS:
-        LOGGER.info('Loading schema for %s', stream.name)
-        result['streams'].append({'stream': stream.name,
-                                  'tap_stream_id': stream.name,
+        LOGGER.info('Loading schema for %s', stream.tap_stream_id)
+        result['streams'].append({'stream': stream.tap_stream_id,
+                                  'tap_stream_id': stream.tap_stream_id,
                                   'schema': load_discovered_schema(stream)})
     return result
 
