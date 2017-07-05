@@ -110,20 +110,20 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     json={}
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/recent/modified?count=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250",
                     complete_qs=True,
                     json={
-                        "results": [],
-                        "hasMore": True,
-                        "offset": 250,
+                        "companies": [],
+                        "has-more": True,
+                        "offset": 252,
                         "total": 400
                     }
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/recent/modified?count=250&offset=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&offset=252",
                     complete_qs=True,
                     json={
-                        "results": [{
+                        "companies": [{
                             "portalId": 62515,
                             "companyId": 19411477,
                             "isDeleted": False,
