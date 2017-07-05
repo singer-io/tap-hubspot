@@ -364,9 +364,11 @@ def sync_companies(catalog):
         row_properties = row['properties']
         modified_time = None
         if 'hs_lastmodifieddate' in row_properties:
+            # Hubspot returns timestamps in millis
             timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
             modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
         elif 'createdate' in row_properties:
+            # Hubspot returns timestamps in millis
             timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
             modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
         if not modified_time or modified_time >= last_sync:
