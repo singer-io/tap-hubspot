@@ -353,7 +353,7 @@ def sync_companies(catalog):
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
 
     url = get_url(endpoint)
-    params = {'count': 250}
+    params = {'count': 250, 'properties': ["createdate","hs_lastmodifieddate"]}
 
     if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
@@ -361,15 +361,15 @@ def sync_companies(catalog):
     for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
                            validation_pred):
 
-        record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-        record = xform(record, schema)
-
+        row_properties = row['properties']
         modified_time = None
-        if 'hs_lastmodifieddate' in record:
-            modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
-        elif 'createdate' in record:
-            modified_time = utils.strptime(record['createdate']['value'])
+        if 'hs_lastmodifieddate' in row_properties:
+            modified_time = datetime.datetime.fromtimestamp(row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0)
+        elif 'createdate' in row_properties:
+            modified_time = datetime.datetime.fromtimestamp(row_properties['createdate']['timestamp'] / 1000.0)
         if not modified_time or modified_time >= last_sync:
+            record = request(get_url("companies_detail", company_id=row['companyId'])).json()
+            record = xform(record, schema)
             singer.write_record("companies", record, catalog.get('stream_alias'))
 
     STATE["companies"] = RUN_START

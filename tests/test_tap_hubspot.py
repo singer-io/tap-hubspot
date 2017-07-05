@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from io import StringIO
 from singer import utils
 from tap_hubspot import *
+import time
 import datetime
 import json
 import requests_mock
@@ -110,7 +111,7 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     json={}
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/paged?count=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?properties=createdate&properties=hs_lastmodifieddate&count=250",
                     complete_qs=True,
                     json={
                         "companies": [],
@@ -120,14 +121,18 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     }
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&offset=252",
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&properties=createdate&properties=hs_lastmodifieddate&offset=252",
                     complete_qs=True,
                     json={
                         "companies": [{
                             "portalId": 62515,
                             "companyId": 19411477,
                             "isDeleted": False,
-                            "properties": {}
+                            "properties": {
+                                "hs_lastmodifieddate": {
+                                    "timestamp": time.time() * 1000.0
+                                }
+                            }
                         }],
                         "hasMore": False,
                         "offset": 250,
@@ -167,7 +172,7 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     json={}
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/recent/modified?count=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?properties=createdate&properties=hs_lastmodifieddate&count=250",
                     complete_qs=True,
                     json={
                         "results": [],
@@ -177,7 +182,7 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     }
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/paged?count=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?properties=createdate&properties=hs_lastmodifieddate&count=250",
                     complete_qs=True,
                     json={
                         "companies": [],
@@ -186,7 +191,7 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     }
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&offset=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&properties=createdate&properties=hs_lastmodifieddate&offset=250",
                     complete_qs=True,
                     json={
                         "companies": [{
@@ -241,7 +246,7 @@ class TestTapHubspotCompanies(unittest.TestCase):
                     }
                 )
                 mocker.get(
-                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&offset=250",
+                    "https://api.hubapi.com/companies/v2/companies/paged?count=250&properties=createdate&properties=hs_lastmodifieddate",
                     complete_qs=True,
                     json={
                         "companies": [{
