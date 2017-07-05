@@ -342,7 +342,6 @@ def use_recent_companies_endpoint(response):
 def sync_companies(catalog):
 
     last_sync = utils.strptime(get_start("companies"))
-    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
     endpoint = "companies_all"
     path = "companies"
     more_key = "has-more"
