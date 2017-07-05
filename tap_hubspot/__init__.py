@@ -339,27 +339,15 @@ class ValidationPredFailed(Exception):
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
-def sync_companies(catalog, force_all=False):
+def sync_companies(catalog):
 
-    if not force_all:
-        last_sync = utils.strptime(get_start("companies"))
-        days_since_sync = (datetime.datetime.utcnow() - last_sync).days
-        force_all = days_since_sync > 30
-
-    if force_all:
-        endpoint = "companies_all"
-        path = "companies"
-        more_key = "has-more"
-        offset_keys = ["offset"]
-        offset_targets = ["offset"]
-        validation_pred = None
-    else:
-        endpoint = "companies_recent"
-        path = "results"
-        more_key = "hasMore"
-        offset_keys = ["offset"]
-        offset_targets = ["offset"]
-        validation_pred = use_recent_companies_endpoint
+    last_sync = utils.strptime(get_start("companies"))
+    endpoint = "companies_all"
+    path = "companies"
+    more_key = "has-more"
+    offset_keys = ["offset"]
+    offset_targets = ["offset"]
+    validation_pred = None
 
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
@@ -370,26 +358,22 @@ def sync_companies(catalog, force_all=False):
     if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
-    try:
-        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
-                               validation_pred):
+    for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
+                           validation_pred):
 
-            record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-            record = xform(record, schema)
+        record = request(get_url("companies_detail", company_id=row['companyId'])).json()
+        record = xform(record, schema)
 
-            modified_time = None
-            if 'hs_lastmodifieddate' in record:
-                modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
-            elif 'createdate' in record:
-                modified_time = utils.strptime(record['createdate']['value'])
-            if not modified_time or modified_time >= last_sync:
-                singer.write_record("companies", record, catalog.get('stream_alias'))
+        modified_time = None
+        if 'hs_lastmodifieddate' in record:
+            modified_time = utils.strptime(record['hs_lastmodifieddate']['value'])
+        elif 'createdate' in record:
+            modified_time = utils.strptime(record['createdate']['value'])
+        if not modified_time or modified_time >= last_sync:
+            singer.write_record("companies", record, catalog.get('stream_alias'))
 
-        STATE["companies"] = RUN_START
-        singer.write_state(STATE)
-
-    except ValidationPredFailed:
-        return sync_companies(catalog, True)
+    STATE["companies"] = RUN_START
+    singer.write_state(STATE)
 
 def sync_deals(catalog):
     last_sync = utils.strptime(get_start("deals"))
