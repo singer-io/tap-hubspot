@@ -381,46 +381,40 @@ def sync_companies(catalog):
 
 def sync_deals(catalog):
     last_sync = utils.strptime(get_start("deals"))
-    days_since_sync = (datetime.datetime.utcnow() - last_sync).days
 
     endpoint = None
     path = None
     params = {'count': 250}
-    if days_since_sync > 30:
-        endpoint = "deals_all"
-        path = "deals"
-        params['properties'] = ["createdate", "hs_lastmodifieddate"]
-    else:
-        endpoint = "deals_recent"
-        path = "results"
-        params['since'] = int(last_sync.timestamp() * 1000.0)
+
+    endpoint = "deals_all"
+    path = "deals"
+    params['properties'] = []
 
     schema = load_schema("deals")
     singer.write_schema("deals", schema, ["portalId", "dealId"], catalog.get('stream_alias'))
+
+    # Append all the properties fields for deals to the request
+    additional_properties = schema.get("properties").get("properties").get("properties")
+    for key in additional_properties.items():
+        params['properties'].append(key)
 
     url = get_url(endpoint)
     if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
     for row in gen_request(url, params, path, "hasMore", ["offset"], ["offset"]):
-        if days_since_sync > 30:
-            row_properties = row['properties']
-            modified_time = None
-            if 'hs_lastmodifieddate' in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
-            elif 'createdate' in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
-            if not modified_time or modified_time >= last_sync:
-                record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
-                record = xform(record, schema)
-                singer.write_record("deals", record, catalog.get('stream_alias'))
-        else:
-            record = request(get_url("deals_detail", deal_id=row['dealId'])).json()
-            record = xform(record, schema)
+        row_properties = row['properties']
+        modified_time = None
+        if 'hs_lastmodifieddate' in row_properties:
+            # Hubspot returns timestamps in millis
+            timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
+            modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
+        elif 'createdate' in row_properties:
+            # Hubspot returns timestamps in millis
+            timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
+            modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
+        if not modified_time or modified_time >= last_sync:
+            record = xform(row, schema)
             singer.write_record("deals", record, catalog.get('stream_alias'))
 
     STATE["deals"] = RUN_START
