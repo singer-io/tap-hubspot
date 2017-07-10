@@ -597,7 +597,8 @@ STREAMS = [
     Stream('contact_lists', sync_contact_lists, ["internalListId"]),
     Stream('contacts', sync_contacts, ["canonical-vid"]),
     Stream('companies', sync_companies, ["companyId"]),
-    Stream('deals', sync_deals, ["portalId", "dealId"])
+    Stream('deals', sync_deals, ["portalId", "dealId"]),
+    Stream('engagements', sync_engagements, ["engagementId"])
 ]
 
 def get_streams_to_sync(streams, state):
