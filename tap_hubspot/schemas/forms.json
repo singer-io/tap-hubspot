@@ -120,10 +120,10 @@
                                             "description": {
                                                 "type": ["null", "string"]
                                             },
-                                            "displayorder": {
+                                            "displayOrder": {
                                                 "type": ["null", "integer"]
                                             },
-                                            "doubledata": {
+                                            "doubleData": {
                                                 "type": ["null", "number"]
                                             },
                                             "hidden" : {
@@ -132,8 +132,11 @@
                                             "label": {
                                                 "type": ["null", "string"]
                                             },
-                                            "readonly": {
+                                            "readOnly": {
                                                 "type": ["null", "boolean"]
+                                            },
+                                            "value": {
+                                                "type": ["null", "string"]
                                             }
                                         }
                                     }
