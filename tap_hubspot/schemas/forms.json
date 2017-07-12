@@ -1,6 +1,9 @@
 {
     "type": "object",
     "properties": {
+        "deletedAt": {
+            "type": ["null", "integer"]
+        },
         "portalId": {
             "type": ["null", "integer"]
         },

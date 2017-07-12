@@ -27,6 +27,9 @@
             "type": ["null", "string"],
             "format": "date-time"
         },
+        "hasContactsAccess" : {
+            "type": ["null", "boolean"]
+        },
         "remoteList": {
             "type": "array",
             "items": {
