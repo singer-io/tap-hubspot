@@ -13,8 +13,7 @@ import requests
 import singer
 import singer.metrics as metrics
 from singer import utils
-from singer import transform
-
+from singer import transform, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING, Transformer
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -63,6 +62,7 @@ ENDPOINTS = {
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
+    "contacts_by_company":  "/companies/v2/companies/{company_id}/vids",
 
     "deals_properties":     "/properties/v1/deals/properties",
     "deals_all":            "/deals/v1/deal/paged",
@@ -85,7 +85,7 @@ ENDPOINTS = {
 
 
 def xform(record, schema):
-    return transform.transform(record, schema, transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
+    return transform(record, schema, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
 
 
 def get_start(key):
@@ -167,7 +167,7 @@ def load_schema(entity_name):
     return schema
 
 
-def refresh_token():
+def acquire_access_token_from_refresh_token():
     payload = {
         "grant_type": "refresh_token",
         "redirect_uri": CONFIG['redirect_uri'],
@@ -176,8 +176,9 @@ def refresh_token():
         "client_secret": CONFIG['client_secret'],
     }
 
-    LOGGER.info("Refreshing token")
+
     resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+    LOGGER.info(resp.content)
     if resp.status_code == 403:
         raise InvalidAuthException(resp.content)
 
@@ -223,8 +224,9 @@ def parse_source_from_url(url):
                       factor=2)
 @utils.ratelimit(9, 1)
 def request(url, params=None):
+
     if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
-        refresh_token()
+        acquire_access_token_from_refresh_token()
 
     params = params or {}
     headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
@@ -339,8 +341,21 @@ class ValidationPredFailed(Exception):
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
-def sync_companies(catalog):
+# NB> to do: support stream aliasing and field selection
+def sync_contacts_by_company(company_id):
+    schema = load_schema('contacts_by_company')
+    singer.write_schema("contacts_by_company", schema, ["company-id", "contact-id"])
+    record = request(get_url("contacts_by_company", company_id=company_id)).json()
 
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for vid in record['vids']:
+            record = { 'company-id' : company_id,
+                       'contact-id' : vid}
+            record = bumble_bee.transform(record, schema)
+            singer.write_record("contacts_by_company", record)
+
+def sync_companies(catalog):
+    bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
     last_sync = utils.strptime(get_start("companies"))
     endpoint = "companies_all"
     path = "companies"
@@ -355,26 +370,31 @@ def sync_companies(catalog):
     url = get_url(endpoint)
     params = {'count': 250, 'properties': ["createdate", "hs_lastmodifieddate"]}
 
+
     if STATE.get(StateFields.offset, {}).get('offset') == 10000:
         STATE.pop(StateFields.offset, None)
 
-    for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
-                           validation_pred):
+    with bumble_bee:
+        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
+                               validation_pred):
+            row_properties = row['properties']
+            modified_time = None
+            if 'hs_lastmodifieddate' in row_properties:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
+                modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
+            elif 'createdate' in row_properties:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
+                modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
 
-        row_properties = row['properties']
-        modified_time = None
-        if 'hs_lastmodifieddate' in row_properties:
-            # Hubspot returns timestamps in millis
-            timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
-            modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
-        elif 'createdate' in row_properties:
-            # Hubspot returns timestamps in millis
-            timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
-            modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
-        if not modified_time or modified_time >= last_sync:
-            record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-            record = xform(record, schema)
-            singer.write_record("companies", record, catalog.get('stream_alias'))
+            LOGGER.info("modified_time: {}".format(modified_time))
+            if not modified_time or modified_time >= last_sync:
+                record = request(get_url("companies_detail", company_id=row['companyId'])).json()
+                LOGGER.info("bumble_bee is about to transform")
+                record = bumble_bee.transform(record, schema)
+                singer.write_record("companies", record, catalog.get('stream_alias'))
+                sync_contacts_by_company(record['companyId'])
 
     STATE["companies"] = RUN_START
     singer.write_state(STATE)
@@ -580,25 +600,24 @@ def sync_engagements(catalog):
 class Stream(object):
     tap_stream_id = attr.ib()
     sync = attr.ib()
-    key_properties = attr.ib()
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes,
-           ["timestamp", "portalId", "recipient"]),
-    Stream('email_events', sync_email_events, ["id"]),
+    # Stream('subscription_changes', sync_subscription_changes,
+    #        ["timestamp", "portalId", "recipient"]),
+    # Stream('email_events', sync_email_events, ["id"]),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms, ["guid"]),
-    Stream('workflows', sync_workflows, ["id"]),
-    Stream('keywords', sync_keywords, ["keyword_guid"]),
-    Stream('owners', sync_owners, ["portalId", "ownerId"]),
-    Stream('campaigns', sync_campaigns, ["id"]),
-    Stream('contact_lists', sync_contact_lists, ["internalListId"]),
-    Stream('contacts', sync_contacts, ["canonical-vid"]),
-    Stream('companies', sync_companies, ["companyId"]),
-    Stream('deals', sync_deals, ["portalId", "dealId"]),
-    Stream('engagements', sync_engagements, ["engagementId"])
+    # Stream('forms', sync_forms, ["guid"]),
+    # Stream('workflows', sync_workflows, ["id"]),
+    # Stream('keywords', sync_keywords, ["keyword_guid"]),
+    # Stream('owners', sync_owners, ["portalId", "ownerId"]),
+    # Stream('campaigns', sync_campaigns, ["id"]),
+    # Stream('contact_lists', sync_contact_lists, ["internalListId"]),
+    # Stream('contacts', sync_contacts, ["canonical-vid"]),
+    Stream('companies', sync_companies)
+    # Stream('deals', sync_deals, ["portalId", "dealId"]),
+    # Stream('engagements', sync_engagements, ["engagementId"])
 ]
 
 def get_streams_to_sync(streams, state):
