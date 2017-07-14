@@ -245,21 +245,16 @@ def request(url, params=None):
 
     return resp
 
-
-def gen_request(url, params, path, more_key, offset_keys, offset_targets, validation_pred=None):
+def gen_request(url, params, path, more_key, offset_keys, offset_targets, use_state=True):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
-    if STATE.get(StateFields.offset):
+    if STATE.get(StateFields.offset) and use_state:
         params.update(STATE[StateFields.offset])
 
     with metrics.record_counter(parse_source_from_url(url)) as counter:
         while True:
             data = request(url, params).json()
-
-            if validation_pred:
-                if not validation_pred(data):
-                    raise ValidationPredFailed()
 
             for row in data[path]:
                 counter.increment()
@@ -268,16 +263,21 @@ def gen_request(url, params, path, more_key, offset_keys, offset_targets, valida
             if not data.get(more_key, False):
                 break
 
-            STATE[StateFields.offset] = {}
+            if use_state:
+                STATE[StateFields.offset] = {}
+
             for key, target in zip(offset_keys, offset_targets):
                 if key in data:
                     params[target] = data[key]
-                    STATE[StateFields.offset][target] = data[key]
+                    if use_state:
+                        STATE[StateFields.offset][target] = data[key]
 
-            singer.write_state(STATE)
+            if use_state:
+                singer.write_state(STATE)
 
-    STATE.pop(StateFields.offset, None)
-    singer.write_state(STATE)
+    if use_state:
+        STATE.pop(StateFields.offset, None)
+        singer.write_state(STATE)
 
 def _sync_contact_vids(catalog, vids, schema):
     if len(vids) == 0:
@@ -345,10 +345,12 @@ def use_recent_companies_endpoint(response):
 def sync_contacts_by_company(company_id):
     schema = load_schema('contacts_by_company')
     singer.write_schema("contacts_by_company", schema, ["company-id", "contact-id"])
-    record = request(get_url("contacts_by_company", company_id=company_id)).json()
 
+    url = get_url("contacts_by_company", company_id=company_id)
+    path = 'vids'
+    params = {'count': 100}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for vid in record['vids']:
+        for vid in gen_request(url, params, path, 'hasMore', ['vidOffset'], ['vidOffset'], False):
             record = { 'company-id' : company_id,
                        'contact-id' : vid}
             record = bumble_bee.transform(record, schema)
@@ -362,7 +364,6 @@ def sync_companies(catalog):
     more_key = "has-more"
     offset_keys = ["offset"]
     offset_targets = ["offset"]
-    validation_pred = None
 
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
@@ -375,8 +376,7 @@ def sync_companies(catalog):
         STATE.pop(StateFields.offset, None)
 
     with bumble_bee:
-        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets,
-                               validation_pred):
+        for row in gen_request(url, params, path, more_key, offset_keys, offset_targets):
             row_properties = row['properties']
             modified_time = None
             if 'hs_lastmodifieddate' in row_properties:
