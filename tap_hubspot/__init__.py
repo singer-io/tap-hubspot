@@ -13,7 +13,7 @@ import requests
 import singer
 import singer.metrics as metrics
 from singer import utils
-from singer import transform, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING, Transformer
+from singer import transform, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING, Transformer, _transform_datetime
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -318,9 +318,9 @@ def sync_contacts(catalog):
         modified_time = None
         if 'lastmodifieddate' in row['properties']:
             modified_time = utils.strptime(
-                transform._transform_datetime( # pylint: disable=protected-access
+                _transform_datetime( # pylint: disable=protected-access
                     row['properties']['lastmodifieddate']['value'],
-                    transform.UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
+                    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
         if not modified_time or modified_time >= last_sync:
             vids.append(row['vid'])
@@ -603,21 +603,20 @@ class Stream(object):
 
 STREAMS = [
     # Do these first as they are incremental
-    # Stream('subscription_changes', sync_subscription_changes,
-    #        ["timestamp", "portalId", "recipient"]),
-    # Stream('email_events', sync_email_events, ["id"]),
+    Stream('subscription_changes', sync_subscription_changes),
+    Stream('email_events', sync_email_events),
 
     # Do these last as they are full table
-    # Stream('forms', sync_forms, ["guid"]),
-    # Stream('workflows', sync_workflows, ["id"]),
-    # Stream('keywords', sync_keywords, ["keyword_guid"]),
-    # Stream('owners', sync_owners, ["portalId", "ownerId"]),
-    # Stream('campaigns', sync_campaigns, ["id"]),
-    # Stream('contact_lists', sync_contact_lists, ["internalListId"]),
-    # Stream('contacts', sync_contacts, ["canonical-vid"]),
-    Stream('companies', sync_companies)
-    # Stream('deals', sync_deals, ["portalId", "dealId"]),
-    # Stream('engagements', sync_engagements, ["engagementId"])
+    Stream('forms', sync_forms),
+    Stream('workflows', sync_workflows),
+    Stream('keywords', sync_keywords),
+    Stream('owners', sync_owners),
+    Stream('campaigns', sync_campaigns),
+    Stream('contact_lists', sync_contact_lists),
+    Stream('contacts', sync_contacts),
+    Stream('companies', sync_companies),
+    Stream('deals', sync_deals),
+    Stream('engagements', sync_engagements)
 ]
 
 def get_streams_to_sync(streams, state):
