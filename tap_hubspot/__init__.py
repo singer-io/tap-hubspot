@@ -507,7 +507,7 @@ def sync_email_events(catalog):
 
 def sync_contact_lists(catalog):
     schema = load_schema("contact_lists")
-    singer.write_schema("contact_lists", schema, ["internalListId"], catalog.get('stream_alias'))
+    singer.write_schema("contact_lists", schema, ["listId"], catalog.get('stream_alias'))
 
     url = get_url("contact_lists")
     params = {'count': 250}
