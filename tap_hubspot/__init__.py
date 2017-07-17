@@ -343,8 +343,8 @@ def use_recent_companies_endpoint(response):
 
 # NB> to do: support stream aliasing and field selection
 def sync_contacts_by_company(company_id):
-    schema = load_schema('contacts_by_company')
-    singer.write_schema("contacts_by_company", schema, ["company-id", "contact-id"])
+    schema = load_schema('hubspot_contacts_by_company')
+    singer.write_schema("hubspot_contacts_by_company", schema, ["company-id", "contact-id"])
 
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
@@ -354,7 +354,7 @@ def sync_contacts_by_company(company_id):
             record = { 'company-id' : company_id,
                        'contact-id' : vid}
             record = bumble_bee.transform(record, schema)
-            singer.write_record("contacts_by_company", record)
+            singer.write_record("hubspot_contacts_by_company", record)
 
 def sync_companies(catalog):
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
