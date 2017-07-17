@@ -566,7 +566,7 @@ def sync_keywords(catalog):
 
 def sync_owners(catalog):
     schema = load_schema("owners")
-    singer.write_schema("owners", schema, ["portalId", "ownerId"], catalog.get('stream_alias'))
+    singer.write_schema("owners", schema, ["ownerId"], catalog.get('stream_alias'))
     start = get_start("owners")
 
     data = request(get_url("owners")).json()
