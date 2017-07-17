@@ -411,7 +411,7 @@ def sync_deals(catalog):
     params['properties'] = []
 
     schema = load_schema("deals")
-    singer.write_schema("deals", schema, ["portalId", "dealId"], catalog.get('stream_alias'))
+    singer.write_schema("deals", schema, ["dealId"], catalog.get('stream_alias'))
 
     # Append all the properties fields for deals to the request
     additional_properties = schema.get("properties").get("properties").get("properties")
