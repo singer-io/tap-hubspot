@@ -481,7 +481,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
             singer.write_state(STATE)
             start_ts = end_ts
 
-    STATE.pop(StateFields.offset, None)
+    STATE = singer.clear_offset(STATE, entity_name)
     singer.write_state(STATE)
     return STATE
 
@@ -615,7 +615,7 @@ STREAMS = [
 ]
 
 def get_streams_to_sync(streams, state):
-    target_stream = state.get(StateFields.this_stream)
+    target_stream = singer.get_currently_syncing(state)
     result = streams
     if target_stream:
         result = list(itertools.dropwhile(
@@ -625,15 +625,15 @@ def get_streams_to_sync(streams, state):
     return result
 
 
-def get_selected_streams(streams, annotated_schema):
+def get_selected_streams(remaining_streams, annotated_schema):
     selected_streams = []
-    for stream in annotated_schema['streams']:
-        schema = stream.get('schema')
-        name = stream.get('stream')
-        if schema.get('selected'):
-            selected_stream = next((s for s in streams if s.tap_stream_id == name), None)
-            if selected_stream:
-                selected_streams.append(selected_stream)
+
+    for stream in remaining_streams:
+        tap_stream_id = stream.tap_stream_id
+        selected_stream =  next((s for s in annotated_schema['streams'] if s['tap_stream_id'] == tap_stream_id), None)
+        if selected_stream and selected_stream.get('schema').get('selected'):
+            selected_streams.append(stream)
+
     return selected_streams
 
 
