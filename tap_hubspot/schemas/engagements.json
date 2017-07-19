@@ -13,11 +13,13 @@
         "active": {
           "type": "boolean"
         },
-        "createdAt": {
-          "type": "integer"
+         "createdAt": {
+             "type": ["null", "string"],
+             "format": "date-time"
         },
-        "lastUpdated": {
-          "type": "integer"
+          "lastUpdated": {
+              "type": ["null", "string"],
+              "format": "date-time"
         },
         "ownerId": {
           "type": "integer"
@@ -25,8 +27,9 @@
         "type": {
           "type": "string"
         },
-        "timestamp": {
-          "type": "integer"
+          "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
         }
       }
     },

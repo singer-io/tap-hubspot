@@ -265,16 +265,15 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                 break
 
             if use_state:
-                STATE = singer.set_offset(STATE, tap_stream_id, {})
+                STATE = singer.clear_offset(STATE, tap_stream_id)
+                for key, target in zip(offset_keys, offset_targets):
+                    if key in data:
+                        params[target] = data[key]
+                        if use_state:
+                            STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
 
-            for key, target in zip(offset_keys, offset_targets):
-                if key in data:
-                    params[target] = data[key]
-                    if use_state:
-                        STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
-
-            if use_state:
                 singer.write_state(STATE)
+
 
     if use_state:
         STATE = singer.clear_offset(STATE, tap_stream_id)
@@ -580,9 +579,9 @@ def sync_owners(STATE, catalog):
 #TODO: support bookmarks
 def sync_engagements(STATE, catalog):
     schema = load_schema("engagements")
-    singer.write_schema("engagements", schema, ["id"], catalog.get('stream_alias'))
-
-    LOGGER.info("sync_engagements(NO bookmarks)")
+    singer.write_schema("engagements", schema, ["engagement_id"], catalog.get('stream_alias'))
+    start = get_start(STATE, "engagements", 'lastUpdated')
+    LOGGER.info("sync_engagements from {}".format(start))
 
     url = get_url("engagements_all")
     params = {'limit': 250}
@@ -592,7 +591,12 @@ def sync_engagements(STATE, catalog):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema)
-            singer.write_record("engagements", record, catalog.get('stream_alias'))
+            LOGGER.info("data {} {}".format(record['engagement']['id'], record['engagement']['lastUpdated']))
+            if record['engagement']['lastUpdated'] >= start:
+                record['engagement_id'] = record['engagement']['id']
+                singer.write_record("engagements", record, catalog.get('stream_alias'))
+                STATE = singer.write_bookmark(STATE, 'engagements', 'lastUpdated', record['engagement']['lastUpdated'])
+                singer.write_state(STATE)
 
     return STATE
 
