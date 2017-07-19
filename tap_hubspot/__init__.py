@@ -82,11 +82,6 @@ ENDPOINTS = {
     "owners":               "/owners/v2/owners",
 }
 
-
-def xform(record, schema):
-    return transform(record, schema, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
-
-
 def get_start(STATE, tap_stream_id, bookmark_key):
     current_bookmark = singer.get_bookmark(STATE, tap_stream_id, bookmark_key)
     if current_bookmark == None:
@@ -249,6 +244,8 @@ def request(url, params=None):
 #  "currently_syncing" : "contacts"
 # }
 # }
+
+
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, use_state=True):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
@@ -284,13 +281,13 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
         singer.write_state(STATE)
 
 
-def _sync_contact_vids(catalog, vids, schema):
+def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     if len(vids) == 0:
         return
 
     data = request(get_url("contacts_detail"), params={'vid': vids}).json()
     for _, record in data.items():
-        record = xform(record, schema)
+        record = bumble_bee.transform(record, schema)
         singer.write_record("contacts", record, catalog.get('stream_alias'))
 
 def sync_contacts(STATE, catalog):
@@ -307,21 +304,21 @@ def sync_contacts(STATE, catalog):
         'count': 100,
     }
     vids = []
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request(STATE, 'contacts', url, params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
+            modified_time = None
+            if 'lastmodifieddate' in row['properties']:
+                modified_time = utils.strptime(
+                    _transform_datetime( # pylint: disable=protected-access
+                        row['properties']['lastmodifieddate']['value'],
+                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
-    for row in gen_request(STATE, 'contacts', url, params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
-        modified_time = None
-        if 'lastmodifieddate' in row['properties']:
-            modified_time = utils.strptime(
-                _transform_datetime( # pylint: disable=protected-access
-                    row['properties']['lastmodifieddate']['value'],
-                    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
+            if not modified_time or modified_time >= last_sync:
+                vids.append(row['vid'])
 
-        if not modified_time or modified_time >= last_sync:
-            vids.append(row['vid'])
-
-        if len(vids) == 100:
-            _sync_contact_vids(catalog, vids, schema)
-            vids = []
+            if len(vids) == 100:
+                _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                vids = []
 
     _sync_contact_vids(catalog, vids, schema)
     STATE = singer.write_bookmark(STATE, 'contacts', 'lastmodifieddate', RUN_START)
@@ -404,20 +401,21 @@ def sync_deals(STATE, catalog):
         params['properties'].append(key)
 
     url = get_url('deals_all')
-    for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"]):
-        row_properties = row['properties']
-        modified_time = None
-        if 'hs_lastmodifieddate' in row_properties:
-            # Hubspot returns timestamps in millis
-            timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
-            modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
-        elif 'createdate' in row_properties:
-            # Hubspot returns timestamps in millis
-            timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
-            modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
-        if not modified_time or modified_time >= last_sync:
-            record = xform(row, schema)
-            singer.write_record("deals", record, catalog.get('stream_alias'))
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"]):
+            row_properties = row['properties']
+            modified_time = None
+            if 'hs_lastmodifieddate' in row_properties:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row_properties['hs_lastmodifieddate']['timestamp'] / 1000.0
+                modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
+            elif 'createdate' in row_properties:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
+                modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
+            if not modified_time or modified_time >= last_sync:
+                record = bumble_bee.transform(row, schema)
+                singer.write_record("deals", record, catalog.get('stream_alias'))
 
     STATE = singer.write_bookmark(STATE, 'deals', 'hs_lastmodifieddate', RUN_START)
     singer.write_state(STATE)
@@ -431,10 +429,11 @@ def sync_campaigns(STATE, catalog):
     url = get_url("campaigns_all")
     params = {'limit': 500}
 
-    for row in gen_request(STATE, 'campaigns', url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
-        record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
-        record = xform(record, schema)
-        singer.write_record("campaigns", record, catalog.get('stream_alias'))
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request(STATE, 'campaigns', url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
+            record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
+            record = bumble_bee.transform(record, schema)
+            singer.write_record("campaigns", record, catalog.get('stream_alias'))
 
     return STATE
 
@@ -459,23 +458,23 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                 'endTimestamp': end_ts,
                 'limit': 1000,
             }
+            with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+                while True:
+                    our_offset = singer.get_offset(STATE, entity_name)
+                    if bool(our_offset) and our_offset.get('offset') != None:
+                        params[StateFields.offset] = our_offset.get('offset')
 
-            while True:
-                our_offset = singer.get_offset(STATE, entity_name)
-                if bool(our_offset) and our_offset.get('offset') != None:
-                    params[StateFields.offset] = our_offset.get('offset')
-
-                data = request(url, params).json()
-                for row in data[path]:
-                    counter.increment()
-                    singer.write_record(entity_name, xform(row, schema),
-                                        catalog.get('stream_alias'))
-                if data.get('hasMore'):
-                    singer.set_offset(STATE, entity_name, 'offset', data['offset'])
-                    LOGGER.info('Got more %s', STATE)
-                    singer.write_state(STATE)
-                else:
-                    break
+                    data = request(url, params).json()
+                    for row in data[path]:
+                        counter.increment()
+                        record = bumble_bee.transform(row, schema)
+                        singer.write_record(entity_name, record,
+                                            catalog.get('stream_alias'))
+                        if data.get('hasMore'):
+                            singer.set_offset(STATE, entity_name, 'offset', data['offset'])
+                            singer.write_state(STATE)
+                        else:
+                            break
 
             STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.utcfromtimestamp(end_ts / 1000))) # pylint: disable=line-too-long
             singer.write_state(STATE)
@@ -501,9 +500,10 @@ def sync_contact_lists(STATE, catalog):
     LOGGER.info("sync_contact_lists(NO bookmarks)")
     url = get_url("contact_lists")
     params = {'count': 250}
-    for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
-        record = xform(row, schema)
-        singer.write_record("contact_lists", record, catalog.get('stream_alias'))
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
+            record = bumble_bee.transform(row, schema)
+            singer.write_record("contact_lists", record, catalog.get('stream_alias'))
 
     return STATE
 
@@ -515,12 +515,13 @@ def sync_forms(STATE, catalog):
     LOGGER.info("sync_forms from {}".format(start))
 
     data = request(get_url("forms")).json()
-    for row in data:
-        record = xform(row, schema)
-        if record['updatedAt'] >= start:
-            singer.write_record("forms", record, catalog.get('stream_alias'))
-            singer.write_state(STATE)
-            STATE = singer.write_bookmark(STATE, 'forms', 'updatedAt', record['updatedAt'])
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data:
+            record = bumble_bee.transform(row, schema)
+            if record['updatedAt'] >= start:
+                singer.write_record("forms", record, catalog.get('stream_alias'))
+                singer.write_state(STATE)
+                STATE = singer.write_bookmark(STATE, 'forms', 'updatedAt', record['updatedAt'])
 
     return STATE
 
@@ -532,12 +533,13 @@ def sync_workflows(STATE, catalog):
     LOGGER.info("sync_workflows from {}".format(start))
 
     data = request(get_url("workflows")).json()
-    for row in data['workflows']:
-        record = xform(row, schema)
-        if record['updatedAt'] >= start:
-            singer.write_record("workflows", record, catalog.get('stream_alias'))
-            STATE = singer.write_bookmark(STATE, 'workflows', 'updatedAt', record['updatedAt'])
-            singer.write_state(STATE)
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data['workflows']:
+            record = bumble_bee.transform(row, schema)
+            if record['updatedAt'] >= start:
+                singer.write_record("workflows", record, catalog.get('stream_alias'))
+                STATE = singer.write_bookmark(STATE, 'workflows', 'updatedAt', record['updatedAt'])
+                singer.write_state(STATE)
 
     return STATE
 
@@ -548,12 +550,13 @@ def sync_keywords(STATE, catalog):
 
     LOGGER.info("sync_keywords from {}".format(start))
     data = request(get_url("keywords")).json()
-    for row in data['keywords']:
-        record = xform(row, schema)
-        if record['created_at'] >= start:
-            singer.write_record("keywords", record, catalog.get('stream_alias'))
-            STATE = singer.write_bookmark(STATE, 'keywords', 'created_at', record['created_at'])
-            singer.write_state(STATE)
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data['keywords']:
+            record = bumble_bee.transform(row, schema)
+            if record['created_at'] >= start:
+                singer.write_record("keywords", record, catalog.get('stream_alias'))
+                STATE = singer.write_bookmark(STATE, 'keywords', 'created_at', record['created_at'])
+                singer.write_state(STATE)
 
     return STATE
 
@@ -564,12 +567,13 @@ def sync_owners(STATE, catalog):
 
     LOGGER.info("sync_owners from {}".format(start))
     data = request(get_url("owners")).json()
-    for row in data:
-        record = xform(row, schema)
-        if record['updatedAt'] >= start:
-            singer.write_record("owners", record, catalog.get('stream_alias'))
-            STATE = singer.write_bookmark(STATE, 'owners', 'updatedAt', record['updatedAt'])
-            singer.write_state(STATE)
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data:
+            record = bumble_bee.transform(row,schema)
+            if record['updatedAt'] >= start:
+                singer.write_record("owners", record, catalog.get('stream_alias'))
+                STATE = singer.write_bookmark(STATE, 'owners', 'updatedAt', record['updatedAt'])
+                singer.write_state(STATE)
 
     return STATE
 
@@ -585,9 +589,10 @@ def sync_engagements(STATE, catalog):
     top_level_key = "results"
     engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
 
-    for engagement in engagements:
-        record = xform(engagement, schema)
-        singer.write_record("engagements", record, catalog.get('stream_alias'))
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for engagement in engagements:
+            record = bumble_bee.transform(engagement, schema)
+            singer.write_record("engagements", record, catalog.get('stream_alias'))
 
     return STATE
 
