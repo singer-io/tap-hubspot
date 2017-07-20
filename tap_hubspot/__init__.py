@@ -269,8 +269,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                 for key, target in zip(offset_keys, offset_targets):
                     if key in data:
                         params[target] = data[key]
-                        if use_state:
-                            STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
+                        STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
 
                 singer.write_state(STATE)
 
@@ -492,17 +491,22 @@ def sync_email_events(STATE, catalog):
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
     return STATE
 
-#TODO: utilize updatedAt to support bookmarking
 def sync_contact_lists(STATE, catalog):
     schema = load_schema("contact_lists")
     singer.write_schema("contact_lists", schema, ["listId"], catalog.get('stream_alias'))
-    LOGGER.info("sync_contact_lists(NO bookmarks)")
+
+    start = get_start(STATE, "contact_lists", 'updatedAt')
+    LOGGER.info("sync_contact_lists from {}".format(start))
+
     url = get_url("contact_lists")
     params = {'count': 250}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
             record = bumble_bee.transform(row, schema)
-            singer.write_record("contact_lists", record, catalog.get('stream_alias'))
+            if record['updatedAt'] >= start:
+                singer.write_record("contact_lists", record, catalog.get('stream_alias'))
+                STATE = singer.write_bookmark(STATE, 'contact_lists', 'updatedAt', record['updatedAt'])
+                singer.write_state(STATE)
 
     return STATE
 
@@ -576,7 +580,6 @@ def sync_owners(STATE, catalog):
 
     return STATE
 
-#TODO: support bookmarks
 def sync_engagements(STATE, catalog):
     schema = load_schema("engagements")
     singer.write_schema("engagements", schema, ["engagement_id"], catalog.get('stream_alias'))
