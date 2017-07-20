@@ -318,7 +318,8 @@ def sync_contacts(STATE, catalog):
                 _sync_contact_vids(catalog, vids, schema, bumble_bee)
                 vids = []
 
-    _sync_contact_vids(catalog, vids, schema)
+        _sync_contact_vids(catalog, vids, schema, bumble_bee)
+
     STATE = singer.write_bookmark(STATE, 'contacts', 'lastmodifieddate', RUN_START)
     singer.write_state(STATE)
     return STATE
@@ -468,11 +469,12 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                         record = bumble_bee.transform(row, schema)
                         singer.write_record(entity_name, record,
                                             catalog.get('stream_alias'))
-                        if data.get('hasMore'):
-                            singer.set_offset(STATE, entity_name, 'offset', data['offset'])
-                            singer.write_state(STATE)
-                        else:
-                            break
+
+                    if data.get('hasMore'):
+                        singer.set_offset(STATE, entity_name, 'offset', data['offset'])
+                        singer.write_state(STATE)
+                    else:
+                        break
 
             STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.utcfromtimestamp(end_ts / 1000))) # pylint: disable=line-too-long
             singer.write_state(STATE)
