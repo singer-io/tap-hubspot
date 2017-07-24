@@ -469,11 +469,12 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                         record = bumble_bee.transform(row, schema)
                         singer.write_record(entity_name, record,
                                             catalog.get('stream_alias'))
-
                     if data.get('hasMore'):
                         singer.set_offset(STATE, entity_name, 'offset', data['offset'])
                         singer.write_state(STATE)
                     else:
+                        singer.clear_offset(STATE, entity_name)
+                        singer.write_state(STATE)
                         break
 
             STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.utcfromtimestamp(end_ts / 1000))) # pylint: disable=line-too-long
