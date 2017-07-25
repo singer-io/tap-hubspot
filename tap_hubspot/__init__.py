@@ -626,7 +626,7 @@ STREAMS = [
     Stream('contacts', sync_contacts),
     Stream('companies', sync_companies),
     Stream('deals', sync_deals),
-    # Stream('engagements', sync_engagements)
+    Stream('engagements', sync_engagements)
 ]
 
 def get_streams_to_sync(streams, state):
