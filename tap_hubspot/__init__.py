@@ -11,6 +11,7 @@ import attr
 import backoff
 import requests
 import singer
+import singer.messages
 import singer.metrics as metrics
 from singer import utils
 from singer import transform, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING, Transformer, _transform_datetime
@@ -288,6 +289,11 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
         record = bumble_bee.transform(record, schema)
         singer.write_record("contacts", record, catalog.get('stream_alias'))
 
+default_contact_params =  {
+    'showListMemberships': True,
+    'count': 100,
+}
+
 def sync_contacts(STATE, catalog):
     now = datetime.datetime.utcnow()
     last_sync = utils.strptime(get_start(STATE, "contacts", 'lastmodifieddate'))
@@ -297,13 +303,10 @@ def sync_contacts(STATE, catalog):
     singer.write_schema("contacts", schema, ["canonical-vid"], catalog.get('stream_alias'))
 
     url = get_url("contacts_all")
-    params = {
-        'showListMemberships': True,
-        'count': 100,
-    }
+
     vids = []
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'contacts', url, params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
+        for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
             if 'lastmodifieddate' in row['properties']:
                 modified_time = utils.strptime(
@@ -332,6 +335,8 @@ class ValidationPredFailed(Exception):
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
+default_contacts_by_company_params = { 'count' : 100 }
+
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, company_id):
     schema = load_schema('hubspot_contacts_by_company')
@@ -339,15 +344,18 @@ def _sync_contacts_by_company(STATE, company_id):
 
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
-    params = {'count': 100}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for vid in gen_request(STATE, 'contacts_by_company', url, params, path, 'hasMore', ['vidOffset'], ['vidOffset'], False):
+        for vid in gen_request(STATE, 'contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset'], False):
             record = { 'company-id' : company_id,
                        'contact-id' : vid}
             record = bumble_bee.transform(record, schema)
             singer.write_record("hubspot_contacts_by_company", record)
 
     return STATE
+
+default_company_params = {
+    'limit': 250, 'properties': ["createdate", "hs_lastmodifieddate"]
+}
 
 def sync_companies(STATE, catalog):
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
@@ -358,10 +366,9 @@ def sync_companies(STATE, catalog):
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
 
     url = get_url("companies_all")
-    params = {'count': 250, 'properties': ["createdate", "hs_lastmodifieddate"]}
 
     with bumble_bee:
-        for row in gen_request(STATE, 'companies', url, params, 'companies', 'has-more', ['offset'],['offset']):
+        for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'],['offset']):
             row_properties = row['properties']
             modified_time = None
             if 'hs_lastmodifieddate' in row_properties:
@@ -376,7 +383,6 @@ def sync_companies(STATE, catalog):
             LOGGER.info("modified_time: {}".format(modified_time))
             if not modified_time or modified_time >= last_sync:
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-                LOGGER.info("bumble_bee is about to transform")
                 record = bumble_bee.transform(record, schema)
                 singer.write_record("companies", record, catalog.get('stream_alias'))
                 STATE = _sync_contacts_by_company(STATE, record['companyId'])
@@ -470,10 +476,10 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                         singer.write_record(entity_name, record,
                                             catalog.get('stream_alias'))
                     if data.get('hasMore'):
-                        singer.set_offset(STATE, entity_name, 'offset', data['offset'])
+                        STATE = singer.set_offset(STATE, entity_name, 'offset', data['offset'])
                         singer.write_state(STATE)
                     else:
-                        singer.clear_offset(STATE, entity_name)
+                        STATE = singer.clear_offset(STATE, entity_name)
                         singer.write_state(STATE)
                         break
 
