@@ -17,9 +17,12 @@ class Bookmarks(unittest.TestCase):
         singer.write_record   = utils.our_write_record
         singer.write_schema   = utils.our_write_schema
 
+    #NB> test account must have > 2 contacts for this to work
     def sync_contacts(self):
         STATE = utils.get_clear_state()
         catalog = {'stream_alias' : 'hubspot_contacts'}
+
+        tap_hubspot.default_contact_params['count'] = 1
 
         STATE = tap_hubspot.sync_contacts(STATE, catalog)
         #offset has been cleared
@@ -29,9 +32,10 @@ class Bookmarks(unittest.TestCase):
         self.assertNotEqual(utils.caught_state['bookmarks']['contacts']['lastmodifieddate'], None)
 
         #should sync some contacts
-        self.assertGreater(len(utils.caught_records),0)
+        # LOGGER.info('A caught record: {}'.format(utils.caught_records['contacts'][0]))
+        self.assertGreater(len(utils.caught_records['contacts']),1)
         self.assertEqual(set(utils.caught_records.keys()), {'contacts'})
-        self.assertEqual(utils.caught_pks, {'contacts': ['canonical-vid']})
+        self.assertEqual(utils.caught_pks, {'contacts': ['vid']})
 
         utils.caught_records = []
         STATE = tap_hubspot.sync_contacts(STATE, catalog)

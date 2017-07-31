@@ -149,6 +149,12 @@ def get_custom_schema(entity_name):
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
+def load_associated_company_schema():
+    associated_company_schema = load_schema("companies")
+    associated_company_schema['properties']['company-id'] =     associated_company_schema['properties'].pop('companyId')
+    associated_company_schema['properties']['portal-id'] =     associated_company_schema['properties'].pop('portalId')
+    return associated_company_schema
+
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
     if entity_name in ["contacts", "companies", "deals"]:
@@ -156,7 +162,10 @@ def load_schema(entity_name):
         schema['properties']['properties'] = {
             "type": "object",
             "properties": custom_schema,
-        }
+         }
+
+    if entity_name == "contacts":
+        schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -284,7 +293,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     if len(vids) == 0:
         return
 
-    data = request(get_url("contacts_detail"), params={'vid': vids}).json()
+    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True}).json()
     for _, record in data.items():
         record = bumble_bee.transform(record, schema)
         singer.write_record("contacts", record, catalog.get('stream_alias'))
@@ -300,7 +309,8 @@ def sync_contacts(STATE, catalog):
     LOGGER.info("sync_contacts from {}".format(last_sync))
 
     schema = load_schema("contacts")
-    singer.write_schema("contacts", schema, ["canonical-vid"], catalog.get('stream_alias'))
+
+    singer.write_schema("contacts", schema, ["vid"], catalog.get('stream_alias'))
 
     url = get_url("contacts_all")
 

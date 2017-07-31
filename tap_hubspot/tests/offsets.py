@@ -22,6 +22,7 @@ class Offsets(unittest.TestCase):
         singer.write_schema   = utils.our_write_schema
         singer.set_offset     = set_offset_with_exception
 
+    #NB> test accounts must have > 1 companies for this to work
     def sync_companies(self):
         simulated_exception = None
         STATE = utils.get_clear_state()

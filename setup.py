@@ -14,7 +14,8 @@ setup(name='tap-hubspot',
           'singer-python==2.0.1',
           'requests==2.12.4',
           'backoff==1.3.2',
-          'requests_mock==1.3.0'
+          'requests_mock==1.3.0',
+	  'nose'
       ],
       entry_points='''
           [console_scripts]
