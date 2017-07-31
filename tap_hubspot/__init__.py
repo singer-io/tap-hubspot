@@ -613,7 +613,6 @@ def sync_engagements(STATE, catalog):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema)
-            LOGGER.info("data {} {}".format(record['engagement']['id'], record['engagement']['lastUpdated']))
             if record['engagement']['lastUpdated'] >= start:
                 record['engagement_id'] = record['engagement']['id']
                 singer.write_record("engagements", record, catalog.get('stream_alias'))

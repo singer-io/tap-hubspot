@@ -81,6 +81,9 @@
         "internalListId": {
             "type": ["null", "integer"]
         },
+        "readOnly": {
+            "type": ["null", "boolean"]
+        },
         "deleteable": {
             "type": ["null", "boolean"]
         },

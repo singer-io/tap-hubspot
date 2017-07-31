@@ -23,6 +23,9 @@
             "type": ["null", "string"],
             "format": "date-time"
         },
+        "signature": {
+            "type": ["null", "string"]
+        },
         "updatedAt": {
             "type": ["null", "string"],
             "format": "date-time"
