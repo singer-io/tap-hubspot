@@ -8,4 +8,4 @@ dependencies:
 
 test:
   post:
-    - pylint tap_hubspot -d missing-docstring,too-few-public-methods,too-many-arguments,locally-disabled,no-else-return,len-as-condition,too-many-locals
+    - pylint tap_hubspot -d C,R,W

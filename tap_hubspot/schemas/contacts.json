@@ -25,6 +25,10 @@
     "profile-url": {
       "type": ["null", "string"]
     },
+    "associated-company" : {
+        "type": ["null", "object"],
+        "properties" : {}
+    },
     "identity-profiles": {
         "type": ["null", "array"],
         "items": {
