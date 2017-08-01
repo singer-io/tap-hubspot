@@ -18,8 +18,8 @@ def verify_environment_vars():
                                 os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
                                 os.getenv('TAP_HUBSPOT_REFRESH_TOKEN')] if x == None]
     if len(missing_envs) != 0:
-           raise Exception("you must specify the following environmental variables for these tests to operate: TAP_HUBSPOT_REDIRECT_URI, TAP_HUBSPOT_CLIENT_ID, TAP_HUBSPOT_CLIENT_SECRET, TAP_HUBSPOT_REFRESH_TOKEN")
-
+        #pylint: disable=line-too-long
+        raise Exception("set TAP_HUBSPOT_REDIRECT_URI, TAP_HUBSPOT_CLIENT_ID, TAP_HUBSPOT_CLIENT_SECRET, TAP_HUBSPOT_REFRESH_TOKEN")
 
 def seed_tap_hubspot_config():
     tap_hubspot.CONFIG = {
@@ -50,9 +50,8 @@ def get_clear_state():
     }
 
 
-
+#pylint: disable=line-too-long
 def our_write_bookmark(state, table_name, bookmark_key, bookmark_value):
-    # LOGGER.info("our_write_bookmark: {} {} {} {}".format(state, table_name, bookmark_key, bookmark_value))
     caught_bookmarks.append([bookmark_key, bookmark_value])
     state = singer.bookmarks.write_bookmark(state, table_name, bookmark_key, bookmark_value)
     return state

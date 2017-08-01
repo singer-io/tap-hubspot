@@ -14,7 +14,9 @@ import singer
 import singer.messages
 import singer.metrics as metrics
 from singer import utils
-from singer import transform, UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING, Transformer, _transform_datetime
+from singer import (transform,
+                    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
+                    Transformer, _transform_datetime)
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -83,9 +85,9 @@ ENDPOINTS = {
     "owners":               "/owners/v2/owners",
 }
 
-def get_start(STATE, tap_stream_id, bookmark_key):
-    current_bookmark = singer.get_bookmark(STATE, tap_stream_id, bookmark_key)
-    if current_bookmark == None:
+def get_start(state, tap_stream_id, bookmark_key):
+    current_bookmark = singer.get_bookmark(state, tap_stream_id, bookmark_key)
+    if current_bookmark is None:
         return CONFIG['start_date']
     return current_bookmark
 
@@ -151,8 +153,9 @@ def get_abs_path(path):
 
 def load_associated_company_schema():
     associated_company_schema = load_schema("companies")
-    associated_company_schema['properties']['company-id'] =     associated_company_schema['properties'].pop('companyId')
-    associated_company_schema['properties']['portal-id'] =     associated_company_schema['properties'].pop('portalId')
+    #pylint: disable=line-too-long
+    associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
+    associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
     return associated_company_schema
 
 def load_schema(entity_name):
@@ -162,14 +165,14 @@ def load_schema(entity_name):
         schema['properties']['properties'] = {
             "type": "object",
             "properties": custom_schema,
-         }
+        }
 
     if entity_name == "contacts":
         schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
-
+#pylint: disable=invalid-name
 def acquire_access_token_from_refresh_token():
     payload = {
         "grant_type": "refresh_token",
@@ -255,7 +258,7 @@ def request(url, params=None):
 # }
 # }
 
-
+#pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, use_state=True):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
@@ -298,15 +301,14 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
         record = bumble_bee.transform(record, schema)
         singer.write_record("contacts", record, catalog.get('stream_alias'))
 
-default_contact_params =  {
+default_contact_params = {
     'showListMemberships': True,
     'count': 100,
 }
 
 def sync_contacts(STATE, catalog):
-    now = datetime.datetime.utcnow()
     last_sync = utils.strptime(get_start(STATE, "contacts", 'lastmodifieddate'))
-    LOGGER.info("sync_contacts from {}".format(last_sync))
+    LOGGER.info("sync_contacts from %s", last_sync)
 
     schema = load_schema("contacts")
 
@@ -345,7 +347,7 @@ class ValidationPredFailed(Exception):
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
-default_contacts_by_company_params = { 'count' : 100 }
+default_contacts_by_company_params = {'count' : 100}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, company_id):
@@ -356,8 +358,8 @@ def _sync_contacts_by_company(STATE, company_id):
     path = 'vids'
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for vid in gen_request(STATE, 'contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset'], False):
-            record = { 'company-id' : company_id,
-                       'contact-id' : vid}
+            record = {'company-id' : company_id,
+                      'contact-id' : vid}
             record = bumble_bee.transform(record, schema)
             singer.write_record("hubspot_contacts_by_company", record)
 
@@ -371,14 +373,14 @@ def sync_companies(STATE, catalog):
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
     last_sync = utils.strptime(get_start(STATE, "companies", 'hs_lastmodifieddate'))
 
-    LOGGER.info("sync_companies from {}".format(last_sync))
+    LOGGER.info("sync_companies from %s", last_sync)
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
 
     url = get_url("companies_all")
 
     with bumble_bee:
-        for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'],['offset']):
+        for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
             row_properties = row['properties']
             modified_time = None
             if 'hs_lastmodifieddate' in row_properties:
@@ -390,7 +392,6 @@ def sync_companies(STATE, catalog):
                 timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis)
 
-            LOGGER.info("modified_time: {}".format(modified_time))
             if not modified_time or modified_time >= last_sync:
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
                 record = bumble_bee.transform(record, schema)
@@ -403,7 +404,7 @@ def sync_companies(STATE, catalog):
 
 def sync_deals(STATE, catalog):
     last_sync = utils.strptime(get_start(STATE, "deals", 'hs_lastmodifieddate'))
-    LOGGER.info("sync_deals from {}".format(last_sync))
+    LOGGER.info("sync_deals from %s", last_sync)
     params = {'count': 250,
               'properties' : []}
 
@@ -458,7 +459,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     singer.write_schema(entity_name, schema, key_properties, catalog.get('stream_alias'))
 
     start = get_start(STATE, entity_name, 'startTimestamp')
-    LOGGER.info("sync_{} from {}".format(entity_name, start))
+    LOGGER.info("sync_%s from %s", entity_name, start)
 
     now_ts = int(datetime.datetime.utcnow().timestamp() * 1000)
     start_ts = int(utils.strptime(start).timestamp() * 1000)
@@ -503,7 +504,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
 
 def sync_subscription_changes(STATE, catalog):
     STATE = sync_entity_chunked(STATE, catalog, "subscription_changes", ["timestamp", "portalId", "recipient"],
-                        "timeline")
+                                "timeline")
     return STATE
 
 def sync_email_events(STATE, catalog):
@@ -515,7 +516,7 @@ def sync_contact_lists(STATE, catalog):
     singer.write_schema("contact_lists", schema, ["listId"], catalog.get('stream_alias'))
 
     start = get_start(STATE, "contact_lists", 'updatedAt')
-    LOGGER.info("sync_contact_lists from {}".format(start))
+    LOGGER.info("sync_contact_lists from %s", start)
 
     url = get_url("contact_lists")
     params = {'count': 250}
@@ -534,7 +535,7 @@ def sync_forms(STATE, catalog):
     singer.write_schema("forms", schema, ["guid"], catalog.get('stream_alias'))
     start = get_start(STATE, "forms", 'updatedAt')
 
-    LOGGER.info("sync_forms from {}".format(start))
+    LOGGER.info("sync_forms from %s", start)
 
     data = request(get_url("forms")).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
@@ -552,7 +553,7 @@ def sync_workflows(STATE, catalog):
     singer.write_schema("workflows", schema, ["id"], catalog.get('stream_alias'))
     start = get_start(STATE, "workflows", 'updatedAt')
 
-    LOGGER.info("sync_workflows from {}".format(start))
+    LOGGER.info("sync_workflows from %s", start)
 
     data = request(get_url("workflows")).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
@@ -570,7 +571,7 @@ def sync_keywords(STATE, catalog):
     singer.write_schema("keywords", schema, ["keyword_guid"], catalog.get('stream_alias'))
     start = get_start(STATE, "keywords", 'created_at')
 
-    LOGGER.info("sync_keywords from {}".format(start))
+    LOGGER.info("sync_keywords from %s", start)
     data = request(get_url("keywords")).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data['keywords']:
@@ -587,11 +588,11 @@ def sync_owners(STATE, catalog):
     singer.write_schema("owners", schema, ["ownerId"], catalog.get('stream_alias'))
     start = get_start(STATE, "owners", 'updatedAt')
 
-    LOGGER.info("sync_owners from {}".format(start))
+    LOGGER.info("sync_owners from %s", start)
     data = request(get_url("owners")).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data:
-            record = bumble_bee.transform(row,schema)
+            record = bumble_bee.transform(row, schema)
             if record['updatedAt'] >= start:
                 singer.write_record("owners", record, catalog.get('stream_alias'))
                 STATE = singer.write_bookmark(STATE, 'owners', 'updatedAt', record['updatedAt'])
@@ -603,7 +604,7 @@ def sync_engagements(STATE, catalog):
     schema = load_schema("engagements")
     singer.write_schema("engagements", schema, ["engagement_id"], catalog.get('stream_alias'))
     start = get_start(STATE, "engagements", 'lastUpdated')
-    LOGGER.info("sync_engagements from {}".format(start))
+    LOGGER.info("sync_engagements from %s", start)
 
     url = get_url("engagements_all")
     params = {'limit': 250}
@@ -660,7 +661,7 @@ def get_selected_streams(remaining_streams, annotated_schema):
 
     for stream in remaining_streams:
         tap_stream_id = stream.tap_stream_id
-        selected_stream =  next((s for s in annotated_schema['streams'] if s['tap_stream_id'] == tap_stream_id), None)
+        selected_stream = next((s for s in annotated_schema['streams'] if s['tap_stream_id'] == tap_stream_id), None)
         if selected_stream and selected_stream.get('schema').get('selected'):
             selected_streams.append(stream)
 
