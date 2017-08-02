@@ -97,3 +97,4 @@ env.sh
 config.json
 .autoenv.zsh
 *~
+env-vars*
