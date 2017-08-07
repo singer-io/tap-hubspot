@@ -20,7 +20,6 @@ from singer import (transform,
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
-RUN_START = utils.strftime(datetime.datetime.utcnow())
 
 class InvalidAuthException(Exception):
     pass
@@ -329,13 +328,16 @@ def sync_contacts(STATE, catalog):
             if not modified_time or modified_time >= last_sync:
                 vids.append(row['vid'])
 
+            if modified_time and modified_time >= last_sync:
+                STATE = singer.write_bookmark(STATE, 'contacts', 'lastmodifieddate', utils.strftime(modified_time))
+
             if len(vids) == 100:
                 _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                singer.write_state(STATE)
                 vids = []
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee)
 
-    STATE = singer.write_bookmark(STATE, 'contacts', 'lastmodifieddate', RUN_START)
     singer.write_state(STATE)
     return STATE
 
@@ -378,6 +380,7 @@ def sync_companies(STATE, catalog):
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
 
     url = get_url("companies_all")
+    most_recent_modified_time = last_sync
 
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
@@ -396,15 +399,18 @@ def sync_companies(STATE, catalog):
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
                 record = bumble_bee.transform(record, schema)
                 singer.write_record("companies", record, catalog.get('stream_alias'))
+                if (modified_time and modified_time > most_recent_modified_time):
+                    most_recent_modified_time = modified_time
                 STATE = _sync_contacts_by_company(STATE, record['companyId'])
 
-    STATE = singer.write_bookmark(STATE, 'companies', 'hs_lastmodifieddate', RUN_START)
+    STATE = singer.write_bookmark(STATE, 'companies', 'hs_lastmodifieddate', utils.strftime(most_recent_modified_time))
     singer.write_state(STATE)
     return STATE
 
 def sync_deals(STATE, catalog):
     last_sync = utils.strptime(get_start(STATE, "deals", 'hs_lastmodifieddate'))
     LOGGER.info("sync_deals from %s", last_sync)
+    most_recent_modified_time = last_sync
     params = {'count': 250,
               'properties' : []}
 
@@ -432,8 +438,10 @@ def sync_deals(STATE, catalog):
             if not modified_time or modified_time >= last_sync:
                 record = bumble_bee.transform(row, schema)
                 singer.write_record("deals", record, catalog.get('stream_alias'))
+                if (modified_time and modified_time > most_recent_modified_time):
+                    most_recent_modified_time = modified_time
 
-    STATE = singer.write_bookmark(STATE, 'deals', 'hs_lastmodifieddate', RUN_START)
+    STATE = singer.write_bookmark(STATE, 'deals', 'hs_lastmodifieddate', utils.strftime(most_recent_modified_time))
     singer.write_state(STATE)
     return STATE
 
@@ -543,8 +551,8 @@ def sync_forms(STATE, catalog):
             record = bumble_bee.transform(row, schema)
             if record['updatedAt'] >= start:
                 singer.write_record("forms", record, catalog.get('stream_alias'))
-                singer.write_state(STATE)
                 STATE = singer.write_bookmark(STATE, 'forms', 'updatedAt', record['updatedAt'])
+                singer.write_state(STATE)
 
     return STATE
 
