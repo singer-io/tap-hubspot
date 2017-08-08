@@ -258,11 +258,11 @@ def request(url, params=None):
 # }
 
 #pylint: disable=line-too-long
-def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, use_state=True):
+def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
-    if singer.get_offset(STATE, tap_stream_id) and use_state:
+    if singer.get_offset(STATE, tap_stream_id):
         params.update(singer.get_offset(STATE, tap_stream_id))
 
     with metrics.record_counter(parse_source_from_url(url)) as counter:
@@ -276,19 +276,16 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
             if not data.get(more_key, False):
                 break
 
-            if use_state:
-                STATE = singer.clear_offset(STATE, tap_stream_id)
-                for key, target in zip(offset_keys, offset_targets):
-                    if key in data:
-                        params[target] = data[key]
-                        STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
+            STATE = singer.clear_offset(STATE, tap_stream_id)
+            for key, target in zip(offset_keys, offset_targets):
+                if key in data:
+                    params[target] = data[key]
+                    STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
 
-                singer.write_state(STATE)
+            singer.write_state(STATE)
 
-
-    if use_state:
-        STATE = singer.clear_offset(STATE, tap_stream_id)
-        singer.write_state(STATE)
+    STATE = singer.clear_offset(STATE, tap_stream_id)
+    singer.write_state(STATE)
 
 
 def _sync_contact_vids(catalog, vids, schema, bumble_bee):
@@ -359,7 +356,7 @@ def _sync_contacts_by_company(STATE, company_id):
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for vid in gen_request(STATE, 'contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset'], False):
+        for vid in gen_request(STATE, 'contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset']):
             record = {'company-id' : company_id,
                       'contact-id' : vid}
             record = bumble_bee.transform(record, schema)
@@ -561,6 +558,9 @@ def sync_workflows(STATE, catalog):
     singer.write_schema("workflows", schema, ["id"], catalog.get('stream_alias'))
     start = get_start(STATE, "workflows", 'updatedAt')
 
+    STATE = singer.write_bookmark(STATE, 'workflows', 'updatedAt', start)
+    singer.write_state(STATE)
+
     LOGGER.info("sync_workflows from %s", start)
 
     data = request(get_url("workflows")).json()
@@ -578,6 +578,9 @@ def sync_keywords(STATE, catalog):
     schema = load_schema("keywords")
     singer.write_schema("keywords", schema, ["keyword_guid"], catalog.get('stream_alias'))
     start = get_start(STATE, "keywords", 'created_at')
+
+    STATE = singer.write_bookmark(STATE, 'keywords', 'created_at', start)
+    singer.write_state(STATE)
 
     LOGGER.info("sync_keywords from %s", start)
     data = request(get_url("keywords")).json()
@@ -613,6 +616,9 @@ def sync_engagements(STATE, catalog):
     singer.write_schema("engagements", schema, ["engagement_id"], catalog.get('stream_alias'))
     start = get_start(STATE, "engagements", 'lastUpdated')
     LOGGER.info("sync_engagements from %s", start)
+
+    STATE = singer.write_bookmark(STATE, 'engagements', 'lastUpdated', start)
+    singer.write_state(STATE)
 
     url = get_url("engagements_all")
     params = {'limit': 250}
@@ -704,7 +710,6 @@ def load_discovered_schema(stream):
         schema['properties'][k]['inclusion'] = 'automatic'
     return schema
 
-
 def discover_schemas():
     result = {'streams': []}
     for stream in STREAMS:
@@ -713,7 +718,6 @@ def discover_schemas():
                                   'tap_stream_id': stream.tap_stream_id,
                                   'schema': load_discovered_schema(stream)})
     return result
-
 
 def do_discover():
     LOGGER.info('Loading schemas')
