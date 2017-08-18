@@ -169,7 +169,7 @@
         },
         "disposition": {
           "type": ["null", "string"]
-        }        
+        }
       }
     }
   }
