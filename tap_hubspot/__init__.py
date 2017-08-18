@@ -608,7 +608,7 @@ def sync_keywords(STATE, catalog):
             if record['created_at'] >= start:
                 singer.write_record("keywords", record, catalog.get('stream_alias'))
             if record['created_at'] >= max_bk_value:
-                max_bk_value = record['updatedAt']
+                max_bk_value = record['created_at']
 
 
     STATE = singer.write_bookmark(STATE, 'keywords', 'created_at', max_bk_value)
