@@ -655,7 +655,9 @@ def sync_engagements(STATE, catalog):
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema)
             if record['engagement']['lastUpdated'] >= start:
+                # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
+                record['lastUpdated'] = record['engagement']['lastUpdated']
                 singer.write_record("engagements", record, catalog.get('stream_alias'))
             if record['engagement']['lastUpdated'] >= max_bk_value:
                 max_bk_value = record['engagement']['lastUpdated']
