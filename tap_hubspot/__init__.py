@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import pytz
 import itertools
 import os
 import re
@@ -469,9 +470,10 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     start = get_start(STATE, entity_name, 'startTimestamp')
     LOGGER.info("sync_%s from %s", entity_name, start)
 
-    now_ts = int(datetime.datetime.utcnow().timestamp() * 1000)
-    start_ts = int(utils.strptime_with_tz(start).timestamp() * 1000)
+    now = datetime.datetime.utcnow().replace(tzinfo=pytz.UTC)
+    now_ts = int(now.timestamp() * 1000)
 
+    start_ts = int(utils.strptime_with_tz(start).timestamp() * 1000)
     url = get_url(entity_name)
 
     with metrics.record_counter(entity_name) as counter:
@@ -501,7 +503,6 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                         STATE = singer.clear_offset(STATE, entity_name)
                         singer.write_state(STATE)
                         break
-
             STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.fromtimestamp((start_ts / 1000), datetime.timezone.utc ))) # pylint: disable=line-too-long
             singer.write_state(STATE)
             start_ts = end_ts
