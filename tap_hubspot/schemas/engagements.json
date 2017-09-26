@@ -4,6 +4,9 @@
     "engagement": {
       "type": "object",
       "properties": {
+        "engagement_id": {
+          "type": "integer"
+        }
         "id": {
           "type": "integer"
         },
