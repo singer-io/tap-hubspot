@@ -16,13 +16,13 @@
         "active": {
           "type": "boolean"
         },
-         "createdAt": {
-             "type": ["null", "string"],
-             "format": "date-time"
+        "createdAt": {
+          "type": ["null", "string"],
+          "format": "date-time"
         },
-          "lastUpdated": {
-              "type": ["null", "string"],
-              "format": "date-time"
+        "lastUpdated": {
+          "type": ["null", "string"],
+          "format": "date-time"
         },
         "ownerId": {
           "type": "integer"
@@ -30,9 +30,9 @@
         "type": {
           "type": "string"
         },
-          "timestamp": {
-              "type": ["null", "string"],
-              "format": "date-time"
+        "timestamp": {
+          "type": ["null", "string"],
+          "format": "date-time"
         }
       }
     },
@@ -80,7 +80,7 @@
           "type": ["null", "object"],
           "properties": {
             "email": {
-              "type": "string",
+              "type": "string"
             },
             "firstName": {
               "type": "string"
@@ -96,7 +96,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string",
+                "type": "string"
               }
             }
           }
@@ -107,7 +107,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string",
+                "type": "string"
               }
             }
           }
@@ -118,7 +118,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string",
+                "type": "string"
               }
             }
           }
