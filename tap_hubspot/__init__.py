@@ -71,6 +71,8 @@ ENDPOINTS = {
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
 
+    "deal_pipelines":       "/deals/v1/pipelines",
+
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
@@ -667,6 +669,18 @@ def sync_engagements(STATE, catalog):
     singer.write_state(STATE)
     return STATE
 
+def sync_deal_pipelines(STATE, catalog):
+    schema = load_schema('deal_pipelines')
+    singer.write_schema('deal_pipelines', schema, ['pipeline_id'], catalog.get('stream_alias'))
+    LOGGER.info('sync_deal_pipelines')
+    data = request(get_url('deal_pipelines')).json()
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data:
+            record = bumble_bee.transform(row, schema)
+            singer.write_record("deal_pipelines", record, catalog.get('stream_alias'))
+    singer.write_state(STATE)
+    return STATE
+
 @attr.s
 class Stream(object):
     tap_stream_id = attr.ib()
@@ -687,6 +701,7 @@ STREAMS = [
     Stream('contacts', sync_contacts),
     Stream('companies', sync_companies),
     Stream('deals', sync_deals),
+    Stream('deal_pipelines', sync_deal_pipelines),
     Stream('engagements', sync_engagements)
 ]
 
