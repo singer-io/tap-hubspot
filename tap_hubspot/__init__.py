@@ -754,7 +754,7 @@ def do_discover():
     LOGGER.info('Loading schemas')
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
-def main():
+def main_impl():
     args = utils.parse_args(
         ["redirect_uri",
          "client_id",
@@ -775,6 +775,12 @@ def main():
     else:
         LOGGER.info("No properties were selected")
 
+def main():
+    try:
+        main_impl()
+    except Exception as exc:
+        LOGGER.critical(exc)
+        raise exc
 
 if __name__ == '__main__':
     main()
