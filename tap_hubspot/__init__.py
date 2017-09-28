@@ -780,7 +780,7 @@ def main():
         main_impl()
     except Exception as e:
         LOGGER.critical(e)
-        raise(e)
+        raise e
 
 if __name__ == '__main__':
     main()
