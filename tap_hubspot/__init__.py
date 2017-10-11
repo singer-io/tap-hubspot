@@ -184,7 +184,6 @@ def acquire_access_token_from_refresh_token():
 
 
     resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
-    LOGGER.info(resp.content)
     if resp.status_code == 403:
         raise InvalidAuthException(resp.content)
 
