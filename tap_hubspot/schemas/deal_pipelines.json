@@ -38,6 +38,9 @@
     },
     "displayOrder": {
       "type": ["null", "integer"]
+    },
+    "staticDefault": {
+      "type": ["null", "boolean"]      
     }
   }
 }
