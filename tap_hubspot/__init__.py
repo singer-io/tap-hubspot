@@ -229,13 +229,17 @@ def parse_source_from_url(url):
                       on_giveup=on_giveup,
                       factor=2)
 @utils.ratelimit(9, 1)
-def request(url, params=None):
+def request(url, params={}):
 
-    if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
-        acquire_access_token_from_refresh_token()
+    hapikey = os.getenv("HUBSPOT_HAPIKEY")
+    if hapikey is None:
+        if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
+            acquire_access_token_from_refresh_token()
+        headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
+    else:
+        params = {**params, **{'hapikey': hapikey}}
+        headers = {}
 
-    params = params or {}
-    headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
