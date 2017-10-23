@@ -1,0 +1,8 @@
+{
+  "redirect_uri": "https://api.hubspot.com/",
+  "client_id": 123456789000,
+  "client_secret": "my_secret",
+  "refresh_token": "my_token",
+  "start_date": "2017-01-01T00:00:00Z",
+  "disable_collection": false
+}
