@@ -51,6 +51,7 @@ CONFIG = {
     "client_secret": None,
     "refresh_token": None,
     "start_date": None,
+    "hapikey": None
 }
 
 
@@ -231,7 +232,7 @@ def parse_source_from_url(url):
 @utils.ratelimit(9, 1)
 def request(url, params={}):
 
-    hapikey = os.getenv("HUBSPOT_HAPIKEY")
+    hapikey = CONFIG['hapikey']
     if hapikey is None:
         if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
             acquire_access_token_from_refresh_token()
