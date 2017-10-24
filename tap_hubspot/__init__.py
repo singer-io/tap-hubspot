@@ -230,15 +230,16 @@ def parse_source_from_url(url):
                       on_giveup=on_giveup,
                       factor=2)
 @utils.ratelimit(9, 1)
-def request(url, params={}):
+def request(url, params=None):
 
+    params = params or {}
     hapikey = CONFIG['hapikey']
     if hapikey is None:
         if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
             acquire_access_token_from_refresh_token()
         headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
     else:
-        params = {**params, **{'hapikey': hapikey}}
+        params['hapikey'] = hapikey
         headers = {}
 
     if 'user_agent' in CONFIG:
