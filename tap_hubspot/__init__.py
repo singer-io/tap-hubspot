@@ -51,6 +51,7 @@ CONFIG = {
     "client_secret": None,
     "refresh_token": None,
     "start_date": None,
+    "hapikey": None
 }
 
 
@@ -230,11 +231,16 @@ def parse_source_from_url(url):
 @utils.ratelimit(9, 1)
 def request(url, params=None):
 
-    if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
-        acquire_access_token_from_refresh_token()
-
     params = params or {}
-    headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
+    hapikey = CONFIG['hapikey']
+    if hapikey is None:
+        if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
+            acquire_access_token_from_refresh_token()
+        headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
+    else:
+        params['hapikey'] = hapikey
+        headers = {}
+
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
