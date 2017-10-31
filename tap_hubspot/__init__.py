@@ -676,7 +676,7 @@ def sync_engagements(STATE, catalog):
 
 def sync_deal_pipelines(STATE, catalog):
     schema = load_schema('deal_pipelines')
-    singer.write_schema('deal_pipelines', schema, ['pipeline_id'], catalog.get('stream_alias'))
+    singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
     data = request(get_url('deal_pipelines')).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
