@@ -7,7 +7,7 @@ This tap:
 - Extracts the following resources from HubSpot
   - [Campaigns](http://developers.hubspot.com/docs/methods/email/get_campaign_data)
   - [Companies](http://developers.hubspot.com/docs/methods/companies/get_company)
-  - [Contacts](https://docs.stitchdata.com/hc/en-us/articles/URL)
+  - [Contacts](https://developers.hubspot.com/docs/methods/contacts/get_contacts)
   - [Contact Lists](http://developers.hubspot.com/docs/methods/lists/get_lists)
   - [Deals](http://developers.hubspot.com/docs/methods/deals/get_deals_modified)
   - [Deal Pipelines](https://developers.hubspot.com/docs/methods/deal-pipelines/get-all-deal-pipelines)
