@@ -307,11 +307,12 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
 
 default_contact_params = {
     'showListMemberships': True,
+    'includeVersion': True,
     'count': 100,
 }
 
 def sync_contacts(STATE, catalog):
-    start = utils.strptime_with_tz(get_start(STATE, "contacts", 'lastmodifieddate'))
+    start = utils.strptime_with_tz(get_start(STATE, "contacts", 'versionTimestamp'))
     LOGGER.info("sync_contacts from %s", start)
 
     max_bk_value = start
@@ -325,10 +326,10 @@ def sync_contacts(STATE, catalog):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
-            if 'lastmodifieddate' in row['properties']:
+            if 'versionTimestamp' in row:
                 modified_time = utils.strptime_with_tz(
                     _transform_datetime( # pylint: disable=protected-access
-                        row['properties']['lastmodifieddate']['value'],
+                        row['versionTimestamp'],
                         UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
             if not modified_time or modified_time >= start:
@@ -343,7 +344,7 @@ def sync_contacts(STATE, catalog):
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee)
 
-    STATE = singer.write_bookmark(STATE, 'contacts', 'lastmodifieddate', utils.strftime(max_bk_value))
+    STATE = singer.write_bookmark(STATE, 'contacts', 'versionTimestamp', utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
 
