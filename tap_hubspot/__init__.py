@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import datetime
 import pytz
 import itertools
@@ -106,9 +105,8 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "boolean"]}
 
     elif field_type == "datetime":
-        # valid unix milliseconds are not returned for this type,
-        # so we have to just make these strings
-        return {"type": ["null", "string"]}
+        return {"type": ["null", "string"],
+                "format": "date-time"}
 
     elif field_type == "number":
         # A value like 'N/A' can be returned for this type,
@@ -117,7 +115,6 @@ def get_field_type_schema(field_type):
 
     else:
         return {"type": ["null", "string"]}
-
 
 def get_field_schema(field_type, extras=False):
     if extras:
@@ -137,7 +134,6 @@ def get_field_schema(field_type, extras=False):
                 "value": get_field_type_schema(field_type),
             }
         }
-
 
 def parse_custom_schema(entity_name, data):
     return {
