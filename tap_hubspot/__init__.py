@@ -380,12 +380,16 @@ def sync_companies(STATE, catalog):
     LOGGER.info("sync_companies from %s", start)
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], catalog.get('stream_alias'))
+    metadata = catalog.get('metadata', {})
 
     url = get_url("companies_all")
     max_bk_value = start
 
     with bumble_bee:
-        for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
+        params = default_company_params
+        if metadata.get('additional_properties'):
+            params['properties'] = params['properties'] + metadata['additional_properties']
+        for row in gen_request(STATE, 'companies', url, params, 'companies', 'has-more', ['offset'], ['offset']):
             row_properties = row['properties']
             modified_time = None
             if 'hs_lastmodifieddate' in row_properties:
@@ -401,10 +405,18 @@ def sync_companies(STATE, catalog):
                 max_bk_value = modified_time
 
             if not modified_time or modified_time >= start:
-                record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-                record = bumble_bee.transform(record, schema)
+                # 'additional_properties' implies detail requests should be skipped
+                if metadata.get('additional_properties'):
+                    record = bumble_bee.transform(row, schema)
+                else:
+                    response = request(get_url("companies_detail", company_id=row['companyId'])).json()
+                    record = bumble_bee.transform(response, schema)
+
                 singer.write_record("companies", record, catalog.get('stream_alias'))
-                STATE = _sync_contacts_by_company(STATE, record['companyId'])
+
+                # Syncing contacts by company is enabled by default
+                if metadata.get('sync_contacts_by_company', True):
+                    STATE = _sync_contacts_by_company(STATE, record['companyId'])
 
     STATE = singer.write_bookmark(STATE, 'companies', 'hs_lastmodifieddate', utils.strftime(max_bk_value))
     singer.write_state(STATE)
