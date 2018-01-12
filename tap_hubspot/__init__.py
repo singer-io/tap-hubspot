@@ -296,7 +296,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     if len(vids) == 0:
         return
 
-    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True}).json()
+    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
     for _, record in data.items():
         record = bumble_bee.transform(record, schema)
         singer.write_record("contacts", record, catalog.get('stream_alias'))
