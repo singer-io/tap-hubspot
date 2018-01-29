@@ -801,13 +801,13 @@ def do_sync(STATE, catalogs):
 class Context(object):
     def __init__(self, catalog):
         self.selected_stream_ids = set(
-            s.get('tap_stream_id') for s in catalogs.get('streams')
+            s.get('tap_stream_id') for s in catalog.get('streams')
             if s.get('schema').get('selected'))
         self.catalog = catalog
 
-    def get_catalog_from_id(tap_stream_id):
-        return [c for c in catalogs.get('streams')
-               if c.get('stream') == stream.tap_stream_id][0]
+    def get_catalog_from_id(self,tap_stream_id):
+        return [c for c in self.catalog.get('streams')
+               if c.get('stream') == tap_stream_id][0]
 
 # stream a is dependent on stream STREAM_DEPENDENCIES[a]
 STREAM_DEPENDENCIES = {
