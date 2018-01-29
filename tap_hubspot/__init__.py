@@ -27,6 +27,9 @@ class InvalidAuthException(Exception):
 class SourceUnavailableException(Exception):
     pass
 
+class DependencyException(Exception):
+    pass
+
 class DataFields:
     offset = 'offset'
 
@@ -309,7 +312,8 @@ default_contact_params = {
     'count': 100,
 }
 
-def sync_contacts(STATE, catalog):
+def sync_contacts(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'versionTimestamp'
     start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
     LOGGER.info("sync_contacts from %s", start)
@@ -377,7 +381,8 @@ default_company_params = {
     'limit': 250, 'properties': ["createdate", "hs_lastmodifieddate"]
 }
 
-def sync_companies(STATE, catalog):
+def sync_companies(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
     bookmark_key = 'hs_lastmodifieddate'
     start = utils.strptime_with_tz(get_start(STATE, "companies", bookmark_key))
@@ -408,13 +413,15 @@ def sync_companies(STATE, catalog):
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
                 record = bumble_bee.transform(record, schema)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                STATE = _sync_contacts_by_company(STATE, record['companyId'])
+                if 'hubspot_contacts_by_comapny' in ctx.selected_stream_ids:
+                    STATE = _sync_contacts_by_company(STATE, record['companyId'])
 
     STATE = singer.write_bookmark(STATE, 'companies', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
 
-def sync_deals(STATE, catalog):
+def sync_deals(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'hs_lastmodifieddate'
     start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
     max_bk_value = start
@@ -456,7 +463,8 @@ def sync_deals(STATE, catalog):
     return STATE
 
 #NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
-def sync_campaigns(STATE, catalog):
+def sync_campaigns(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("campaigns")
     singer.write_schema("campaigns", schema, ["id"], catalog.get('stream_alias'))
     LOGGER.info("sync_campaigns(NO bookmarks)")
@@ -526,16 +534,19 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     singer.write_state(STATE)
     return STATE
 
-def sync_subscription_changes(STATE, catalog):
+def sync_subscription_changes(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     STATE = sync_entity_chunked(STATE, catalog, "subscription_changes", ["timestamp", "portalId", "recipient"],
                                 "timeline")
     return STATE
 
-def sync_email_events(STATE, catalog):
+def sync_email_events(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
     return STATE
 
-def sync_contact_lists(STATE, catalog):
+def sync_contact_lists(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("contact_lists")
     bookmark_key = 'updatedAt'
     singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
@@ -561,7 +572,8 @@ def sync_contact_lists(STATE, catalog):
 
     return STATE
 
-def sync_forms(STATE, catalog):
+def sync_forms(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("forms")
     bookmark_key = 'updatedAt'
 
@@ -588,7 +600,8 @@ def sync_forms(STATE, catalog):
 
     return STATE
 
-def sync_workflows(STATE, catalog):
+def sync_workflows(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("workflows")
     bookmark_key = 'updatedAt'
     singer.write_schema("workflows", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
@@ -615,7 +628,8 @@ def sync_workflows(STATE, catalog):
     singer.write_state(STATE)
     return STATE
 
-def sync_keywords(STATE, catalog):
+def sync_keywords(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("keywords")
     bookmark_key = 'created_at'
     singer.write_schema("keywords", schema, ["keyword_guid"], catalog.get('stream_alias'))
@@ -642,7 +656,8 @@ def sync_keywords(STATE, catalog):
     singer.write_state(STATE)
     return STATE
 
-def sync_owners(STATE, catalog):
+def sync_owners(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("owners")
     bookmark_key = 'updatedAt'
 
@@ -667,7 +682,8 @@ def sync_owners(STATE, catalog):
     singer.write_state(STATE)
     return STATE
 
-def sync_engagements(STATE, catalog):
+def sync_engagements(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("engagements")
     bookmark_key = 'lastUpdated'
     singer.write_schema("engagements", schema, ["engagement_id"], [bookmark_key], catalog.get('stream_alias'))
@@ -700,7 +716,8 @@ def sync_engagements(STATE, catalog):
     singer.write_state(STATE)
     return STATE
 
-def sync_deal_pipelines(STATE, catalog):
+def sync_deal_pipelines(STATE, ctx):
+    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema('deal_pipelines')
     singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
@@ -760,6 +777,9 @@ def get_selected_streams(remaining_streams, annotated_schema):
 
 
 def do_sync(STATE, catalogs):
+    ctx = Context(catalogs)
+    validate_dependencies(ctx)
+
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, catalogs)
     LOGGER.info('Starting sync. Will sync these streams: %s',
@@ -770,9 +790,7 @@ def do_sync(STATE, catalogs):
         singer.write_state(STATE)
 
         try:
-            catalog = [c for c in catalogs.get('streams')
-                       if c.get('stream') == stream.tap_stream_id][0]
-            STATE = stream.sync(STATE, catalog) # pylint: disable=not-callable
+            STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException:
             pass
 
@@ -780,6 +798,32 @@ def do_sync(STATE, catalogs):
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
+class Context(object):
+    def __init__(self, catalog):
+        self.selected_stream_ids = set(
+            s.get('tap_stream_id') for s in catalogs.get('streams')
+            if s.get('schema').get('selected'))
+        self.catalog = catalog
+
+    def get_catalog_from_id(tap_stream_id):
+        return [c for c in catalogs.get('streams')
+               if c.get('stream') == stream.tap_stream_id][0]
+
+# stream a is dependent on stream STREAM_DEPENDENCIES[a]
+STREAM_DEPENDENCIES = {
+    'hubspot_contacts_by_company': 'companies'
+}
+
+def validate_dependencies(ctx):
+    errs = []
+    msg_tmpl = ("Unable to extract {0} data. "
+                "To receive {0} data, you also need to select {1}.")
+
+    for k,v in STREAM_DEPENDENCIES.items():
+        if k in ctx.selected_stream_ids and v not in ctx.selected_stream_ids:
+            errs.append(msg_tmpl.format(k, v))
+    if errs:
+        raise DependencyException(" ".join(errs))
 
 def load_discovered_schema(stream):
     schema = load_schema(stream.tap_stream_id)
