@@ -272,7 +272,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     if singer.get_offset(STATE, tap_stream_id):
         params.update(singer.get_offset(STATE, tap_stream_id))
 
-    with metrics.record_counter(parse_source_from_url(url)) as counter:
+    with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
 
@@ -369,7 +369,7 @@ def _sync_contacts_by_company(STATE, company_id):
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for vid in gen_request(STATE, 'contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset']):
+        for vid in gen_request(STATE, 'hubspot_contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset']):
             record = {'company-id' : company_id,
                       'contact-id' : vid}
             record = bumble_bee.transform(record, schema)
@@ -413,7 +413,7 @@ def sync_companies(STATE, ctx):
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
                 record = bumble_bee.transform(record, schema)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                if 'hubspot_contacts_by_comapny' in ctx.selected_stream_ids:
+                if 'hubspot_contacts_by_company' in ctx.selected_stream_ids:
                     STATE = _sync_contacts_by_company(STATE, record['companyId'])
 
     STATE = singer.write_bookmark(STATE, 'companies', bookmark_key, utils.strftime(max_bk_value))
