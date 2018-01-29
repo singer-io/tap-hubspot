@@ -364,16 +364,19 @@ default_contacts_by_company_params = {'count' : 100}
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, company_id):
     schema = load_schema('hubspot_contacts_by_company')
-    singer.write_schema("hubspot_contacts_by_company", schema, ["company-id", "contact-id"])
 
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for vid in gen_request(STATE, 'hubspot_contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset']):
-            record = {'company-id' : company_id,
-                      'contact-id' : vid}
-            record = bumble_bee.transform(record, schema)
-            singer.write_record("hubspot_contacts_by_company", record, time_extracted=utils.now())
+        #for vid in gen_request(STATE, 'hubspot_contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset']):
+        with metrics.record_counter('hubspot_contacts_by_company') as counter:
+            data = request(url, default_contacts_by_company_params).json()
+            for row in data[path]:
+                counter.increment()
+                record = {'company-id' : company_id,
+                          'contact-id' : row}
+                record = bumble_bee.transform(record, schema)
+                singer.write_record("hubspot_contacts_by_company", record, time_extracted=utils.now())
 
     return STATE
 
@@ -392,6 +395,9 @@ def sync_companies(STATE, ctx):
 
     url = get_url("companies_all")
     max_bk_value = start
+    if 'hubspot_contacts_by_company' in ctx.selected_stream_ids:
+        contacts_by_company_schema = load_schema('hubspot_contacts_by_company')
+        singer.write_schema("hubspot_contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
 
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
