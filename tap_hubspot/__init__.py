@@ -43,6 +43,9 @@ CHUNK_SIZES = {
 }
 
 BASE_URL = "https://api.hubapi.com"
+
+CONTACTS_BY_COMPANY = "contacts_by_company"
+
 CONFIG = {
     "access_token": None,
     "token_expires": None,
@@ -313,7 +316,7 @@ default_contact_params = {
 }
 
 def sync_contacts(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'versionTimestamp'
     start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
     LOGGER.info("sync_contacts from %s", start)
@@ -363,20 +366,19 @@ default_contacts_by_company_params = {'count' : 100}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, company_id):
-    schema = load_schema('hubspot_contacts_by_company')
+    schema = load_schema(CONTACTS_BY_COMPANY)
 
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        #for vid in gen_request(STATE, 'hubspot_contacts_by_company', url, default_contacts_by_company_params, path, 'hasMore', ['vidOffset'], ['vidOffset']):
-        with metrics.record_counter('hubspot_contacts_by_company') as counter:
+        with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
             data = request(url, default_contacts_by_company_params).json()
             for row in data[path]:
                 counter.increment()
                 record = {'company-id' : company_id,
                           'contact-id' : row}
                 record = bumble_bee.transform(record, schema)
-                singer.write_record("hubspot_contacts_by_company", record, time_extracted=utils.now())
+                singer.write_record("contacts_by_company", record, time_extracted=utils.now())
 
     return STATE
 
@@ -385,7 +387,7 @@ default_company_params = {
 }
 
 def sync_companies(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
     bookmark_key = 'hs_lastmodifieddate'
     start = utils.strptime_with_tz(get_start(STATE, "companies", bookmark_key))
@@ -395,9 +397,9 @@ def sync_companies(STATE, ctx):
 
     url = get_url("companies_all")
     max_bk_value = start
-    if 'hubspot_contacts_by_company' in ctx.selected_stream_ids:
-        contacts_by_company_schema = load_schema('hubspot_contacts_by_company')
-        singer.write_schema("hubspot_contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
+    if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
+        contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
+        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
 
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
@@ -419,7 +421,7 @@ def sync_companies(STATE, ctx):
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
                 record = bumble_bee.transform(record, schema)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                if 'hubspot_contacts_by_company' in ctx.selected_stream_ids:
+                if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
                     STATE = _sync_contacts_by_company(STATE, record['companyId'])
 
     STATE = singer.write_bookmark(STATE, 'companies', bookmark_key, utils.strftime(max_bk_value))
@@ -427,7 +429,7 @@ def sync_companies(STATE, ctx):
     return STATE
 
 def sync_deals(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'hs_lastmodifieddate'
     start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
     max_bk_value = start
@@ -470,7 +472,7 @@ def sync_deals(STATE, ctx):
 
 #NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
 def sync_campaigns(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("campaigns")
     singer.write_schema("campaigns", schema, ["id"], catalog.get('stream_alias'))
     LOGGER.info("sync_campaigns(NO bookmarks)")
@@ -541,18 +543,18 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     return STATE
 
 def sync_subscription_changes(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     STATE = sync_entity_chunked(STATE, catalog, "subscription_changes", ["timestamp", "portalId", "recipient"],
                                 "timeline")
     return STATE
 
 def sync_email_events(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
     return STATE
 
 def sync_contact_lists(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("contact_lists")
     bookmark_key = 'updatedAt'
     singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
@@ -579,7 +581,7 @@ def sync_contact_lists(STATE, ctx):
     return STATE
 
 def sync_forms(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("forms")
     bookmark_key = 'updatedAt'
 
@@ -607,7 +609,7 @@ def sync_forms(STATE, ctx):
     return STATE
 
 def sync_workflows(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("workflows")
     bookmark_key = 'updatedAt'
     singer.write_schema("workflows", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
@@ -635,7 +637,7 @@ def sync_workflows(STATE, ctx):
     return STATE
 
 def sync_keywords(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("keywords")
     bookmark_key = 'created_at'
     singer.write_schema("keywords", schema, ["keyword_guid"], catalog.get('stream_alias'))
@@ -663,7 +665,7 @@ def sync_keywords(STATE, ctx):
     return STATE
 
 def sync_owners(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("owners")
     bookmark_key = 'updatedAt'
 
@@ -689,7 +691,7 @@ def sync_owners(STATE, ctx):
     return STATE
 
 def sync_engagements(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema("engagements")
     bookmark_key = 'lastUpdated'
     singer.write_schema("engagements", schema, ["engagement_id"], [bookmark_key], catalog.get('stream_alias'))
@@ -723,7 +725,7 @@ def sync_engagements(STATE, ctx):
     return STATE
 
 def sync_deal_pipelines(STATE, ctx):
-    catalog=ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     schema = load_schema('deal_pipelines')
     singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
@@ -757,10 +759,6 @@ STREAMS = [
     Stream('deals', sync_deals),
     Stream('deal_pipelines', sync_deal_pipelines),
     Stream('engagements', sync_engagements)
-]
-
-DEPENDENT_STREAMS = [
-    Stream('hubspot_contacts_by_company', None)
 ]
 
 def get_streams_to_sync(streams, state):
@@ -821,7 +819,7 @@ class Context(object):
 
 # stream a is dependent on stream STREAM_DEPENDENCIES[a]
 STREAM_DEPENDENCIES = {
-    'hubspot_contacts_by_company': 'companies'
+    CONTACTS_BY_COMPANY: 'companies'
 }
 
 def validate_dependencies(ctx):
@@ -849,10 +847,10 @@ def discover_schemas():
                                   'tap_stream_id': stream.tap_stream_id,
                                   'schema': load_discovered_schema(stream.tap_stream_id)})
     # Load the contacts_by_company schema
-    LOGGER.info('Loading schema for hubspot_contacts_by_company')
-    result['streams'].append({'stream': 'hubspot_contacts_by_company',
-                                  'tap_stream_id': 'hubspot_contacts_by_company',
-                                  'schema': load_discovered_schema('hubspot_contacts_by_company')})
+    LOGGER.info('Loading schema for contacts_by_company')
+    result['streams'].append({'stream': CONTACTS_BY_COMPANY,
+                                  'tap_stream_id': CONTACTS_BY_COMPANY,
+                                  'schema': load_discovered_schema(CONTACTS_BY_COMPANY)})
 
     return result
 
