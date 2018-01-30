@@ -759,6 +759,10 @@ STREAMS = [
     Stream('engagements', sync_engagements)
 ]
 
+DEPENDENT_STREAMS = [
+    Stream('hubspot_contacts_by_company', None)
+]
+
 def get_streams_to_sync(streams, state):
     target_stream = singer.get_currently_syncing(state)
     result = streams
@@ -831,8 +835,8 @@ def validate_dependencies(ctx):
     if errs:
         raise DependencyException(" ".join(errs))
 
-def load_discovered_schema(stream):
-    schema = load_schema(stream.tap_stream_id)
+def load_discovered_schema(tap_stream_id):
+    schema = load_schema(tap_stream_id)
     for k in schema['properties']:
         schema['properties'][k]['inclusion'] = 'automatic'
     return schema
@@ -843,7 +847,13 @@ def discover_schemas():
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         result['streams'].append({'stream': stream.tap_stream_id,
                                   'tap_stream_id': stream.tap_stream_id,
-                                  'schema': load_discovered_schema(stream)})
+                                  'schema': load_discovered_schema(stream.tap_stream_id)})
+    # Load the contacts_by_company schema
+    LOGGER.info('Loading schema for hubspot_contacts_by_company')
+    result['streams'].append({'stream': 'hubspot_contacts_by_company',
+                                  'tap_stream_id': 'hubspot_contacts_by_company',
+                                  'schema': load_discovered_schema('hubspot_contacts_by_company')})
+
     return result
 
 def do_discover():
