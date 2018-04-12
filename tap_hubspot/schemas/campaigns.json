@@ -24,6 +24,9 @@
         },
         "sent": {
           "type": ["null", "integer"]
+        },
+        "click": {
+          "type": ["null", "integer"]
         }
       }
     },
