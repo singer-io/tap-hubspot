@@ -13,6 +13,7 @@ import requests
 import singer
 import singer.messages
 import singer.metrics as metrics
+from singer import metadata
 from singer import utils
 from singer import (transform,
                     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
@@ -741,24 +742,27 @@ def sync_deal_pipelines(STATE, ctx):
 class Stream(object):
     tap_stream_id = attr.ib()
     sync = attr.ib()
+    key_properties = attr.ib()
+    replication_key = attr.ib()
+    #replication_method = attr.ib() All Hubspot are incremental?
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes),
-    Stream('email_events', sync_email_events),
+    Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp'),
+    Stream('email_events', sync_email_events, ['id'], 'startTimestamp'),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms),
-    Stream('workflows', sync_workflows),
-    Stream('keywords', sync_keywords),
-    Stream('owners', sync_owners),
-    Stream('campaigns', sync_campaigns),
-    Stream('contact_lists', sync_contact_lists),
-    Stream('contacts', sync_contacts),
-    Stream('companies', sync_companies),
-    Stream('deals', sync_deals),
-    Stream('deal_pipelines', sync_deal_pipelines),
-    Stream('engagements', sync_engagements)
+    Stream('forms', sync_forms, ['guid'], 'updatedAt'),
+    Stream('workflows', sync_workflows, ['id'], 'updatedAt'),
+    Stream('keywords', sync_keywords, ["keyword_guid"], 'createdAt'),
+    Stream('owners', sync_owners, ["ownerId"], 'updatedAt'),
+    Stream('campaigns', sync_campaigns, ["id"], None), # No bookmark?
+    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt'),
+    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp'),
+    Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate'),
+    Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate'),
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None), #No bookmark? Full table?
+    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated')
 ]
 
 def get_streams_to_sync(streams, state):
@@ -833,24 +837,41 @@ def validate_dependencies(ctx):
     if errs:
         raise DependencyException(" ".join(errs))
 
-def load_discovered_schema(tap_stream_id):
-    schema = load_schema(tap_stream_id)
-    for k in schema['properties']:
-        schema['properties'][k]['inclusion'] = 'automatic'
-    return schema
+def load_discovered_schema(stream):
+    schema = load_schema(stream.tap_stream_id)
+    mdata = metadata.new()
+
+    mdata = metadata.write(mdata, (), 'table-key-properties', stream.key_properties)
+    mdata = metadata.write(mdata, (), 'forced-replication-method', 'INCREMENTAL') # seems like they might not all be incremental
+    if stream.replication_key:
+        mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
+
+    for field_name, props in schema['properties'].items():
+        if field_name in stream.key_properties:
+            mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
+        else:
+            mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'available')
+
+    return schema, metadata.to_list(mdata)
 
 def discover_schemas():
     result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
+        schema, mdata = load_discovered_schema(stream)
         result['streams'].append({'stream': stream.tap_stream_id,
                                   'tap_stream_id': stream.tap_stream_id,
-                                  'schema': load_discovered_schema(stream.tap_stream_id)})
+                                  'schema': schema,
+                                  'metadata': mdata})
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
+    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None)
+    schema, mdata = load_discovered_schema(contacts_by_company)
+
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
-                                  'tap_stream_id': CONTACTS_BY_COMPANY,
-                                  'schema': load_discovered_schema(CONTACTS_BY_COMPANY)})
+                              'tap_stream_id': CONTACTS_BY_COMPANY,
+                              'schema': schema,
+                              'metadata': mdata})
 
     return result
 
