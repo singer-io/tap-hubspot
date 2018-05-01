@@ -756,25 +756,25 @@ class Stream(object):
     sync = attr.ib()
     key_properties = attr.ib()
     replication_key = attr.ib()
-    #replication_method = attr.ib() All Hubspot are incremental?
+    replication_method = attr.ib()
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp'),
-    Stream('email_events', sync_email_events, ['id'], 'startTimestamp'),
+    Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
+    Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms, ['guid'], 'updatedAt'),
-    Stream('workflows', sync_workflows, ['id'], 'updatedAt'),
-    Stream('keywords', sync_keywords, ["keyword_guid"], 'createdAt'),
-    Stream('owners', sync_owners, ["ownerId"], 'updatedAt'),
-    Stream('campaigns', sync_campaigns, ["id"], None), # No bookmark?
-    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt'),
-    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp'),
-    Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate'),
-    Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None), #No bookmark? Full table?
-    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated')
+    Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
+    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
+    Stream('keywords', sync_keywords, ["keyword_guid"], 'createdAt', 'FULL_TABLE'),
+    Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
+    Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
+    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
+    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'FULL_TABLE'),
+    Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
+    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
 def get_streams_to_sync(streams, state):
@@ -854,7 +854,8 @@ def load_discovered_schema(stream):
     mdata = metadata.new()
 
     mdata = metadata.write(mdata, (), 'table-key-properties', stream.key_properties)
-    mdata = metadata.write(mdata, (), 'forced-replication-method', 'INCREMENTAL') # seems like they might not all be incremental
+    mdata = metadata.write(mdata, (), 'forced-replication-method', stream.replication_method)
+
     if stream.replication_key:
         mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
 
@@ -877,7 +878,7 @@ def discover_schemas():
                                   'metadata': mdata})
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
-    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None)
+    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
     schema, mdata = load_discovered_schema(contacts_by_company)
 
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
