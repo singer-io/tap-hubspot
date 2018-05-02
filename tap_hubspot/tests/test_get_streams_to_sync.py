@@ -12,18 +12,18 @@ class TestGetStreamsToSync(unittest.TestCase):
 
     def test_get_streams_to_sync_with_no_this_stream(self):
         streams = [
-            Stream('a', 'a'),
-            Stream('b', 'b'),
-            Stream('c', 'c'),
+            Stream('a', 'a', [], None, None),
+            Stream('b', 'b', [], None, None),
+            Stream('c', 'c', [], None, None),
         ]
         state = {'this_stream': None}
         self.assertEqual(streams, get_streams_to_sync(streams, state))
 
     def test_get_streams_to_sync_with_this_stream(self):
         streams = [
-            Stream('a', 'a'),
-            Stream('b', 'b'),
-            Stream('c', 'c'),
+            Stream('a', 'a', [], None, None),
+            Stream('b', 'b', [], None, None),
+            Stream('c', 'c', [], None, None),
         ]
         state = {'currently_syncing': 'b'}
         self.assertEqual(streams[1:], list(get_streams_to_sync(streams, state)))
