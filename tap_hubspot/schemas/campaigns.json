@@ -25,6 +25,27 @@
         "sent": {
           "type": ["null", "integer"]
         },
+        "deferred": {
+          "type": ["null", "integer"]
+        },
+        "unsubscribed": {
+          "type": ["null", "integer"]
+        },
+        "statuschange": {
+          "type": ["null", "integer"]
+        },
+        "bounce": {
+          "type": ["null", "integer"]
+        },
+        "mta_dropped": {
+          "type": ["null", "integer"]
+        },
+        "dropped": {
+          "type": ["null", "integer"]
+        },
+        "suppressed": {
+          "type": ["null", "integer"]
+        },
         "click": {
           "type": ["null", "integer"]
         }
