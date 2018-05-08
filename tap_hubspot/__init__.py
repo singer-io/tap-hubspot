@@ -298,7 +298,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     singer.write_state(STATE)
 
 
-def _sync_contact_vids(catalog, vids, schema, bumble_bee):
+def _sync_contact_vids(catalog, vids, schema, start, bumble_bee):
     if len(vids) == 0:
         return
 
@@ -308,6 +308,12 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
 
     for _, record in data.items():
         record = bumble_bee.transform(record, schema, mdata)
+
+        for form_submission in record['form-submissions'][:]:
+            timestamp = utils.strptime_with_tz(form_submission['timestamp'])
+            if timestamp < start:
+                record['form-submissions'].remove(form_submission)
+
         singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
 default_contact_params = {
@@ -346,10 +352,10 @@ def sync_contacts(STATE, ctx):
                 max_bk_value = modified_time
 
             if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                _sync_contact_vids(catalog, vids, schema, start, bumble_bee)
                 vids = []
 
-        _sync_contact_vids(catalog, vids, schema, bumble_bee)
+        _sync_contact_vids(catalog, vids, schema, start, bumble_bee)
 
     STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
