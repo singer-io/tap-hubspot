@@ -6,9 +6,6 @@
     },
     "companyId": {
       "type": ["null", "integer"]
-    },
-    "isDeleted": {
-      "type": ["null", "boolean"]
     }
   }
 }
