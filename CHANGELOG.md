@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.2
+  * Fix a bug with the 'engagements' stream which requires the 'engagement' field to have automatic inclusion [#74](https://github.com/singer-io/tap-hubspot/pull/74)
+
 ## 2.2.1
   * Fix a bug with the 'inclusion' metadata for replication_key fields [#72](https://github.com/singer-io/tap-hubspot/pull/72)
 
