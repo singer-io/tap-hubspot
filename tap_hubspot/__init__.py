@@ -835,6 +835,10 @@ def load_discovered_schema(stream):
         else:
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'available')
 
+    # The engagements stream has nested data that we synthesize; The engagement field needs to be automatic
+    if stream.tap_stream_id == "engagements":
+        mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
+
     return schema, metadata.to_list(mdata)
 
 def discover_schemas():
