@@ -84,7 +84,6 @@ ENDPOINTS = {
     "contact_lists":        "/contacts/v1/lists",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
-    "keywords":             "/keywords/v1/keywords",
     "owners":               "/owners/v2/owners",
 }
 
@@ -617,33 +616,6 @@ def sync_workflows(STATE, catalog):
     singer.write_state(STATE)
     return STATE
 
-def sync_keywords(STATE, catalog):
-    schema = load_schema("keywords")
-    bookmark_key = 'created_at'
-    singer.write_schema("keywords", schema, ["keyword_guid"], [bookmark_key], catalog.get('stream_alias'))
-    start = get_start(STATE, "keywords", bookmark_key)
-    max_bk_value = start
-
-    STATE = singer.write_bookmark(STATE, 'keywords', bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-
-    LOGGER.info("sync_keywords from %s", start)
-    data = request(get_url("keywords")).json()
-    time_extracted = utils.now()
-
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data['keywords']:
-            record = bumble_bee.transform(row, schema)
-            if record[bookmark_key] >= start:
-                singer.write_record("keywords", record, catalog.get('stream_alias'), time_extracted)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-
-    STATE = singer.write_bookmark(STATE, 'keywords', bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-    return STATE
-
 def sync_owners(STATE, catalog):
     schema = load_schema("owners")
     bookmark_key = 'updatedAt'
@@ -727,7 +699,6 @@ STREAMS = [
     # Do these last as they are full table
     Stream('forms', sync_forms),
     Stream('workflows', sync_workflows),
-    Stream('keywords', sync_keywords),
     Stream('owners', sync_owners),
     Stream('campaigns', sync_campaigns),
     Stream('contact_lists', sync_contact_lists),
