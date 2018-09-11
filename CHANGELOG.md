@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.3
+  * Scrub the access token from error messages Hubspot returns when there are insufficient permissions [#75](https://github.com/singer-io/tap-hubspot/pull/75)
+
 ## 2.2.2
   * Fix a bug with the 'engagements' stream which requires the 'engagement' field to have automatic inclusion [#74](https://github.com/singer-io/tap-hubspot/pull/74)
 
