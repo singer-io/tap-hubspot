@@ -785,7 +785,8 @@ def do_sync(STATE, catalogs):
         try:
             STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException as ex:
-            LOGGER.error(ex)
+            error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+            LOGGER.error(error_message)
             pass
 
     STATE = singer.set_currently_syncing(STATE, None)
