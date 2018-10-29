@@ -1,6 +1,6 @@
 # tap-hubspot
 
-This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md). 
 
 This tap:
 - Pulls raw data from HubSpot's [REST API](http://developers.hubspot.com/docs/overview)
