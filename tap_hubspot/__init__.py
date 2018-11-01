@@ -439,10 +439,18 @@ def sync_deals(STATE, ctx):
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
     params = {'count': 250,
+              'includeAssociations': False,
               'properties' : []}
 
     schema = load_schema("deals")
     singer.write_schema("deals", schema, ["dealId"], [bookmark_key], catalog.get('stream_alias'))
+
+    # Check if we should  include associations
+    for key in mdata.keys():
+        if 'associations' in key:
+            assoc_mdata = mdata.get(key)
+            if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
+                params['includeAssociations'] = True
 
     # Append all the properties fields for deals to the request
     additional_properties = schema.get("properties").get("properties").get("properties")
@@ -759,10 +767,10 @@ def get_streams_to_sync(streams, state):
 
 def get_selected_streams(remaining_streams, annotated_schema):
     selected_streams = []
-
     for stream in remaining_streams:
         tap_stream_id = stream.tap_stream_id
         selected_stream = next((s for s in annotated_schema['streams'] if s['tap_stream_id'] == tap_stream_id), None)
+
         if selected_stream and selected_stream.get('schema').get('selected'):
             selected_streams.append(stream)
 
