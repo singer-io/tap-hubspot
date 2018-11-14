@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2.2.5
-  * Update version of `requests` to `0.20.0` in response to CVE 2018-18074
+  * Update version of `requests` to `2.20.0` in response to CVE 2018-18074
 
 ## 2.2.4
   * Ensure that deal associations are being retrieved if `associations` are selected in the catalog [#79](https://github.com/singer-io/tap-hubspot/pull/79)
