@@ -449,7 +449,7 @@ def sync_deals(STATE, ctx):
                 params['includeAssociations'] = True
 
     # Append all the properties fields for deals to the request
-    additional_properties = schema.get("properties").get("properties").get("properties")
+    additional_properties = schema.get("properties")
     for key in additional_properties.keys():
         params['properties'].append(key)
 
