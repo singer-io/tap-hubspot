@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.6
+  * Change a loop over `dict.items()` to `dict.values()` because the keys returned were not being used [#82](https://github.com/singer-io/tap-hubspot/pull/82)
+
 ## 2.2.5
   * Update version of `requests` to `2.20.0` in response to CVE 2018-18074
 
