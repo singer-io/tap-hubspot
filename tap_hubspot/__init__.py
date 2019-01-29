@@ -306,7 +306,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     time_extracted = utils.now()
     mdata = metadata.to_map(catalog.get('metadata'))
 
-    for _, record in data.items():
+    for _, record in data.values():
         record = bumble_bee.transform(record, schema, mdata)
         singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
