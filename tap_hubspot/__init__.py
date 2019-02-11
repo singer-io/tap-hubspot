@@ -115,9 +115,7 @@ def get_field_type_schema(field_type):
                 "format": "date-time"}
 
     elif field_type == "number":
-        # A value like 'N/A' can be returned for this type,
-        # so we have to let this be a string sometimes
-        return {"type": ["null", "number", "string"]}
+        return {"type": ["null", "number"]}
 
     else:
         return {"type": ["null", "string"]}
@@ -268,6 +266,24 @@ def request(url, params=None):
 # }
 
 #pylint: disable=line-too-long
+def replace_na_with_none(obj):
+    if isinstance(obj, dict):
+        new_dict = {}
+        for key, value in obj.items():
+            new_dict[key] = replace_na_with_none(value)
+        return new_dict
+
+    if isinstance(obj, list):
+        new_list = []
+        for value in obj:
+            new_list.append(replace_na_with_none(value))
+        return new_list
+    
+    if isinstance(obj, str):
+        if obj.lower() == 'n/a':
+            obj = None
+    return obj
+
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
@@ -278,9 +294,8 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
-
-            for row in data[path]:
-                counter.increment()
+            for row in data[path]:        
+                counter.increment()    
                 yield row
 
             if not data.get(more_key, False):
@@ -307,6 +322,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     mdata = metadata.to_map(catalog.get('metadata'))
 
     for record in data.values():
+        record = replace_na_with_none(record)
         record = bumble_bee.transform(record, schema, mdata)
         singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
@@ -376,8 +392,8 @@ def _sync_contacts_by_company(STATE, company_id):
             data = request(url, default_contacts_by_company_params).json()
             for row in data[path]:
                 counter.increment()
-                record = {'company-id' : company_id,
-                          'contact-id' : row}
+                record = replace_na_with_none({'company-id' : company_id,
+                                                'contact-id' : row})
                 record = bumble_bee.transform(record, schema)
                 singer.write_record("contacts_by_company", record, time_extracted=utils.now())
 
@@ -420,7 +436,7 @@ def sync_companies(STATE, ctx):
                 max_bk_value = modified_time
 
             if not modified_time or modified_time >= start:
-                record = request(get_url("companies_detail", company_id=row['companyId'])).json()
+                record = replace_na_with_none(request(get_url("companies_detail", company_id=row['companyId'])).json())
                 record = bumble_bee.transform(record, schema, mdata)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
                 if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
@@ -474,6 +490,7 @@ def sync_deals(STATE, ctx):
                 max_bk_value = modified_time
 
             if not modified_time or modified_time >= start:
+                row = replace_na_with_none(row)
                 record = bumble_bee.transform(row, schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
@@ -493,7 +510,7 @@ def sync_campaigns(STATE, ctx):
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'campaigns', url, params, "campaigns", "hasMore", ["offset"], ["offset"]):
-            record = request(get_url("campaigns_detail", campaign_id=row['id'])).json()
+            record = replace_na_with_none(request(get_url("campaigns_detail", campaign_id=row['id'])).json())
             record = bumble_bee.transform(record, schema, mdata)
             singer.write_record("campaigns", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
@@ -535,6 +552,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
 
                     for row in data[path]:
                         counter.increment()
+                        record = replace_na_with_none(record)
                         record = bumble_bee.transform(row, schema, mdata)
                         singer.write_record(entity_name,
                                             record,
@@ -582,6 +600,7 @@ def sync_contact_lists(STATE, ctx):
     params = {'count': 250}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
+            record = replace_na_with_none(record)
             record = bumble_bee.transform(row, schema, mdata)
 
             if record[bookmark_key] >= start:
@@ -611,6 +630,7 @@ def sync_forms(STATE, ctx):
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data:
+            row = replace_na_with_none(row)
             record = bumble_bee.transform(row, schema, mdata)
 
             if record[bookmark_key] >= start:
@@ -642,6 +662,7 @@ def sync_workflows(STATE, ctx):
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data['workflows']:
+            row = replace_na_with_none(row)
             record = bumble_bee.transform(row, schema, mdata)
             if record[bookmark_key] >= start:
                 singer.write_record("workflows", record, catalog.get('stream_alias'), time_extracted=time_extracted)
@@ -668,6 +689,7 @@ def sync_owners(STATE, ctx):
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data:
+            row = replace_na_with_none(row)
             record = bumble_bee.transform(row, schema, mdata)
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
@@ -701,6 +723,7 @@ def sync_engagements(STATE, ctx):
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
+            record = replace_na_with_none(engagement)
             record = bumble_bee.transform(engagement, schema, mdata)
             if record['engagement'][bookmark_key] >= start:
                 # hoist PK and bookmark field to top-level record
@@ -723,6 +746,7 @@ def sync_deal_pipelines(STATE, ctx):
     data = request(get_url('deal_pipelines')).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data:
+            row = replace_na_with_none(row)
             record = bumble_bee.transform(row, schema, mdata)
             singer.write_record("deal_pipelines", record, catalog.get('stream_alias'), time_extracted=utils.now())
     singer.write_state(STATE)
