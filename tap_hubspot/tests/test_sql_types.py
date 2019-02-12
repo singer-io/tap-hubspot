@@ -1,4 +1,5 @@
-from tap_hubspot import replace_na_with_none
+from tap_hubspot import RowTransformer
+from singer import UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING
 
 class TestRelationalDBFieldType(unittest.TestCase):
     def test_process_na(self):
@@ -27,7 +28,8 @@ class TestRelationalDBFieldType(unittest.TestCase):
                                     'merge-audits': [], 
                                     'version': 7,
                                     'versionTimestamp': 1549521003697}
-        processed_row = replace_na_with_none(row) 
+        transformer = RowTransformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
+        processed_row = transformer.replace_na_with_none(row)
 
         self.asserEqual(processed_row, 
                 {'addedAt': 1549520648318, 
