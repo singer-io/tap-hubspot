@@ -920,7 +920,7 @@ def do_sync(STATE, catalogs, postgres_compatible = False):
         singer.write_state(STATE)
 
         try:
-            STATE = make_postgres_comp_if_needed(stream, STATE, ctx, postgres_comp)
+            STATE = make_postgres_comp_if_needed(stream, STATE, ctx, postgres_compatible)
             # stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException as ex:
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
