@@ -48,6 +48,21 @@
         },
         "click": {
           "type": ["null", "integer"]
+        },
+        "delivered": {
+          "type": ["null", "integer"]
+        },
+        "forward": {
+          "type": ["null", "integer"]
+        },
+        "print": {
+          "type": ["null", "integer"]
+        },
+        "reply": {
+          "type": ["null", "integer"]
+        },
+        "spamreport": {
+          "type": ["null", "integer"]
         }
       }
     },
