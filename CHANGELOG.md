@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.7
+  * Add `delivered`, `forward`, `print`, `reply`, `spamreport` to `campaigns.counters`
+
 ## 2.2.6
   * Change a loop over `dict.items()` to `dict.values()` because the keys returned were not being used [#82](https://github.com/singer-io/tap-hubspot/pull/82)
 
