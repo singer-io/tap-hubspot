@@ -758,8 +758,11 @@ def get_streams_to_sync(streams, state):
     target_stream = singer.get_currently_syncing(state)
     result = streams
     if target_stream:
-        result = list(itertools.dropwhile(
+        skipped = list(itertools.takewhile(
             lambda x: x.tap_stream_id != target_stream, streams))
+        rest = list(itertools.dropwhile(
+            lambda x: x.tap_stream_id != target_stream, streams))
+        result = rest + skipped # Move skipped streams to end
     if not result:
         raise Exception('Unknown stream {} in state'.format(target_stream))
     return result
