@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.8
+  * When resuming an interrupted sync, will now attempt all streams before exiting [#90](https://github.com/singer-io/tap-hubspot/pull/90)
+
 ## 2.2.7
   * Add `delivered`, `forward`, `print`, `reply`, `spamreport` to `campaigns.counters`
 
