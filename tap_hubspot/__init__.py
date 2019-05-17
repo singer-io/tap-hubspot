@@ -106,7 +106,7 @@ def get_previous_time_window(state, tap_stream_id):
     return singer.get_bookmark(state, tap_stream_id, "last_sync_duration")
 
 def write_stream_duration(state, tap_stream_id, start, end):
-    duration = (start - end).total_seconds()
+    duration = (end - start).total_seconds()
     return singer.write_bookmark(state, tap_stream_id, "last_sync_duration", duration)
 
 def get_url(endpoint, **kwargs):
