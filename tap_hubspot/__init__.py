@@ -99,6 +99,16 @@ def get_start(state, tap_stream_id, bookmark_key):
         return CONFIG['start_date']
     return current_bookmark
 
+def has_bookmark(state, tap_stream_id, bookmark_key):
+    return singer.get_bookmark(state, tap_stream_id, bookmark_key) is not None
+
+def get_previous_time_window(state, tap_stream_id):
+    return singer.get_bookmark(state, tap_stream_id, "last_sync_duration")
+
+def write_stream_duration(state, tap_stream_id, start, end):
+    duration = (start - end).total_seconds()
+    return singer.write_bookmark(state, tap_stream_id, "last_sync_duration", duration)
+
 def get_url(endpoint, **kwargs):
     if endpoint not in ENDPOINTS:
         raise ValueError("Invalid endpoint {}".format(endpoint))
@@ -686,6 +696,19 @@ def sync_engagements(STATE, ctx):
     bookmark_key = 'lastUpdated'
     singer.write_schema("engagements", schema, ["engagement_id"], [bookmark_key], catalog.get('stream_alias'))
     start = get_start(STATE, "engagements", bookmark_key)
+
+    # Because this stream doesn't query by `lastUpdated`, it cycles
+    # through the data set every time. The issue with this is that there
+    # is a race condition by which records may be updated between the
+    # start of this table's sync and the end, causing some updates to not
+    # be captured, in order to combat this, we must save a lookback window
+    # that handles the duration of time that this stream was last syncing,
+    # and look back by that amount on the next sync
+    last_sync_duration = utils.strptime_to_utc(get_previous_time_window(STATE, "engagements"))
+    current_sync_start = utils.now()
+    if has_bookmark(STATE, "engagements", bookmark_key) and \
+       last_sync_duration is not None:
+        start = start - datetime.timedelta(seconds=last_sync_duration)
     max_bk_value = start
     LOGGER.info("sync_engagements from %s", start)
 
@@ -711,6 +734,8 @@ def sync_engagements(STATE, ctx):
                     max_bk_value = record['engagement'][bookmark_key]
 
     STATE = singer.write_bookmark(STATE, 'engagements', bookmark_key, max_bk_value)
+    # Write duration for next sync's lookback window
+    STATE = write_stream_duration(STATE, 'engagements', current_sync_start, utils.now())
     singer.write_state(STATE)
     return STATE
 
