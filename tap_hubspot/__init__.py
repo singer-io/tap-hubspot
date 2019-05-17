@@ -708,6 +708,8 @@ def sync_engagements(STATE, ctx):
     current_sync_start = utils.now()
     if has_bookmark(STATE, "engagements", bookmark_key) and \
        last_sync_duration is not None:
+        LOGGER.info(("Last sync of engagements lasted {} seconds. Adjusting bookmark by this"
+                     "amount to account for race conditions with record updates."))
         start = start - datetime.timedelta(seconds=last_sync_duration)
     max_bk_value = start
     LOGGER.info("sync_engagements from %s", start)
