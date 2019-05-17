@@ -704,7 +704,7 @@ def sync_engagements(STATE, ctx):
     # be captured, in order to combat this, we must save a lookback window
     # that handles the duration of time that this stream was last syncing,
     # and look back by that amount on the next sync
-    last_sync_duration = utils.strptime_to_utc(get_previous_time_window(STATE, "engagements"))
+    last_sync_duration = get_previous_time_window(STATE, "engagements")
     current_sync_start = utils.now()
     if has_bookmark(STATE, "engagements", bookmark_key) and \
        last_sync_duration is not None:
