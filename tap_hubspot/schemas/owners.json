@@ -33,6 +33,15 @@
         "hasContactsAccess" : {
             "type": ["null", "boolean"]
         },
+        "isActive": {
+            "type": ["null", "boolean"]
+        },
+        "activeUserId" : {
+            "type": ["null", "integer"]
+        },
+        "userIdIncludingInactive" : {
+            "type": ["null", "integer"]
+        },
         "remoteList": {
             "type": "array",
             "items": {
