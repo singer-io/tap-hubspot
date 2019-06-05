@@ -57,7 +57,8 @@ CONFIG = {
     "client_secret": None,
     "refresh_token": None,
     "start_date": None,
-    "hapikey": None
+    "hapikey": None,
+    "include_inactives": None,
 }
 
 
@@ -673,7 +674,12 @@ def sync_owners(STATE, ctx):
     max_bk_value = start
 
     LOGGER.info("sync_owners from %s", start)
-    data = request(get_url("owners")).json()
+
+    params = {}
+    if CONFIG.get('include_inactives'):
+        params['includeInactives'] = "true"
+    data = request(get_url("owners"), params).json()
+
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
