@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.4.0
+  * The owners stream can optionally fetch "inactive owners" [#92](https://github.com/singer-io/tap-hubspot/pull/92)
+
 ## 2.3.0
   * Engagements will now track how long the stream takes to sync, and look back on the next run by that amount to cover potentially missed updates due to asynchronous updates during the previous sync [#91](https://github.com/singer-io/tap-hubspot/pull/91)
 
