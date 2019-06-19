@@ -237,13 +237,14 @@ def parse_source_from_url(url):
     return None
 
 
-@backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
+@backoff.on_exception(backoff.constant,
+                      (requests.exceptions.RequestException,
+                       requests.exceptions.HTTPError),
                       max_tries=5,
+                      jitter=None,
                       giveup=giveup,
                       on_giveup=on_giveup,
-                      factor=2)
-@utils.ratelimit(9, 1)
+                      interval=10)
 def request(url, params=None):
 
     params = params or {}
