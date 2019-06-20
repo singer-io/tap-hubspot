@@ -153,9 +153,10 @@ def get_field_schema(field_type, extras=False):
 
 def parse_custom_schema(entity_name, data):
     return {
-        field['name']: get_field_schema(
-            field['type'], entity_name != "contacts")
-        for field in data
+            # exclude Salesforce custom fields
+            field['name']: get_field_schema(
+                field['type'], entity_name != "contacts")
+            for field in data if ('__c' != field['name'][(len(field['name']) - 3):])
     }
 
 
@@ -175,15 +176,19 @@ def load_associated_company_schema():
 
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
+    # don't load custom properties for companies as they are not used
+    # if entity_name in ["contacts", "companies", "deals"]:
+    if entity_name in ["contacts", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
             "type": "object",
             "properties": custom_schema,
         }
 
-    if entity_name == "contacts":
-        schema['properties']['associated-company'] = load_associated_company_schema()
+    # associated companies include 700 properties
+    # removed for efficiencies
+    # if entity_name == "contacts":
+    #     schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -766,7 +771,7 @@ class Stream(object):
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
+    # Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
 
     # Do these last as they are full table
@@ -813,7 +818,7 @@ def do_sync(STATE, catalogs):
     validate_dependencies(ctx)
 
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
-    selected_streams = get_selected_streams(remaining_streams, catalogs)
+    selected_streams = remaining_streams
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.tap_stream_id for stream in selected_streams])
     for stream in selected_streams:
