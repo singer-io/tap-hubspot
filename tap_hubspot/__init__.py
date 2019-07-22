@@ -58,7 +58,6 @@ CONFIG = {
     "include_inactives": None,
 }
 
-
 ENDPOINTS = {
     "contacts_properties":  "/properties/v1/contacts/properties",
     "contacts_all":         "/contacts/v1/lists/all/contacts/all",
@@ -805,7 +804,6 @@ def get_streams_to_sync(streams, state):
         raise Exception('Unknown stream {} in state'.format(target_stream))
     return result
 
-
 def get_selected_streams(remaining_streams, annotated_schema):
     selected_streams = []
     for stream in remaining_streams:
@@ -816,7 +814,6 @@ def get_selected_streams(remaining_streams, annotated_schema):
             selected_streams.append(stream)
 
     return selected_streams
-
 
 def do_sync(STATE, catalogs):
     ctx = Context(catalogs)
