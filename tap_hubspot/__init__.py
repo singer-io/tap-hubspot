@@ -38,11 +38,6 @@ class StateFields:
     offset = 'offset'
     this_stream = 'this_stream'
 
-CHUNK_SIZES = {
-    "email_events": 1000 * 60 * 60 * 24,
-    "subscription_changes": 1000 * 60 * 60 * 24,
-}
-
 BASE_URL = "https://api.hubapi.com"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
@@ -50,6 +45,8 @@ CONTACTS_BY_COMPANY = "contacts_by_company"
 CONFIG = {
     "access_token": None,
     "token_expires": None,
+    "email_chunk_size": 1000 * 60 * 60 * 24,
+    "subscription_chunk_size": 1000 * 60 * 60 * 24,
 
     # in config.json
     "redirect_uri": None,
