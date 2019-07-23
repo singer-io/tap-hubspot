@@ -42,11 +42,13 @@ BASE_URL = "https://api.hubapi.com"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
+DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
+
 CONFIG = {
     "access_token": None,
     "token_expires": None,
-    "email_chunk_size": 1000 * 60 * 60 * 24,
-    "subscription_chunk_size": 1000 * 60 * 60 * 24,
+    "email_chunk_size": DEFAULT_CHUNK_SIZE,
+    "subscription_chunk_size": DEFAULT_CHUNK_SIZE
 
     # in config.json
     "redirect_uri": None,
