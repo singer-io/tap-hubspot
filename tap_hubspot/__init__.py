@@ -38,18 +38,17 @@ class StateFields:
     offset = 'offset'
     this_stream = 'this_stream'
 
-CHUNK_SIZES = {
-    "email_events": 1000 * 60 * 60 * 24,
-    "subscription_changes": 1000 * 60 * 60 * 24,
-}
-
 BASE_URL = "https://api.hubapi.com"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
+DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
+
 CONFIG = {
     "access_token": None,
     "token_expires": None,
+    "email_chunk_size": DEFAULT_CHUNK_SIZE,
+    "subscription_chunk_size": DEFAULT_CHUNK_SIZE,
 
     # in config.json
     "redirect_uri": None,
@@ -60,7 +59,6 @@ CONFIG = {
     "hapikey": None,
     "include_inactives": None,
 }
-
 
 ENDPOINTS = {
     "contacts_properties":  "/properties/v1/contacts/properties",
@@ -528,9 +526,15 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     url = get_url(entity_name)
 
     mdata = metadata.to_map(catalog.get('metadata'))
+
+    if entity_name == 'email_events':
+        window_size = CONFIG['email_chunk_size']
+    elif entity_name == 'subscription_changes':
+        window_size = CONFIG['subscription_chunk_size']
+
     with metrics.record_counter(entity_name) as counter:
         while start_ts < now_ts:
-            end_ts = start_ts + CHUNK_SIZES[entity_name]
+            end_ts = start_ts + window_size
             params = {
                 'startTimestamp': start_ts,
                 'endTimestamp': end_ts,
@@ -802,7 +806,6 @@ def get_streams_to_sync(streams, state):
         raise Exception('Unknown stream {} in state'.format(target_stream))
     return result
 
-
 def get_selected_streams(remaining_streams, annotated_schema):
     selected_streams = []
     for stream in remaining_streams:
@@ -813,7 +816,6 @@ def get_selected_streams(remaining_streams, annotated_schema):
             selected_streams.append(stream)
 
     return selected_streams
-
 
 def do_sync(STATE, catalogs):
     ctx = Context(catalogs)
