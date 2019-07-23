@@ -48,7 +48,7 @@ CONFIG = {
     "access_token": None,
     "token_expires": None,
     "email_chunk_size": DEFAULT_CHUNK_SIZE,
-    "subscription_chunk_size": DEFAULT_CHUNK_SIZE
+    "subscription_chunk_size": DEFAULT_CHUNK_SIZE,
 
     # in config.json
     "redirect_uri": None,
