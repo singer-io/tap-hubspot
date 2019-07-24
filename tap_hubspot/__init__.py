@@ -528,9 +528,9 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     mdata = metadata.to_map(catalog.get('metadata'))
 
     if entity_name == 'email_events':
-        window_size = CONFIG['email_chunk_size']
+        window_size = int(CONFIG['email_chunk_size'])
     elif entity_name == 'subscription_changes':
-        window_size = CONFIG['subscription_chunk_size']
+        window_size = int(CONFIG['subscription_chunk_size'])
 
     with metrics.record_counter(entity_name) as counter:
         while start_ts < now_ts:
