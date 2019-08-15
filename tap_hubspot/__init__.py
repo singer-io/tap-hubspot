@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import datetime
 import pytz
 import itertools
@@ -21,6 +22,8 @@ from singer import (transform,
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
+
+env = os.environ.copy()
 
 class InvalidAuthException(Exception):
     pass
@@ -92,6 +95,19 @@ ENDPOINTS = {
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
 }
+
+def load_file(filename):
+    file = {}
+
+    try:
+        with open(filename) as handle:
+            file = json.load(handle)
+    except Exception:
+        LOGGER.fatal("Failed to decode file. Is it valid json?")
+        raise RuntimeError
+
+    return file
+
 
 def get_start(state, tap_stream_id, bookmark_key):
     current_bookmark = singer.get_bookmark(state, tap_stream_id, bookmark_key)
@@ -912,14 +928,32 @@ def do_discover():
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
 def main_impl():
-    args = utils.parse_args(
-        ["redirect_uri",
-         "client_id",
-         "client_secret",
-         "refresh_token",
-         "start_date"])
+    parser = argparse.ArgumentParser()
 
-    CONFIG.update(args.config)
+    parser.add_argument("-p", "--properties", help="Catalog file with fields selected")
+    parser.add_argument("-c", "--config", help="Optional config file")
+    parser.add_argument("-s", "--state", help="State file")
+    parser.add_argument(
+        "-d",
+        "--discover",
+        help="Build a catalog from the underlying schema",
+        action="store_true",
+    )
+
+    args = parser.parse_args()
+
+    # Determine which config is available
+    if args.config:
+        LOGGER.info('Config json found')
+        config = load_file(args.config)
+    elif "wiw_config" in env:
+        LOGGER.info('Env var config found')
+        config = json.loads(env["hubspot_config"])
+    else:
+        LOGGER.critical("No config found, aborting")
+        return
+
+    CONFIG.update(config)
     STATE = {}
 
     if args.state:
@@ -928,7 +962,8 @@ def main_impl():
     if args.discover:
         do_discover()
     elif args.properties:
-        do_sync(STATE, args.properties)
+        properties = load_file(args.properties)
+        do_sync(STATE, properties)
     else:
         LOGGER.info("No properties were selected")
 
