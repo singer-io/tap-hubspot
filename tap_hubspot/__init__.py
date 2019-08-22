@@ -106,9 +106,9 @@ def write_current_sync_start(state, tap_stream_id, start):
 
 def clean_state(state):
     """ Clear deprecated keys out of state. """
-    for stream, bookmark_map in STATE.get("bookmarks", {}).items():
+    for stream, bookmark_map in state.get("bookmarks", {}).items():
         if "last_sync_duration" in bookmark_map:
-            STATE[stream].pop("last_sync_duration", None)
+            state[stream].pop("last_sync_duration", None)
 
 def get_url(endpoint, **kwargs):
     if endpoint not in ENDPOINTS:
