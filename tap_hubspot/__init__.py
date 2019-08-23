@@ -411,7 +411,7 @@ def sync_companies(STATE, ctx):
     mdata = metadata.to_map(catalog.get('metadata'))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
     bookmark_key = 'hs_lastmodifieddate'
-    start = utils.strptime_with_tz(get_start(STATE, "companies", bookmark_key))
+    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
     LOGGER.info("sync_companies from %s", start)
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], [bookmark_key], catalog.get('stream_alias'))
@@ -765,8 +765,8 @@ def sync_engagements(STATE, ctx):
                     max_bk_value = record['engagement'][bookmark_key]
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(max_bk_value, current_sync_start)
-    STATE = singer.write_bookmark(STATE, 'engagements', bookmark_key, new_bookmark)
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), current_sync_start)
+    STATE = singer.write_bookmark(STATE, 'engagements', bookmark_key, utils.strftime(new_bookmark))
     STATE = write_current_sync_start(STATE, 'engagements', None)
     singer.write_state(STATE)
     return STATE
