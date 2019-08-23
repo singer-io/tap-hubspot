@@ -99,16 +99,23 @@ def get_start(state, tap_stream_id, bookmark_key):
     return current_bookmark
 
 def get_current_sync_start(state, tap_stream_id):
-    return utils.strptime_to_utc(singer.get_bookmark(state, tap_stream_id, "current_sync_start"))
+    current_sync_start_value = singer.get_bookmark(state, tap_stream_id, "current_sync_start")
+    if current_sync_start_value is None:
+        return current_sync_start_value
+    return utils.strptime_to_utc(current_sync_start_value)
 
 def write_current_sync_start(state, tap_stream_id, start):
-    return singer.write_bookmark(state, tap_stream_id, "current_sync_start", utils.strftime(start))
+    value = start
+    if start is not None:
+        value = utils.strftime(start)
+    return singer.write_bookmark(state, tap_stream_id, "current_sync_start", value)
 
 def clean_state(state):
     """ Clear deprecated keys out of state. """
     for stream, bookmark_map in state.get("bookmarks", {}).items():
         if "last_sync_duration" in bookmark_map:
-            state[stream].pop("last_sync_duration", None)
+            LOGGER.info("{} - Removing last_sync_duration from state.".format(stream))
+            state["bookmarks"][stream].pop("last_sync_duration", None)
 
 def get_url(endpoint, **kwargs):
     if endpoint not in ENDPOINTS:
