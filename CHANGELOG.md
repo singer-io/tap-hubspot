@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.5.2
+  * Companies and Engagements have a new pattern to catch records that are updated during a long-running sync. Rather than using a lookback window, the bookmark value will be limited to the `min(current_sync_start, max_bk_seen)` [#98](https://github.com/singer-io/tap-hubspot/pull/98)
+
 ## 2.4.0
   * The owners stream can optionally fetch "inactive owners" [#92](https://github.com/singer-io/tap-hubspot/pull/92)
 
