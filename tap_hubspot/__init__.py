@@ -782,7 +782,7 @@ def _sync_form_submissions_by_form_id(STATE, form_guid):
     bookmark_key = 'last_max_submitted_at'
 
     singer.write_schema("form_submissions", schema, ['guid', 'submittedAt', 'pageUrl'], [bookmark_key])
-    end = utils.strptime_with_tz(get_start(STATE, form_guid, bookmark_key))
+    end = utils.strptime_to_utc(get_start(STATE, form_guid, bookmark_key))
     max_bk_value = end
     up_to_date = False
 
@@ -791,13 +791,13 @@ def _sync_form_submissions_by_form_id(STATE, form_guid):
     url = get_url("form_submissions", form_guid=form_guid)
     path = 'results'
     params = {
-        'count': 50
+        'limit': 50
     }
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         while up_to_date == False:
             form_offset = singer.get_offset(STATE, form_guid)
 
-            if bool(form_offset) and form_offset.get('after') != None:
+            if form_offset and form_offset.get('after') != None:
                 params['after'] = form_offset.get('after')
             data = request(url, params).json()
             for row in data[path]:
@@ -810,6 +810,7 @@ def _sync_form_submissions_by_form_id(STATE, form_guid):
                 if submitted_at > max_bk_value:
                     max_bk_value = submitted_at
 
+                # since this stream returns in reverse order check to see if we've reached the data already loaded
                 if submitted_at <= end:
                     STATE = singer.clear_offset(STATE, form_guid)
                     up_to_date = True
