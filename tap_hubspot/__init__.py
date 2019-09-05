@@ -865,8 +865,8 @@ class Context(object):
 
         for stream in catalog.get('streams'):
             for mdata in stream['metadata']:
-                if mdata['breadcrumb'] == [] and mdata['metadata']['selected'] == True:
-                    self.selected_stream_ids.add(stream.get('tap_stream_id'))
+                if mdata['breadcrumb'] == [] and mdata['metadata'].get('selected')== True:
+                    self.selected_stream_ids.add(stream['tap_stream_id'])
 
         self.catalog = catalog
 
