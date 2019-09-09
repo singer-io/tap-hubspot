@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.6.1
+  * Revert v2.6.0 to v.2.5.2
+
 ## 2.6.0
   * Replaced `annotated_schema` with Singer `metadata`
   * Added integration tests to CircleCI
