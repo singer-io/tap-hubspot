@@ -385,10 +385,9 @@ def use_recent_companies_endpoint(response):
 default_contacts_by_company_params = {'count' : 100}
 
 # NB> to do: support stream aliasing and field selection
-def _sync_contacts_by_company(STATE, ctx, company_id):
+def _sync_contacts_by_company(STATE, company_id):
     schema = load_schema(CONTACTS_BY_COMPANY)
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get('metadata'))
+
     url = get_url("contacts_by_company", company_id=company_id)
     path = 'vids'
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
@@ -398,7 +397,7 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
                 counter.increment()
                 record = {'company-id' : company_id,
                           'contact-id' : row}
-                record = bumble_bee.transform(record, schema, mdata)
+                record = bumble_bee.transform(record, schema)
                 singer.write_record("contacts_by_company", record, time_extracted=utils.now())
 
     return STATE
@@ -454,7 +453,7 @@ def sync_companies(STATE, ctx):
                 record = bumble_bee.transform(record, schema, mdata)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
                 if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                    STATE = _sync_contacts_by_company(STATE, ctx, record['companyId'])
+                    STATE = _sync_contacts_by_company(STATE, record['companyId'])
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
@@ -825,22 +824,26 @@ def get_streams_to_sync(streams, state):
         raise Exception('Unknown stream {} in state'.format(target_stream))
     return result
 
-def get_selected_streams(remaining_streams, ctx):
+def get_selected_streams(remaining_streams, annotated_schema):
     selected_streams = []
     for stream in remaining_streams:
-        if stream.tap_stream_id in ctx.selected_stream_ids:
+        tap_stream_id = stream.tap_stream_id
+        selected_stream = next((s for s in annotated_schema['streams'] if s['tap_stream_id'] == tap_stream_id), None)
+
+        if selected_stream and selected_stream.get('schema').get('selected'):
             selected_streams.append(stream)
+
     return selected_streams
 
-def do_sync(STATE, catalog):
+def do_sync(STATE, catalogs):
     # Clear out keys that are no longer used
     clean_state(STATE)
 
-    ctx = Context(catalog)
+    ctx = Context(catalogs)
     validate_dependencies(ctx)
 
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
-    selected_streams = get_selected_streams(remaining_streams, ctx)
+    selected_streams = get_selected_streams(remaining_streams, catalogs)
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.tap_stream_id for stream in selected_streams])
     for stream in selected_streams:
@@ -861,13 +864,9 @@ def do_sync(STATE, catalog):
 
 class Context(object):
     def __init__(self, catalog):
-        self.selected_stream_ids = set()
-
-        for stream in catalog.get('streams'):
-            for mdata in stream['metadata']:
-                if mdata['breadcrumb'] == [] and mdata['metadata'].get('selected')== True:
-                    self.selected_stream_ids.add(stream['tap_stream_id'])
-
+        self.selected_stream_ids = set(
+            s.get('tap_stream_id') for s in catalog.get('streams')
+            if s.get('schema').get('selected'))
         self.catalog = catalog
 
     def get_catalog_from_id(self,tap_stream_id):
