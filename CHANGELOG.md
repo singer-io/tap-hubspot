@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.0
+  * Replaced `annotated_schema` with Singer `metadata`
+  * Added integration tests to CircleCI
+
 ## 2.5.2
   * Companies and Engagements have a new pattern to catch records that are updated during a long-running sync. Rather than using a lookback window, the bookmark value will be limited to the `min(current_sync_start, max_bk_seen)` [#98](https://github.com/singer-io/tap-hubspot/pull/98)
 
