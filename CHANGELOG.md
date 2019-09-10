@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.6.2
+  * Revert the revert. Go back to v2.6.0.
+
 ## 2.6.1
   * Revert v2.6.0 to v.2.5.2
 
