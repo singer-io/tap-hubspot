@@ -864,9 +864,9 @@ class Context(object):
         self.selected_stream_ids = set()
 
         for stream in catalog.get('streams'):
-            for mdata in stream['metadata']:
-                if len(mdata['breadcrumb']) == 0 and mdata['metadata'].get('selected') == True:
-                    self.selected_stream_ids.add(stream['tap_stream_id'])
+            mdata = metadata.to_map(stream['metadata'])
+            if metadata.get(mdata, (), 'selected'):
+                self.selected_stream_ids.add(stream['tap_stream_id'])
 
         self.catalog = catalog
 
