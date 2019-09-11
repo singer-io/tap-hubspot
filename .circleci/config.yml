@@ -19,6 +19,11 @@ jobs:
             source ~/.virtualenvs/tap-hubspot/bin/activate
             pip install nose
             nosetests
+      - run:
+          name: 'JSON Validator'
+          command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            stitch-validate-json ~/.virtualenvs/tap-hubspot/lib/python3.5/site-packages/tap_hubspot/schemas/*.json
       - add_ssh_keys
       - run:
           name: 'Integration Tests'
