@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.6.3
+  * Use the metadata library better
+
 ## 2.6.2
   * Revert the revert. Go back to v2.6.0.
 
