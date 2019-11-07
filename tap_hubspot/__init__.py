@@ -486,8 +486,8 @@ def sync_deals(STATE, ctx):
                 params['includeAssociations'] = True
 
     # Append all the properties fields for deals to the request if
-    # properties is selected
-    if mdata.get(('properties', 'properties')).get('selected'):
+    # properties is selectedOB
+    if mdata.get(('properties', 'properties'), {}).get('selected'):
         additional_properties = schema.get("properties").get("properties").get("properties")
         for key in additional_properties.keys():
             params['properties'].append(key)
