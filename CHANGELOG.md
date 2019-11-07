@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.6.4
+  * When making `deals` requests, only attach `properties` if selected [#102](https://github.com/singer-io/tap-hubspot/pull/102)
+
 ## 2.6.3
   * Use the metadata library better
 
