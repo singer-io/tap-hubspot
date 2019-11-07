@@ -485,10 +485,12 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
-    # Append all the properties fields for deals to the request
-    additional_properties = schema.get("properties").get("properties").get("properties")
-    for key in additional_properties.keys():
-        params['properties'].append(key)
+    # Append all the properties fields for deals to the request if
+    # properties is selected
+    if mdata.get(('properties', 'properties')).get('selected'):
+        additional_properties = schema.get("properties").get("properties").get("properties")
+        for key in additional_properties.keys():
+            params['properties'].append(key)
 
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
