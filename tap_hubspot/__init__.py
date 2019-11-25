@@ -431,7 +431,7 @@ def sync_companies(STATE, ctx):
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
         contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
-        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
+        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company_id", "contact_id"])
 
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
