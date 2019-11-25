@@ -98,3 +98,8 @@ config.json
 .autoenv.zsh
 *~
 env-vars*
+bq_config.json
+catalog.json
+Pipfile
+stream.ndjson
+settings.json
