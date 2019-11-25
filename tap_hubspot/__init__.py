@@ -396,8 +396,8 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
             data = request(url, default_contacts_by_company_params).json()
             for row in data[path]:
                 counter.increment()
-                record = {'company-id' : company_id,
-                          'contact-id' : row}
+                record = {'company_id' : company_id,
+                          'contact_id' : row}
                 record = bumble_bee.transform(record, schema, mdata)
                 singer.write_record("contacts_by_company", record, time_extracted=utils.now())
 
