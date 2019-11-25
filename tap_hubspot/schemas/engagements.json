@@ -4,6 +4,9 @@
     "engagement_id": {
       "type": "integer"
     },
+    "lastUpdated": {
+      "type": ["null", "string"]
+    },
     "engagement": {
       "type": "object",
       "properties": {
