@@ -396,8 +396,8 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
             data = request(url, default_contacts_by_company_params).json()
             for row in data[path]:
                 counter.increment()
-                record = {'company-id' : company_id,
-                          'contact-id' : row}
+                record = {'company_id' : company_id,
+                          'contact_id' : row}
                 record = bumble_bee.transform(record, schema, mdata)
                 singer.write_record("contacts_by_company", record, time_extracted=utils.now())
 
@@ -431,7 +431,7 @@ def sync_companies(STATE, ctx):
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
         contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
-        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
+        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company_id", "contact_id"])
 
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):

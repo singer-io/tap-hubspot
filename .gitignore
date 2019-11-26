@@ -101,5 +101,6 @@ env-vars*
 bq_config.json
 catalog.json
 Pipfile
+Pipfile.lock
 stream.ndjson
 settings.json
