@@ -382,7 +382,7 @@ class ValidationPredFailed(Exception):
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
-default_contacts_by_company_params = {'count' : 100}
+default_contacts_by_company_params = {'count' : 250}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, ctx, company_id):
