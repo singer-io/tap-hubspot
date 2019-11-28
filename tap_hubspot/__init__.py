@@ -404,7 +404,7 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
     return STATE
 
 default_company_params = {
-    'limit': 250, 'properties': ["website", "name","country", "createdate", "hs_lastmodifieddate"]
+    'limit': 250, 'properties': ["website", "name","country", "domain", "createdate", "hs_lastmodifieddate"]
 }
 
 def sync_companies(STATE, ctx):
@@ -449,14 +449,7 @@ def sync_companies(STATE, ctx):
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
-            
-
-            # if not modified_time or modified_time >= start:
-
-               
-  
-            record = row
-            record = bumble_bee.transform(record, schema, mdata)        
+            record = bumble_bee.transform(row, schema, mdata)        
             singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
             if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
                 STATE = _sync_contacts_by_company(STATE, ctx, record['companyId'])
