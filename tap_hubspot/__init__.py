@@ -404,7 +404,7 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
     return STATE
 
 default_company_params = {
-    'limit': 250, 'properties': ["createdate", "hs_lastmodifieddate"]
+    'limit': 250, 'properties': ["website", "name","country", "createdate", "hs_lastmodifieddate"]
 }
 
 def sync_companies(STATE, ctx):
