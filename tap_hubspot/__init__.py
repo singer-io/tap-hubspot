@@ -767,6 +767,168 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def sync_form_submissions(STATE, ctx):
+    data = request(get_url("forms")).json()
+
+    for row in data:
+        STATE = _sync_form_submissions_by_form_id(STATE, row['guid'])
+        singer.write_state(STATE)
+
+    return STATE
+
+def _sync_form_submissions_by_form_id(STATE, form_guid):
+    schema = load_schema("form_submissions")
+    bookmark_key = 'last_max_submitted_at'
+
+    singer.write_schema("form_submissions", schema, ['guid', 'submittedAt', 'pageUrl'], [bookmark_key])
+    end = utils.strptime_to_utc(get_start(STATE, form_guid, bookmark_key))
+    max_bk_value = end
+    up_to_date = False
+
+    LOGGER.info("_sync_form_submissions_by_form_id for guid %s ending at %s", form_guid, end)
+
+    url = get_url("form_submissions", form_guid=form_guid)
+    path = 'results'
+    params = {
+        'limit': 50
+    }
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        while up_to_date == False:
+            form_offset = singer.get_offset(STATE, form_guid)
+
+            if form_offset and form_offset.get('after') != None:
+                params['after'] = form_offset.get('after')
+            data = request(url, params).json()
+            for row in data[path]:
+                if len(row) == 0:
+                    continue
+
+                submitted_at = utils.strptime_with_tz(
+                    _transform_datetime(row['submittedAt'], UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
+
+                if submitted_at > max_bk_value:
+                    max_bk_value = submitted_at
+
+                # since this stream returns in reverse order check to see if we've reached the data already loaded
+                if submitted_at <= end:
+                    STATE = singer.clear_offset(STATE, form_guid)
+                    up_to_date = True
+                    LOGGER.info("Reached the end of new form submissions")
+                    break
+
+                record = {
+                    'guid': form_guid,
+                    'submittedAt': row['submittedAt'],
+                    'pageUrl': row['pageUrl'],
+                    'values': row['values']
+                }
+                record = bumble_bee.transform(record, schema)
+                singer.write_record("form_submissions", record, 'form_submissions', time_extracted=utils.now())
+            if 'paging' in data:
+                STATE = singer.set_offset(STATE, form_guid, 'after', data['paging']['next']['after'])
+                singer.write_state(STATE)
+            else:
+                STATE = singer.clear_offset(STATE, form_guid)
+                singer.write_state(STATE)
+                LOGGER.info("No more submissions for this form")
+                break
+    STATE = singer.write_bookmark(STATE, form_guid, bookmark_key, max_bk_value.strftime("%Y-%m-%d %H:%M:%S"))
+    return STATE
+
+properties = [
+    'hs_additional_emails',
+    'first_conversion_event_name',
+    'hs_analytics_first_visit_timestamp',
+    'hs_all_contact_vids',
+    'first_conversion_date',
+    'company',
+    'company_name',
+    'createdate',
+    'hs_analytics_last_touch_converting_campaign',
+    'hs_analytics_last_url',
+    'referral_source',
+    'referring_source',
+    'referring_link',
+    'referring_vc',
+    'hs_analytics_first_referrer',
+    'hs_analytics_last_referrer',
+    'email',
+    'createdat',
+    'lastmodifieddate',
+    'hs_is_contact',
+    'hs_analytics_first_url',
+    'source',
+    'hs_analytics_source_data_1',
+    'hs_analytics_source_data_2',
+    'hs_analytics_last_visit_timestamp',
+    'hs_lifecyclestage_lead_date',
+    'form_source',
+    'v7_form_source',
+    'hs_analytics_source',
+    'hs_analytics_first_timestamp',
+    'user_id',
+    'anonymous_id',
+    'plan_affiliation',
+    'enterprise_role',
+    'enterprise_subdomain',
+    'is_enterprise_customer_email_domain',
+    'enterprise_status',
+    'enterprise_sso',
+    'bucket',
+    'number_of_boards',
+    'number_of_projects',
+    'number_of_comments',
+    'number_of_hotspots',
+    'invision_users_in_domain',
+    'first_craft_sync',
+    'last_craft_sync',
+    'signup_invision_version'
+]
+
+def sync_recent_contacts(STATE, ctx):
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    schema = load_schema("contacts_recent")
+    bookmark_key = 'last_max_modified_at'
+
+    singer.write_schema("contacts_recent", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
+    end = utils.strptime_with_tz(get_start(STATE, "contacts_recent", bookmark_key))
+    max_bk_value = end
+
+    LOGGER.info("sync_recent_contacts ending at %s", end)
+
+    url = get_url("contacts_recent")
+    path = 'contacts'
+    params = {
+        'count': 100,
+        'showListMemberships': 'false',
+        'formSubmissionMode': 'none',
+        'property': properties
+    }
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request(STATE, 'recent_contacts', url, params, path, 'has-more', ['vid-offset', 'time-offset'], ['vidOffset', 'timeOffset']):
+            modified_time = None
+            if 'properties' in row:
+                modified_time = utils.strptime_with_tz(
+                    _transform_datetime( # pylint: disable=protected-access
+                        row['properties']['lastmodifieddate']['value'],
+                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
+
+            if not modified_time or modified_time <= end:
+                LOGGER.info("Reached the end of new/updated contacts")
+                break
+            elif modified_time >= end:
+                record = bumble_bee.transform(row, schema)
+                singer.write_record("contacts_recent", record, catalog.get('stream_alias'), time_extracted=utils.now())
+
+            if modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+    STATE = singer.write_bookmark(STATE, 'contacts_recent', bookmark_key, utils.strftime(max_bk_value))
+    singer.write_state(STATE)
+    return STATE
+
 @attr.s
 class Stream(object):
     tap_stream_id = attr.ib()
@@ -779,6 +941,8 @@ STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
+    Stream('contacts_recent', sync_recent_contacts, ['vid'], 'lastmodifieddate', 'INCREMENTAL'),
+    Stream('form_submissions', sync_form_submissions, ['guid', 'submittedAt', 'pageUrl'], 'submittedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -905,7 +1069,7 @@ def discover_schemas():
     schema, mdata = load_discovered_schema(contacts_by_company)
 
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
-                              'tap_stream_id': CONTACTS_BY_COMPANY,
+                              'tap_stream           _id': CONTACTS_BY_COMPANY,
                               'schema': schema,
                               'metadata': mdata})
 

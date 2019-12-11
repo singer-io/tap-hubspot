@@ -1,0 +1,590 @@
+{
+  "type": "object",
+  "properties": {
+    "addedAt": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "vid": {
+      "type": ["null", "integer"]
+    },
+    "canonical-vid": {
+      "type": ["null", "integer"]
+    },
+    "merged-vids": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    },
+    "portal-id": {
+      "type": ["null", "integer"]
+    },
+    "is-contact": {
+      "type": ["null", "boolean"]
+    },
+    "profile-token": {
+      "type": ["null", "string"]
+    },
+    "profile-url": {
+      "type": ["null", "string"]
+    },
+    "associated-company" : {
+        "type": ["null", "object"],
+        "properties" : {}
+    },
+    "identity-profiles": {
+        "type": ["null", "array"],
+        "items": {
+            "type": ["null", "object"],
+            "properties": {
+                "deleted-changed-timestamp": {
+                    "type": ["null", "string"],
+                    "format": "date-time"
+                },
+                "saved-at-timestamp": {
+                    "type": ["null", "string"],
+                    "format": "date-time"
+                },
+                "vid": {
+                    "type": ["null", "integer"]
+                },
+                "identities": {
+                    "type": ["null", "array"],
+                    "items": {
+                        "type": ["null", "object"],
+                        "properties": {
+                            "timestamp": {
+                                "type": ["null", "string"],
+                                "format": "date-time"
+                            },
+                            "type": {
+                                "type": ["null", "string"]
+                            },
+                            "value": {
+                                "type": ["null", "string"]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "list-memberships": {
+        "type": ["null", "array"],
+        "items": {
+            "type": ["null", "object"],
+            "properties": {
+                "internal-list-id": {
+                    "type": ["null", "integer"]
+                },
+                "is-member": {
+                    "type": ["null", "boolean"]
+                },
+                "static-list-id": {
+                    "type": ["null", "integer"]
+                },
+                "timestamp": {
+                    "type": ["null", "string"],
+                    "format": "date-time"
+                },
+                "vid": {
+                    "type": ["null", "integer"]
+                }
+            }
+        }
+    },
+    "form-submissions": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "conversion-id": {
+            "type": ["null", "string"]
+          },
+          "timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "form-id": {
+            "type": ["null", "string"]
+          },
+          "portal-id": {
+            "type": ["null", "integer"]
+          },
+          "page-url": {
+            "type": ["null", "string"]
+          },
+          "title": {
+            "type": ["null", "string"]
+          }
+        }
+      }
+    },
+    "merge-audits": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "canonical-vid": {
+            "type": ["null", "integer"]
+          },
+          "vid-to-merge": {
+            "type": ["null", "integer"]
+          },
+          "timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "user-id": {
+            "type": ["null", "integer"]
+          },
+          "num-properties-moved": {
+            "type": ["null", "integer"]
+          },
+          "merged_from_email": {
+            "type": ["null", "object"],
+            "properties": {
+              "value": {
+                "type": ["null", "string"]
+              },
+              "source-type": {
+                "type": ["null", "string"]
+              },
+              "source-id": {
+                "type": ["null", "string"]
+              },
+              "source-label": {
+                "type": ["null", "string"]
+              },
+              "source-vids": {
+                "type": ["null", "array"],
+                "items": {
+                  "type": ["null", "integer"]
+                }
+              },
+              "timestamp": {
+                "type": ["null", "integer"]
+              },
+              "selected": {
+                "type": ["null", "boolean"]
+              }
+            }
+          },
+          "merged_to_email": {
+            "type": ["null", "object"],
+            "properties": {
+              "value": {
+                "type": ["null", "string"]
+              },
+              "source-type": {
+                "type": ["null", "string"]
+              },
+              "source-id": {
+                "type": ["null", "string"]
+              },
+              "source-label": {
+                "type": ["null", "string"]
+              },
+              "timestamp": {
+                "type": ["null", "integer"]
+              },
+              "selected": {
+                "type": ["null", "boolean"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "properties": {
+      "type": [ "null", "object" ],
+      "properties": {
+        "hs_additional_emails": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "first_conversion_event_name": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_first_visit_timestamp": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "hs_all_contact_vids": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "first_conversion_date": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "company": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "company_name": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "createdate": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "hs_analytics_last_touch_converting_campaign": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_last_url": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "referral_source": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "referring_source": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "referring_link": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "referring_vc": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_first_referrer": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_last_referrer": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "email": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "createdat": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "lastmodifieddate": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "hs_is_contact": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "boolean" ]
+            }
+          }
+        },
+        "hs_analytics_first_url": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "source": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_source_data_1": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_source_data_2": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_last_visit_timestamp": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "hs_lifecyclestage_lead_date": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "form_source": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "v7_form_source": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_source": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "hs_analytics_first_timestamp": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ],
+              "format": "date-time"
+            }
+          }
+        },
+        "user_id": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "anonymous_id": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "enterprise_status": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "plan_affiliation": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "enterprise_role": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "enterprise_subdomain": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "is_enterprise_customer_email_domain": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "enterprise_sso": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "bucket": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "integer" ]
+            }
+          }
+        },
+        "number_of_boards": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "integer" ]
+            }
+          }
+        },
+        "number_of_projects": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "integer" ]
+            }
+          }
+        },
+        "number_of_comments": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "integer" ]
+            }
+          }
+        },
+        "number_of_hotspots": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "integer" ]
+            }
+          }
+        },
+        "invision_users_in_domain": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "first_craft_sync": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "last_craft_sync": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        },
+        "signup_invision_version": {
+          "type": [ "null", "object" ],
+          "properties": {
+            "value": {
+              "type": [ "null", "string" ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
