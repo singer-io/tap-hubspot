@@ -18,7 +18,7 @@ jobs:
           command: |
             source ~/.virtualenvs/tap-hubspot/bin/activate
             pip install nose
-            nosetests
+            nosetests tap_hubspot/tests
       - run:
           name: 'JSON Validator'
           command: |
