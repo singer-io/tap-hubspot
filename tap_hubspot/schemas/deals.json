@@ -7,6 +7,9 @@
     "dealId": {
       "type": ["null", "integer"]
     },
+    "isDeleted": {
+      "type": ["null", "boolean"]
+    },
     "associations": {
       "type": ["null", "object"],
       "properties": {
