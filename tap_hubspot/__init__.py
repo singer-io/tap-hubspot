@@ -132,6 +132,42 @@ def get_url(endpoint, **kwargs):
 
     return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
+def replace_na_with_none(obj):
+    '''Given a certain object, the function will replace any 'N/A' values with None.
+    E.g: object = {
+                    "key1" : [{"subkey1": "value1"}, {"subkey2": "N/A"}],
+                    "key2" : "n/a",
+                    "key3" : {
+                                "subkey3" : "n/a",
+                                "subkey4" : "value2"
+                        }
+                    }
+        self.replace_na_with_none(object) will return:
+        {
+            "key1" : [{"subkey1": "value1"}, {"subkey2": None}],
+            "key2" : None,
+            "key3" : {
+                        "subkey3" : None,
+                        "subkey4" : "value2"
+                }
+            }
+    '''
+    if isinstance(obj, dict):
+        new_dict = {}
+        for key, value in obj.items():
+            new_dict[key] = replace_na_with_none(value)
+        return new_dict
+
+    if isinstance(obj, list):
+        new_list = []
+        for value in obj:
+            new_list.append(replace_na_with_none(value))
+        return new_list
+
+    if isinstance(obj, str):
+        if obj.lower() == 'n/a':
+            obj = None
+    return obj
 
 def get_field_type_schema(field_type):
     if field_type == "bool":
