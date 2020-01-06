@@ -141,9 +141,7 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "string"], "format": "date-time"}
 
     elif field_type == "number":
-        # A value like 'N/A' can be returned for this type,
-        # so we have to let this be a string sometimes
-        return {"type": ["null", "number", "string"]}
+        return {"type": ["null", "number"]}
 
     else:
         return {"type": ["null", "string"]}
