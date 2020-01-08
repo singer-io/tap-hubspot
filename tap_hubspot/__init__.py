@@ -132,8 +132,9 @@ def get_url(endpoint, **kwargs):
 
     return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
+
 def replace_na_with_none(obj):
-    '''Given a certain object, the function will replace any 'N/A' values with None.
+    """Given a certain object, the function will replace any 'N/A' values with None.
     E.g: object = {
                     "key1" : [{"subkey1": "value1"}, {"subkey2": "N/A"}],
                     "key2" : "n/a",
@@ -151,7 +152,7 @@ def replace_na_with_none(obj):
                         "subkey4" : "value2"
                 }
             }
-    '''
+    """
     if isinstance(obj, dict):
         new_dict = {}
         for key, value in obj.items():
@@ -165,9 +166,10 @@ def replace_na_with_none(obj):
         return new_list
 
     if isinstance(obj, str):
-        if obj.lower() == 'n/a':
+        if obj.lower() == "n/a":
             obj = None
     return obj
+
 
 def get_field_type_schema(field_type):
     if field_type == "bool":
