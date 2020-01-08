@@ -244,7 +244,50 @@ def load_schema(entity_name):
     if entity_name == "contacts":
         schema["properties"]["associated-company"] = load_associated_company_schema()
 
-    return schema
+    return schema_nodash(schema)
+
+
+def schema_nodash(obj):
+    type_field = obj.get("type")
+    type = get_type(type_field)
+    if not type:
+        return obj
+    if not type in ["array", "object"]:
+        return obj
+    if "object" == type:
+        props = obj.get("properties", {})
+        new_props = replace_props(props)
+        obj["properties"] = new_props
+    if "array" == type:
+        items = obj.get("items", {})
+        obj["items"] = schema_nodash(items)
+    return obj
+
+
+def get_type(type_field):
+    if isinstance(type_field, str):
+        return type_field
+    if isinstance(type_field, list):
+        types = set(type_field)
+        if "null" in types:
+            types.remove("null")
+        return types.pop()
+    return None
+
+
+def replace_props(props):
+    if not props:
+        return props
+    keys = list(props.keys())
+    for k in keys:
+        if not "-" in k:
+            props[k] = schema_nodash(props[k])
+        else:
+            v = props.pop(k)
+            new_key = k.replace("-", "_")
+            new_value = schema_nodash(v)
+            props[new_key] = new_value
+    return props
 
 
 # pylint: disable=invalid-name
