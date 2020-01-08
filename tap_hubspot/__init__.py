@@ -132,8 +132,9 @@ def get_url(endpoint, **kwargs):
 
     return BASE_URL + ENDPOINTS[endpoint].format(**kwargs)
 
+
 def replace_na_with_none(obj):
-    '''Given a certain object, the function will replace any 'N/A' values with None.
+    """Given a certain object, the function will replace any 'N/A' values with None.
     E.g: object = {
                     "key1" : [{"subkey1": "value1"}, {"subkey2": "N/A"}],
                     "key2" : "n/a",
@@ -151,7 +152,7 @@ def replace_na_with_none(obj):
                         "subkey4" : "value2"
                 }
             }
-    '''
+    """
     if isinstance(obj, dict):
         new_dict = {}
         for key, value in obj.items():
@@ -165,9 +166,10 @@ def replace_na_with_none(obj):
         return new_list
 
     if isinstance(obj, str):
-        if obj.lower() == 'n/a':
+        if obj.lower() == "n/a":
             obj = None
     return obj
+
 
 def get_field_type_schema(field_type):
     if field_type == "bool":
@@ -242,7 +244,50 @@ def load_schema(entity_name):
     if entity_name == "contacts":
         schema["properties"]["associated-company"] = load_associated_company_schema()
 
-    return schema
+    return schema_nodash(schema)
+
+
+def schema_nodash(obj):
+    type_field = obj.get("type")
+    type = get_type(type_field)
+    if not type:
+        return obj
+    if not type in ["array", "object"]:
+        return obj
+    if "object" == type:
+        props = obj.get("properties", {})
+        new_props = replace_props(props)
+        obj["properties"] = new_props
+    if "array" == type:
+        items = obj.get("items", {})
+        obj["items"] = schema_nodash(items)
+    return obj
+
+
+def get_type(type_field):
+    if isinstance(type_field, str):
+        return type_field
+    if isinstance(type_field, list):
+        types = set(type_field)
+        if "null" in types:
+            types.remove("null")
+        return types.pop()
+    return None
+
+
+def replace_props(props):
+    if not props:
+        return props
+    keys = list(props.keys())
+    for k in keys:
+        if not "-" in k:
+            props[k] = schema_nodash(props[k])
+        else:
+            v = props.pop(k)
+            new_key = k.replace("-", "_")
+            new_value = schema_nodash(v)
+            props[new_key] = new_value
+    return props
 
 
 # pylint: disable=invalid-name
@@ -396,12 +441,30 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     for record in data.values():
         record = replace_na_with_none(record)
         record = bumble_bee.transform(record, schema, mdata)
+        record = record_nodash(record)
         singer.write_record(
             "contacts",
             record,
             catalog.get("stream_alias"),
             time_extracted=time_extracted,
         )
+
+
+def record_nodash(obj):
+    if not isinstance(obj, dict):  # stopplesing criteria
+        return obj
+
+    for k in obj.keys():
+        value = record_nodash(obj[k])
+        if not "-" in k:
+            key = k
+        else:
+            obj.pop(k)
+            key = k.replace("-", "_")
+
+        obj[key] = value  # recursion
+
+    return obj
 
 
 default_contact_params = {
