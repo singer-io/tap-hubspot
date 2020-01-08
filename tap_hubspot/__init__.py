@@ -441,12 +441,30 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     for record in data.values():
         record = replace_na_with_none(record)
         record = bumble_bee.transform(record, schema, mdata)
+        record = record_nodash(record)
         singer.write_record(
             "contacts",
             record,
             catalog.get("stream_alias"),
             time_extracted=time_extracted,
         )
+
+
+def record_nodash(obj):
+    if not isinstance(obj, dict):  # stopplesing criteria
+        return obj
+
+    for k in obj.keys():
+        value = record_nodash(obj[k])
+        if not "-" in k:
+            key = k
+        else:
+            obj.pop(k)
+            key = k.replace("-", "_")
+
+        obj[key] = value  # recursion
+
+    return obj
 
 
 default_contact_params = {
