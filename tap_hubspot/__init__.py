@@ -974,7 +974,7 @@ def sync_workflows(STATE, ctx):
 def sync_owners(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("owners")
+    schema = catalog["schema"]
     bookmark_key = "updatedAt"
 
     singer.write_schema(
