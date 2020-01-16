@@ -758,7 +758,7 @@ def sync_campaigns(STATE, ctx):
 
 
 def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
-    schema = load_schema(entity_name)
+    schema = catalog["schema"]
     bookmark_key = "startTimestamp"
 
     singer.write_schema(
