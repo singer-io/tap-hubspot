@@ -727,7 +727,7 @@ def sync_deals(STATE, ctx):
 def sync_campaigns(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("campaigns")
+    schema = catalog["schema"]
     singer.write_schema("campaigns", schema, ["id"], catalog.get("stream_alias"))
     LOGGER.info("sync_campaigns(NO bookmarks)")
     url = get_url("campaigns_all")
