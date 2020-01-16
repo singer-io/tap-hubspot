@@ -1015,7 +1015,7 @@ def sync_owners(STATE, ctx):
 def sync_engagements(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("engagements")
+    schema = catalog["schema"]
     bookmark_key = "lastUpdated"
     singer.write_schema(
         "engagements",
