@@ -481,7 +481,7 @@ def sync_contacts(STATE, ctx):
     LOGGER.info("sync_contacts from %s", start)
 
     max_bk_value = start
-    schema = load_schema("contacts")
+    schema = catalog["schema"]
 
     singer.write_schema(
         "contacts", schema, ["vid"], [bookmark_key], catalog.get("stream_alias")
@@ -542,8 +542,8 @@ default_contacts_by_company_params = {"count": 250}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, ctx, company_id):
-    schema = load_schema(CONTACTS_BY_COMPANY)
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    schema = catalog.get["schema"]
     mdata = metadata.to_map(catalog.get("metadata"))
     url = get_url("contacts_by_company", company_id=company_id)
     path = "vids"
@@ -582,7 +582,7 @@ def sync_companies(STATE, ctx):
     bookmark_key = "hs_lastmodifieddate"
     start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
     LOGGER.info("sync_companies from %s", start)
-    schema = load_schema("companies")
+    schema = catalog["schema"]
     singer.write_schema(
         "companies", schema, ["companyId"], [bookmark_key], catalog.get("stream_alias")
     )
@@ -662,7 +662,6 @@ def sync_deals(STATE, ctx):
     start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
-    most_recent_modified_time = start
     params = {"count": 250, "includeAssociations": False, "properties": []}
 
     schema = load_schema("deals")
@@ -728,7 +727,7 @@ def sync_deals(STATE, ctx):
 def sync_campaigns(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("campaigns")
+    schema = catalog["schema"]
     singer.write_schema("campaigns", schema, ["id"], catalog.get("stream_alias"))
     LOGGER.info("sync_campaigns(NO bookmarks)")
     url = get_url("campaigns_all")
@@ -759,7 +758,7 @@ def sync_campaigns(STATE, ctx):
 
 
 def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
-    schema = load_schema(entity_name)
+    schema = catalog["schema"]
     bookmark_key = "startTimestamp"
 
     singer.write_schema(
@@ -937,7 +936,7 @@ def sync_forms(STATE, ctx):
 def sync_workflows(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("workflows")
+    schema = catalog["schema"]
     bookmark_key = "updatedAt"
     singer.write_schema(
         "workflows", schema, ["id"], [bookmark_key], catalog.get("stream_alias")
@@ -975,7 +974,7 @@ def sync_workflows(STATE, ctx):
 def sync_owners(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("owners")
+    schema = catalog["schema"]
     bookmark_key = "updatedAt"
 
     singer.write_schema(
@@ -1016,7 +1015,7 @@ def sync_owners(STATE, ctx):
 def sync_engagements(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("engagements")
+    schema = catalog["schema"]
     bookmark_key = "lastUpdated"
     singer.write_schema(
         "engagements",
@@ -1089,7 +1088,7 @@ def sync_engagements(STATE, ctx):
 def sync_deal_pipelines(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("deal_pipelines")
+    schema = catalog["schema"]
     singer.write_schema(
         "deal_pipelines", schema, ["pipelineId"], catalog.get("stream_alias")
     )
@@ -1249,7 +1248,7 @@ def load_discovered_schema(stream):
             mdata, (), "valid-replication-keys", [stream.replication_key]
         )
 
-    for field_name, props in schema["properties"].items():
+    for field_name in schema["properties"]:
         if field_name in stream.key_properties or field_name == stream.replication_key:
             mdata = metadata.write(
                 mdata, ("properties", field_name), "inclusion", "automatic"
