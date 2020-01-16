@@ -1088,7 +1088,7 @@ def sync_engagements(STATE, ctx):
 def sync_deal_pipelines(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("deal_pipelines")
+    schema = catalog["schema"]
     singer.write_schema(
         "deal_pipelines", schema, ["pipelineId"], catalog.get("stream_alias")
     )
