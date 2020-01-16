@@ -582,7 +582,7 @@ def sync_companies(STATE, ctx):
     bookmark_key = "hs_lastmodifieddate"
     start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
     LOGGER.info("sync_companies from %s", start)
-    schema = load_schema("companies")
+    schema = catalog["schema"]
     singer.write_schema(
         "companies", schema, ["companyId"], [bookmark_key], catalog.get("stream_alias")
     )
