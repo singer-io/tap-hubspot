@@ -481,7 +481,7 @@ def sync_contacts(STATE, ctx):
     LOGGER.info("sync_contacts from %s", start)
 
     max_bk_value = start
-    schema = load_schema("contacts")
+    schema = catalog["schema"]
 
     singer.write_schema(
         "contacts", schema, ["vid"], [bookmark_key], catalog.get("stream_alias")
