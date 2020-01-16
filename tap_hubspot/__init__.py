@@ -542,8 +542,8 @@ default_contacts_by_company_params = {"count": 250}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company(STATE, ctx, company_id):
-    schema = load_schema(CONTACTS_BY_COMPANY)
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    schema = catalog.get["schema"]
     mdata = metadata.to_map(catalog.get("metadata"))
     url = get_url("contacts_by_company", company_id=company_id)
     path = "vids"
