@@ -936,7 +936,7 @@ def sync_forms(STATE, ctx):
 def sync_workflows(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("workflows")
+    schema = catalog["schema"]
     bookmark_key = "updatedAt"
     singer.write_schema(
         "workflows", schema, ["id"], [bookmark_key], catalog.get("stream_alias")
