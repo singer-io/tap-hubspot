@@ -662,7 +662,6 @@ def sync_deals(STATE, ctx):
     start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
-    most_recent_modified_time = start
     params = {"count": 250, "includeAssociations": False, "properties": []}
 
     schema = load_schema("deals")
@@ -1249,7 +1248,7 @@ def load_discovered_schema(stream):
             mdata, (), "valid-replication-keys", [stream.replication_key]
         )
 
-    for field_name, props in schema["properties"].items():
+    for field_name in schema["properties"]:
         if field_name in stream.key_properties or field_name == stream.replication_key:
             mdata = metadata.write(
                 mdata, ("properties", field_name), "inclusion", "automatic"
