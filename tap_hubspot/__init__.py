@@ -861,13 +861,13 @@ def do_sync(STATE, catalog):
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
+
 class Context(object):
     def __init__(self, catalog):
         self.selected_stream_ids = set()
 
         for stream in catalog.get('streams'):
-            mdata = metadata.to_map(stream['metadata'])
-            if metadata.get(mdata, (), 'selected'):
+            if stream['schema'].get('selected'):
                 self.selected_stream_ids.add(stream['tap_stream_id'])
 
         self.catalog = catalog
