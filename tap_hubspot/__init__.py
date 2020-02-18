@@ -210,40 +210,12 @@ def parse_custom_schema(entity_name, data):
     }
 
 
-def get_custom_schema(entity_name):
-    return parse_custom_schema(
-        entity_name, request(get_url(entity_name + "_properties")).json()
-    )
-
-
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
 
-def load_associated_company_schema():
-    associated_company_schema = load_schema("companies")
-    # pylint: disable=line-too-long
-    associated_company_schema["properties"]["company-id"] = associated_company_schema[
-        "properties"
-    ].pop("companyId")
-    associated_company_schema["properties"]["portal-id"] = associated_company_schema[
-        "properties"
-    ].pop("portalId")
-    return associated_company_schema
-
-
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path("schemas/{}.json".format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
-        custom_schema = get_custom_schema(entity_name)
-        schema["properties"]["properties"] = {
-            "type": "object",
-            "properties": custom_schema,
-        }
-
-    if entity_name == "contacts":
-        schema["properties"]["associated-company"] = load_associated_company_schema()
-
     return schema_nodash(schema)
 
 
