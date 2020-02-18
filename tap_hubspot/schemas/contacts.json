@@ -25,70 +25,70 @@
     "profile-url": {
       "type": ["null", "string"]
     },
-    "associated-company" : {
-        "type": ["null", "object"],
-        "properties" : {}
+    "associated-company": {
+      "type": ["null", "object"],
+      "properties": {}
     },
     "identity-profiles": {
-        "type": ["null", "array"],
-        "items": {
-            "type": ["null", "object"],
-            "properties": {
-                "deleted-changed-timestamp": {
-                    "type": ["null", "string"],
-                    "format": "date-time"
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "deleted-changed-timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "saved-at-timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "vid": {
+            "type": ["null", "integer"]
+          },
+          "identities": {
+            "type": ["null", "array"],
+            "items": {
+              "type": ["null", "object"],
+              "properties": {
+                "timestamp": {
+                  "type": ["null", "string"],
+                  "format": "date-time"
                 },
-                "saved-at-timestamp": {
-                    "type": ["null", "string"],
-                    "format": "date-time"
+                "type": {
+                  "type": ["null", "string"]
                 },
-                "vid": {
-                    "type": ["null", "integer"]
-                },
-                "identities": {
-                    "type": ["null", "array"],
-                    "items": {
-                        "type": ["null", "object"],
-                        "properties": {
-                            "timestamp": {
-                                "type": ["null", "string"],
-                                "format": "date-time"
-                            },
-                            "type": {
-                                "type": ["null", "string"]
-                            },
-                            "value": {
-                                "type": ["null", "string"]
-                            }
-                        }
-                    }
+                "value": {
+                  "type": ["null", "string"]
                 }
+              }
             }
+          }
         }
+      }
     },
     "list-memberships": {
-        "type": ["null", "array"],
-        "items": {
-            "type": ["null", "object"],
-            "properties": {
-                "internal-list-id": {
-                    "type": ["null", "integer"]
-                },
-                "is-member": {
-                    "type": ["null", "boolean"]
-                },
-                "static-list-id": {
-                    "type": ["null", "integer"]
-                },
-                "timestamp": {
-                    "type": ["null", "string"],
-                    "format": "date-time"
-                },
-                "vid": {
-                    "type": ["null", "integer"]
-                }
-            }
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "internal-list-id": {
+            "type": ["null", "integer"]
+          },
+          "is-member": {
+            "type": ["null", "boolean"]
+          },
+          "static-list-id": {
+            "type": ["null", "integer"]
+          },
+          "timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "vid": {
+            "type": ["null", "integer"]
+          }
         }
+      }
     },
     "form-submissions": {
       "type": ["null", "array"],
