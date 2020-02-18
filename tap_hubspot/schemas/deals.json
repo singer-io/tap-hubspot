@@ -29,6 +29,103 @@
           }
         }
       }
+    },
+    "properties": {
+      "type": "object",
+      "properties": {
+        "closedate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "createdate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "dealtype": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "amount_in_home_currency": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "number"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "dealstage": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
     }
   }
 }

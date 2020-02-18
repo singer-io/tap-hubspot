@@ -1,11 +1,123 @@
 {
   "type": "object",
   "properties": {
-    "portalId": {
-      "type": ["null", "integer"]
-    },
     "companyId": {
       "type": ["null", "integer"]
+    },
+    "properties": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "country": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "domain": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "website": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "createdate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
+        "hs_lastmodifieddate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
     }
   }
 }
