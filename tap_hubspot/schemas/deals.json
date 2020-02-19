@@ -33,6 +33,24 @@
     "properties": {
       "type": "object",
       "properties": {
+        "pipeline": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
         "closedate": {
           "type": "object",
           "properties": {
