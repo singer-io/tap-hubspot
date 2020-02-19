@@ -510,30 +510,6 @@ def use_recent_companies_endpoint(response):
     return response["total"] < 10000
 
 
-default_contacts_by_company_params = {"count": 250}
-
-# NB> to do: support stream aliasing and field selection
-def _sync_contacts_by_company(STATE, ctx, company_id):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    schema = catalog.get["schema"]
-    mdata = metadata.to_map(catalog.get("metadata"))
-    url = get_url("contacts_by_company", company_id=company_id)
-    path = "vids"
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
-            data = request(url, default_contacts_by_company_params).json()
-            for row in data[path]:
-                counter.increment()
-                row = replace_na_with_none(row)
-                record = {"company_id": company_id, "contact_id": row}
-                record = bumble_bee.transform(record, schema, mdata)
-                singer.write_record(
-                    "contacts_by_company", record, time_extracted=utils.now()
-                )
-
-    return STATE
-
-
 default_company_params = {
     "limit": 250,
     "properties": [
@@ -571,13 +547,6 @@ def sync_companies(STATE, ctx):
 
     url = get_url("companies_all")
     max_bk_value = start
-    if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-        contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
-        singer.write_schema(
-            "contacts_by_company",
-            contacts_by_company_schema,
-            ["company_id", "contact_id"],
-        )
 
     with bumble_bee:
         for row in gen_request(
@@ -615,8 +584,6 @@ def sync_companies(STATE, ctx):
                 catalog.get("stream_alias"),
                 time_extracted=utils.now(),
             )
-            if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                STATE = _sync_contacts_by_company(STATE, ctx, record["companyId"])
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
     STATE = singer.write_bookmark(
@@ -803,67 +770,9 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
     return STATE
 
 
-def sync_subscription_changes(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    STATE = sync_entity_chunked(
-        STATE,
-        catalog,
-        "subscription_changes",
-        ["timestamp", "portalId", "recipient"],
-        "timeline",
-    )
-    return STATE
-
-
 def sync_email_events(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
-    return STATE
-
-
-def sync_contact_lists(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get("metadata"))
-    schema = load_schema("contact_lists")
-    bookmark_key = "updatedAt"
-    singer.write_schema(
-        "contact_lists", schema, ["listId"], [bookmark_key], catalog.get("stream_alias")
-    )
-
-    start = get_start(STATE, "contact_lists", bookmark_key)
-    max_bk_value = start
-
-    LOGGER.info("sync_contact_lists from %s", start)
-
-    url = get_url("contact_lists")
-    params = {"count": 250}
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(
-            STATE,
-            "contact_lists",
-            url,
-            params,
-            "lists",
-            "has-more",
-            ["offset"],
-            ["offset"],
-        ):
-            row = replace_na_with_none(row)
-            record = bumble_bee.transform(row, schema, mdata)
-
-            if record[bookmark_key] >= start:
-                singer.write_record(
-                    "contact_lists",
-                    record,
-                    catalog.get("stream_alias"),
-                    time_extracted=utils.now(),
-                )
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-    STATE = singer.write_bookmark(STATE, "contact_lists", bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-
     return STATE
 
 
@@ -902,85 +811,6 @@ def sync_forms(STATE, ctx):
     STATE = singer.write_bookmark(STATE, "forms", bookmark_key, max_bk_value)
     singer.write_state(STATE)
 
-    return STATE
-
-
-def sync_workflows(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get("metadata"))
-    schema = catalog["schema"]
-    bookmark_key = "updatedAt"
-    singer.write_schema(
-        "workflows", schema, ["id"], [bookmark_key], catalog.get("stream_alias")
-    )
-    start = get_start(STATE, "workflows", bookmark_key)
-    max_bk_value = start
-
-    STATE = singer.write_bookmark(STATE, "workflows", bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-
-    LOGGER.info("sync_workflows from %s", start)
-
-    data = request(get_url("workflows")).json()
-    time_extracted = utils.now()
-
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data["workflows"]:
-            row = replace_na_with_none(row)
-            record = bumble_bee.transform(row, schema, mdata)
-            if record[bookmark_key] >= start:
-                singer.write_record(
-                    "workflows",
-                    record,
-                    catalog.get("stream_alias"),
-                    time_extracted=time_extracted,
-                )
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-    STATE = singer.write_bookmark(STATE, "workflows", bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-    return STATE
-
-
-def sync_owners(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get("metadata"))
-    schema = catalog["schema"]
-    bookmark_key = "updatedAt"
-
-    singer.write_schema(
-        "owners", schema, ["ownerId"], [bookmark_key], catalog.get("stream_alias")
-    )
-    start = get_start(STATE, "owners", bookmark_key)
-    max_bk_value = start
-
-    LOGGER.info("sync_owners from %s", start)
-
-    params = {}
-    if CONFIG.get("include_inactives"):
-        params["includeInactives"] = "true"
-    data = request(get_url("owners"), params).json()
-
-    time_extracted = utils.now()
-
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data:
-            row = replace_na_with_none(row)
-            record = bumble_bee.transform(row, schema, mdata)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-            if record[bookmark_key] >= start:
-                singer.write_record(
-                    "owners",
-                    record,
-                    catalog.get("stream_alias"),
-                    time_extracted=time_extracted,
-                )
-
-    STATE = singer.write_bookmark(STATE, "owners", bookmark_key, max_bk_value)
-    singer.write_state(STATE)
     return STATE
 
 
@@ -1090,21 +920,9 @@ class Stream(object):
 
 
 STREAMS = [
-    # Do these first as they are incremental
-    Stream(
-        "subscription_changes",
-        sync_subscription_changes,
-        ["timestamp", "portalId", "recipient"],
-        "startTimestamp",
-        "INCREMENTAL",
-    ),
     Stream("email_events", sync_email_events, ["id"], "startTimestamp", "INCREMENTAL"),
     # Do these last as they are full table
     Stream("forms", sync_forms, ["guid"], "updatedAt", "FULL_TABLE"),
-    Stream("workflows", sync_workflows, ["id"], "updatedAt", "FULL_TABLE"),
-    Stream("owners", sync_owners, ["ownerId"], "updatedAt", "FULL_TABLE"),
-    Stream("campaigns", sync_campaigns, ["id"], None, "FULL_TABLE"),
-    Stream("contact_lists", sync_contact_lists, ["listId"], "updatedAt", "FULL_TABLE"),
     Stream("contacts", sync_contacts, ["vid"], "versionTimestamp", "FULL_TABLE"),
     Stream(
         "companies", sync_companies, ["companyId"], "hs_lastmodifieddate", "FULL_TABLE"
@@ -1252,25 +1070,6 @@ def discover_schemas():
                 "metadata": mdata,
             }
         )
-    # Load the contacts_by_company schema
-    LOGGER.info("Loading schema for contacts_by_company")
-    contacts_by_company = Stream(
-        "contacts_by_company",
-        _sync_contacts_by_company,
-        ["company-id", "contact-id"],
-        None,
-        "FULL_TABLE",
-    )
-    schema, mdata = load_discovered_schema(contacts_by_company)
-
-    result["streams"].append(
-        {
-            "stream": CONTACTS_BY_COMPANY,
-            "tap_stream_id": CONTACTS_BY_COMPANY,
-            "schema": schema,
-            "metadata": mdata,
-        }
-    )
 
     return result
 
