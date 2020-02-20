@@ -488,9 +488,11 @@ def sync_deals(STATE, ctx):
     # Append all the properties fields for deals to the request if
     # properties is selectedOB
     if mdata.get(('properties', 'properties'), {}).get('selected'):
-        additional_properties = schema.get("properties").get("properties").get("properties")
-        for key in additional_properties.keys():
-            params['properties'].append(key)
+        params['includeAllProperties'] = True
+        params['allPropertiesFetchMode'] = 'latest_version'
+        #additional_properties = schema.get("properties").get("properties").get("properties")
+        #for key in additional_properties.keys():
+        #    params['properties'].append(key)
 
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
