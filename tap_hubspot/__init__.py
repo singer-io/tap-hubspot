@@ -485,12 +485,14 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
-    # Append all the properties fields for deals to the request if
-    # properties is selectedOB
     if mdata.get(('properties', 'properties'), {}).get('selected'):
-        additional_properties = schema.get("properties").get("properties").get("properties")
-        for key in additional_properties.keys():
-            params['properties'].append(key)
+        # On 2/12/20, hubspot added a lot of additional properties for
+        # deals, and appending all of them to requests ended up leading to
+        # 414 (url-too-long) errors. Hubspot recommended we use the
+        # `includeAllProperties` and `allpropertiesFetchMode` params
+        # instead.
+        params['includeAllProperties'] = True
+        params['allPropertiesFetchMode'] = 'latest_version'
 
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
