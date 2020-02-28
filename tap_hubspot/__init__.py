@@ -346,7 +346,7 @@ def request(url, params=None):
         headers["User-Agent"] = CONFIG["user_agent"]
 
     req = requests.Request("GET", url, params=params, headers=headers).prepare()
-    LOGGER.info("GET %s", req.url)
+    #LOGGER.info("GET %s", req.url)
     with metrics.http_request_timer(parse_source_from_url(url)) as timer:
         resp = SESSION.send(req)
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
