@@ -78,6 +78,7 @@ ENDPOINTS = {
     "deals_detail":         "/deals/v1/deal/{deal_id}",
 
     "deal_pipelines":       "/deals/v1/pipelines",
+    "dispositions":         "/calling/v1/dispositions",
 
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
@@ -790,6 +791,20 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def sync_dispositions(STATE, ctx):
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    schema = load_schema('dispositions')
+    singer.write_schema('dispositions', schema, ['id'], catalog.get('stream_alias'))
+    LOGGER.info('sync_dispositions')
+    data = request(get_url('dispositions')).json()
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data:
+            record = bumble_bee.transform(row, schema, mdata)
+            singer.write_record("dispositions", record, catalog.get('stream_alias'), time_extracted=utils.now())
+    singer.write_state(STATE)
+    return STATE
+
 @attr.s
 class Stream(object):
     tap_stream_id = attr.ib()
@@ -813,7 +828,8 @@ STREAMS = [
     Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
-    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
+    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE'),
+    Stream('dispositions', sync_dispositions, ["id"], None, 'FULL_TABLE'),
 ]
 
 def get_streams_to_sync(streams, state):

@@ -1,0 +1,26 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": ["null", "integer"]
+      },
+      "portalId": {
+        "type": ["null", "integer"]
+      },
+      "ownerId": {
+        "type": ["null", "integer"]
+      },
+      "remoteId": {
+        "type": ["null", "string"]
+      },
+      "remoteType": {
+        "type": ["null", "string"]
+      },
+      "active": {
+        "type": ["null", "boolean"]
+      }
+    }
+  }
+}
