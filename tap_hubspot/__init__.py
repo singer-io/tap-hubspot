@@ -576,14 +576,14 @@ def sync_companies(STATE, ctx):
 
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
-
-            record = bumble_bee.transform(row, schema, mdata)
-            singer.write_record(
-                "companies",
-                record,
-                catalog.get("stream_alias"),
-                time_extracted=utils.now(),
-            )
+            if not modified_time or modified_time >= start:
+                record = bumble_bee.transform(row, schema, mdata)
+                singer.write_record(
+                    "companies",
+                    record,
+                    catalog.get("stream_alias"),
+                    time_extracted=utils.now(),
+                )
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
     STATE = singer.write_bookmark(
