@@ -481,7 +481,7 @@ def sync_contacts(STATE, ctx):
                     )
                 )
 
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time > start:
                 vids.append(row["vid"])
 
             if modified_time and modified_time >= max_bk_value:
@@ -576,7 +576,7 @@ def sync_companies(STATE, ctx):
 
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time > start:
                 record = bumble_bee.transform(row, schema, mdata)
                 singer.write_record(
                     "companies",
@@ -646,7 +646,7 @@ def sync_deals(STATE, ctx):
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time > start:
                 record = bumble_bee.transform(row, schema, mdata)
                 singer.write_record(
                     "deals",
@@ -798,7 +798,7 @@ def sync_forms(STATE, ctx):
             row = replace_na_with_none(row)
             record = bumble_bee.transform(row, schema, mdata)
 
-            if record[bookmark_key] >= start:
+            if record[bookmark_key] > start:
                 singer.write_record(
                     "forms",
                     record,
@@ -864,7 +864,7 @@ def sync_engagements(STATE, ctx):
         for engagement in engagements:
             engagement = replace_na_with_none(engagement)
             record = bumble_bee.transform(engagement, schema, mdata)
-            if record["engagement"][bookmark_key] >= start:
+            if record["engagement"][bookmark_key] > start:
                 # hoist PK and bookmark field to top-level record
                 record["engagement_id"] = record["engagement"]["id"]
                 record[bookmark_key] = record["engagement"][bookmark_key]
