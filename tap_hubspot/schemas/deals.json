@@ -51,6 +51,25 @@
             }
           }
         },
+        "hs_lastmodifieddate": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "timestamp": {
+              "type": ["null", "string"],
+              "format": "date-time"
+            },
+            "source": {
+              "type": ["null", "string"]
+            },
+            "sourceId": {
+              "type": ["null", "string"]
+            }
+          }
+        },
         "closedate": {
           "type": "object",
           "properties": {

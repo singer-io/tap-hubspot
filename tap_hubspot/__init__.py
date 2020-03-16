@@ -82,7 +82,7 @@ ENDPOINTS = {
     "deals_all": "/deals/v1/deal/paged",
     "deals_recent": "/deals/v1/deal/recent/modified",
     "deals_detail": "/deals/v1/deal/{deal_id}",
-    "deal_pipelines": "/deals/v1/pipelines",
+    "deal_pipelines": "/crm-pipelines/v1/pipelines/deals",
     "campaigns_all": "/email/public/v1/campaigns/by-id",
     "campaigns_detail": "/email/public/v1/campaigns/{campaign_id}",
     "engagements_all": "/engagements/v1/engagements/paged",
@@ -481,7 +481,7 @@ def sync_contacts(STATE, ctx):
                     )
                 )
 
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time > start:
                 vids.append(row["vid"])
 
             if modified_time and modified_time >= max_bk_value:
@@ -576,14 +576,14 @@ def sync_companies(STATE, ctx):
 
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
-
-            record = bumble_bee.transform(row, schema, mdata)
-            singer.write_record(
-                "companies",
-                record,
-                catalog.get("stream_alias"),
-                time_extracted=utils.now(),
-            )
+            if not modified_time or modified_time > start:
+                record = bumble_bee.transform(row, schema, mdata)
+                singer.write_record(
+                    "companies",
+                    record,
+                    catalog.get("stream_alias"),
+                    time_extracted=utils.now(),
+                )
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
     STATE = singer.write_bookmark(
@@ -646,7 +646,7 @@ def sync_deals(STATE, ctx):
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time > start:
                 record = bumble_bee.transform(row, schema, mdata)
                 singer.write_record(
                     "deals",
@@ -798,7 +798,7 @@ def sync_forms(STATE, ctx):
             row = replace_na_with_none(row)
             record = bumble_bee.transform(row, schema, mdata)
 
-            if record[bookmark_key] >= start:
+            if record[bookmark_key] > start:
                 singer.write_record(
                     "forms",
                     record,
@@ -864,7 +864,7 @@ def sync_engagements(STATE, ctx):
         for engagement in engagements:
             engagement = replace_na_with_none(engagement)
             record = bumble_bee.transform(engagement, schema, mdata)
-            if record["engagement"][bookmark_key] >= start:
+            if record["engagement"][bookmark_key] > start:
                 # hoist PK and bookmark field to top-level record
                 record["engagement_id"] = record["engagement"]["id"]
                 record[bookmark_key] = record["engagement"][bookmark_key]
@@ -888,24 +888,44 @@ def sync_engagements(STATE, ctx):
 
 
 def sync_deal_pipelines(STATE, ctx):
+    bookmark_key = "updatedAt"
+    start = utils.strptime_with_tz(get_start(STATE, "deal_pipelines", bookmark_key))
+    max_bk_value = start
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get("metadata"))
     schema = catalog["schema"]
     singer.write_schema(
         "deal_pipelines", schema, ["pipelineId"], catalog.get("stream_alias")
     )
-    LOGGER.info("sync_deal_pipelines")
+    LOGGER.info(f"sync deal_pipelines from {start}")
+
     data = request(get_url("deal_pipelines")).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data:
+        for row in data["results"]:
+            modified_time = None
             row = replace_na_with_none(row)
-            record = bumble_bee.transform(row, schema, mdata)
-            singer.write_record(
-                "deal_pipelines",
-                record,
-                catalog.get("stream_alias"),
-                time_extracted=utils.now(),
+            if bookmark_key in row:
+                timestamp_millis = row[bookmark_key]
+            elif "createdAt" in row:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row["createdAt"]
+            modified_time = datetime.datetime.fromtimestamp(
+                timestamp_millis / 1000.0, datetime.timezone.utc
             )
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+            if not modified_time or modified_time > start:
+                record = bumble_bee.transform(row, schema, mdata)
+                singer.write_record(
+                    "deal_pipelines",
+                    record,
+                    catalog.get("stream_alias"),
+                    time_extracted=utils.now(),
+                )
+    STATE = singer.write_bookmark(
+        STATE, "deal_pipelines", bookmark_key, utils.strftime(max_bk_value)
+    )
     singer.write_state(STATE)
     return STATE
 
@@ -928,7 +948,9 @@ STREAMS = [
         "companies", sync_companies, ["companyId"], "hs_lastmodifieddate", "FULL_TABLE"
     ),
     Stream("deals", sync_deals, ["dealId"], "hs_lastmodifieddate", "FULL_TABLE"),
-    Stream("deal_pipelines", sync_deal_pipelines, ["pipelineId"], None, "FULL_TABLE"),
+    Stream(
+        "deal_pipelines", sync_deal_pipelines, ["pipelineId"], "updatedAt", "FULL_TABLE"
+    ),
     Stream(
         "engagements", sync_engagements, ["engagement_id"], "lastUpdated", "FULL_TABLE"
     ),
