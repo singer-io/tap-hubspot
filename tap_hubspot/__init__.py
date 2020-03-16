@@ -82,7 +82,7 @@ ENDPOINTS = {
     "deals_all": "/deals/v1/deal/paged",
     "deals_recent": "/deals/v1/deal/recent/modified",
     "deals_detail": "/deals/v1/deal/{deal_id}",
-    "deal_pipelines": "/deals/v1/pipelines",
+    "deal_pipelines": "/crm-pipelines/v1/pipelines/deals",
     "campaigns_all": "/email/public/v1/campaigns/by-id",
     "campaigns_detail": "/email/public/v1/campaigns/{campaign_id}",
     "engagements_all": "/engagements/v1/engagements/paged",
