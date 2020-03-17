@@ -300,7 +300,7 @@ def request(url, params=None):
 def lift_properties_and_versions(record):
     for key, value in record.get('properties', {}).items():
         computed_key = "property_{}".format(key)
-        versions = value.pop('versions', None)
+        versions = value.get('versions')
         record[computed_key] = value
 
         if versions:
