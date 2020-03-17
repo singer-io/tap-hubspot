@@ -162,7 +162,7 @@ def get_field_schema(field_type, extras=False):
 def parse_custom_schema(entity_name, data):
     # Prefix custom properties with "property"
     return {
-        "property_{}".format(field['name']): get_field_schema(
+        field['name']: get_field_schema(
             field['type'], entity_name != "contacts")
         for field in data
     }
@@ -187,7 +187,15 @@ def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
     if entity_name in ["contacts", "companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
-        schema['properties'].update(get_custom_schema(entity_name))
+
+        schema['properties']['properties'] = {
+            "type": "object",
+            "properties": custom_schema,
+        }
+
+        # Move properties to top level
+        custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
+        schema['properties'].update(custom_schema_top_level)
 
         # Make properties_versions selectable and share the same schema.
         versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
@@ -290,8 +298,7 @@ def request(url, params=None):
 # }
 
 def lift_properties_and_versions(record):
-    properties = record.pop('properties', {})
-    for key, value in properties.items():
+    for key, value in record.get('properties', {}).items():
         computed_key = "property_{}".format(key)
         versions = value.pop('versions', None)
         record[computed_key] = value
@@ -501,7 +508,7 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
-    if mdata.get(('properties', 'properties'), {}).get('selected'):
+    if mdata.get(('properties', 'properties'), {}).get('selected') or has_selected_custom_field(mdata):
         # On 2/12/20, hubspot added a lot of additional properties for
         # deals, and appending all of them to requests ended up leading to
         # 414 (url-too-long) errors. Hubspot recommended we use the
@@ -851,6 +858,13 @@ def get_selected_streams(remaining_streams, ctx):
         if stream.tap_stream_id in ctx.selected_stream_ids:
             selected_streams.append(stream)
     return selected_streams
+
+def has_selected_custom_field(mdata):
+    top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
+    for prop in top_level_custom_props:
+        if mdata.get(prop, {}).get('selected') == True:
+            return True
+    return False
 
 def do_sync(STATE, catalog):
     # Clear out keys that are no longer used
