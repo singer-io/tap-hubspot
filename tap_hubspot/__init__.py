@@ -160,7 +160,6 @@ def get_field_schema(field_type, extras=False):
         }
 
 def parse_custom_schema(entity_name, data):
-    # Prefix custom properties with "property"
     return {
         field['name']: get_field_schema(
             field['type'], entity_name != "contacts")
@@ -169,8 +168,7 @@ def parse_custom_schema(entity_name, data):
 
 
 def get_custom_schema(entity_name):
-    custom_schema = parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
-    return custom_schema
+    return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
 
 
 def get_abs_path(path):
@@ -485,6 +483,13 @@ def sync_companies(STATE, ctx):
     STATE = write_current_sync_start(STATE, 'companies', None)
     singer.write_state(STATE)
     return STATE
+
+def has_selected_custom_field(mdata):
+    top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
+    for prop in top_level_custom_props:
+        if mdata.get(prop, {}).get('selected') == True:
+            return True
+    return False
 
 def sync_deals(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
@@ -858,13 +863,6 @@ def get_selected_streams(remaining_streams, ctx):
         if stream.tap_stream_id in ctx.selected_stream_ids:
             selected_streams.append(stream)
     return selected_streams
-
-def has_selected_custom_field(mdata):
-    top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
-    for prop in top_level_custom_props:
-        if mdata.get(prop, {}).get('selected') == True:
-            return True
-    return False
 
 def do_sync(STATE, catalog):
     # Clear out keys that are no longer used
