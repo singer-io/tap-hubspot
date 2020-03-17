@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.6.5
+  * For `deals` stream, use `includeAllProperties` flag instead of appending all properties to request url [#112](https://github.com/singer-io/tap-hubspot/pull/112)
+
 ## 2.6.4
   * When making `deals` requests, only attach `properties` if selected [#102](https://github.com/singer-io/tap-hubspot/pull/102)
 
