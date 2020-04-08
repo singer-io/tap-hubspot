@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.7.0
+  * Fields nested under `properties` are copied to top level and prepended with `property_` [#107](https://github.com/singer-io/tap-hubspot/pull/107)
+
 ## 2.6.5
   * For `deals` stream, use `includeAllProperties` flag instead of appending all properties to request url [#112](https://github.com/singer-io/tap-hubspot/pull/112)
 
