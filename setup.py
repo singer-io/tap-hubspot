@@ -14,6 +14,7 @@ setup(
         "singer-python>=5.1.1, <5.9",
         "requests==2.22.0",
         "backoff>=1.3.2, <2",
+        "ratelimit==2.2.1",
     ],
     entry_points="""
           [console_scripts]
