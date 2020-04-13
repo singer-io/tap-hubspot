@@ -11,12 +11,9 @@ setup(
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_hubspot"],
     install_requires=[
-        "attrs>=16.3.0, <19",
         "singer-python>=5.1.1, <5.9",
         "requests==2.22.0",
         "backoff>=1.3.2, <2",
-        "requests_mock==1.3.0",
-        "nose",
     ],
     entry_points="""
           [console_scripts]
