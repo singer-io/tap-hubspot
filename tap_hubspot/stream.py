@@ -44,25 +44,24 @@ class Stream:
             try:
                 data = self.hubspot.streams(start_date, end_date)
                 for d, replication_value in data:
-                    if not replication_value:
-                        record = transformer.transform(d, self.schema, self.mdata)
-                        singer.write_record(self.tap_stream_id, record)
-
-                    elif (start_date >= replication_value) or (
-                        end_date <= replication_value
+                    if replication_value and (
+                        start_date >= replication_value or end_date <= replication_value
                     ):
                         continue
+                    
+                    record = transformer.transform(d, self.schema, self.mdata)
+                    singer.write_record(self.tap_stream_id, record)
+                    if not replication_value:
+                        continue
 
-                    else:
-                        record = transformer.transform(d, self.schema, self.mdata)
-                        singer.write_record(self.tap_stream_id, record)
-                        new_bookmark = replication_value
-                        if not prev_bookmark:
-                            prev_bookmark = new_bookmark
+                    new_bookmark = replication_value
+                    if not prev_bookmark:
+                        prev_bookmark = new_bookmark
 
-                        if prev_bookmark < new_bookmark:
-                            state = self.__advance_bookmark(state, prev_bookmark)
-                            prev_bookmark = new_bookmark
+                    if prev_bookmark < new_bookmark:
+                        state = self.__advance_bookmark(state, prev_bookmark)
+                        prev_bookmark = new_bookmark
+
                 return self.__advance_bookmark(state, prev_bookmark)
 
             except Exception:
