@@ -4,7 +4,6 @@ from singer import (
     CatalogEntry,
     Transformer,
     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
-    _transform_datetime,
 )
 from typing import Union
 from datetime import timedelta, datetime

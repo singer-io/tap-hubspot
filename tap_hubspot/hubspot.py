@@ -1,13 +1,9 @@
 import requests
-from dateutil import parser
-import time
 from ratelimit import limits
 import ratelimit
 import singer
 import backoff
-import sys
 import datetime
-from singer import utils
 
 LOGGER = singer.get_logger()
 
