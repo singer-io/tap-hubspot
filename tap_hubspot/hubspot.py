@@ -4,74 +4,143 @@ import ratelimit
 import singer
 import backoff
 import datetime
+from typing import Dict
 
 LOGGER = singer.get_logger()
 
 
 class Hubspot:
     BASE_URL = "https://api.hubapi.com"
-    ENDPOINTS = {
-        "companies": "/companies/v2/companies/paged",
-        "contacts": "/contacts/v1/lists/all/contacts/all",
-        "deal_pipelines": "/crm-pipelines/v1/pipelines/deals",
-        "deals": "/deals/v1/deal/paged",
-        "email_events": "/email/public/v1/events",
-        "engagements": "/engagements/v1/engagements/paged",
-        "forms": "/forms/v2/forms",
-    }
-    DATA_PATH = {
-        "companies": "companies",
-        "contacts": "contacts",
-        "deal_pipelines": "results",
-        "deals": "deals",
-        "email_events": "events",
-        "engagements": "results",
-    }
-    REPLICATION_PATH = {
-        "companies": ["properties", "hs_lastmodifieddate", "timestamp",],
-        "contacts": ["properties", "lastmodifieddate", "value"],
-        "deal_pipelines": ["updatedAt"],
-        "deals": ["properties", "hs_lastmodifieddate", "timestamp"],
-        "email_events": ["created"],
-        "engagements": ["engagement", "lastUpdated"],
-        "forms": ["updatedAt"],
-    }
 
-    def __init__(self, config, tap_stream_id, properties, limit=250):
+    def __init__(self, config, limit=250):
         self.SESSION = requests.Session()
         self.limit = limit
         self.access_token = None
-        self.tap_stream_id = tap_stream_id
         self.config = config
         self.refresh_access_token()
-        self.endpoint = self.ENDPOINTS[tap_stream_id]
-        self.offset_value = None
-        self.offset_key = None
-        self.hasmore = True
-        self.PARAMS = {
-            "companies": {"limit": self.limit, "properties": properties,},
-            "contacts": {
-                "showListMemberships": True,
-                "includeVersion": True,
-                "count": self.limit,
-            },
-            "engagements": {"limit": self.limit},
-            "deals": {
-                "count": self.limit,
-                "includeAssociations": False,
-                "properties": properties,
-                "limit": self.limit,
-            },
-        }
 
-    def get_url_params(self, start_date, end_date):
-        url = f"{self.BASE_URL}{self.endpoint}"
-        params = self.PARAMS.get(self.tap_stream_id, {})
-        if self.tap_stream_id == "email_events":
-            params = {"startTimestamp": start_date, "endTimestamp": end_date}
-        if self.offset_value:
-            params[self.offset_key] = self.offset_value
-        return url, params
+    def streams(self, tap_stream_id, start_date, end_date, properties):
+        if tap_stream_id == "companies":
+            yield from self.get_companies(properties)
+        elif tap_stream_id == "contacts":
+            yield from self.get_contacts()
+        elif tap_stream_id == "engagements":
+            yield from self.get_engagements()
+        elif tap_stream_id == "deal_pipelines":
+            yield from self.get_deal_pipelines()
+        elif tap_stream_id == "deals":
+            yield from self.get_deals(properties)
+        elif tap_stream_id == "email_events":
+            start_date = self.datetime_to_milliseconds(start_date)
+            end_date = self.datetime_to_milliseconds(end_date)
+            yield from self.get_email_events(start_date, end_date)
+        elif tap_stream_id == "forms":
+            yield from self.get_forms()
+        else:
+            return []
+
+    def get_companies(self, properties):
+        path = "/contacts/v1/lists/all/contacts/all"
+        data_field = "companies"
+        replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
+        params = {
+            "limit": self.limit,
+            "properties": properties,
+        }
+        offset_key = "offset"
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_contacts(self):
+        path = "/contacts/v1/lists/all/contacts/all"
+        data_field = "contacts"
+        replication_path = ["properties", "lastmodifieddate", "value"]
+        params = {
+            "showListMemberships": True,
+            "includeVersion": True,
+            "count": self.limit,
+        }
+        offset_key = "vid-offset"
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_engagements(self):
+        path = "/engagements/v1/engagements/paged"
+        data_field = "results"
+        replication_path = ["engagement", "lastUpdated"]
+        params = {"limit": self.limit}
+        offset_key = "offset"
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_deal_pipelines(self):
+        path = "/crm-pipelines/v1/pipelines/deals"
+        data_field = "results"
+        replication_path = ["updatedAt"]
+        yield from self.get_records(path, replication_path, data_field=data_field)
+
+    def get_deals(self, properties):
+        path = "/deals/v1/deal/paged"
+        data_field = "deals"
+        replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
+        params = {
+            "count": self.limit,
+            "includeAssociations": False,
+            "properties": properties,
+            "limit": self.limit,
+        }
+        offset_key = "offset"
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_email_events(self, start_date, end_date):
+        path = "/email/public/v1/events"
+        data_field = "events"
+        replication_path = ["created"]
+        params = {"startTimestamp": start_date, "endTimestamp": end_date}
+        offset_key = "offset"
+
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_forms(self):
+        path = "/forms/v2/forms"
+        replication_path = ["updatedAt"]
+        yield from self.get_records(path, replication_path)
+
+    def get_records(
+        self, path, replication_path, params={}, data_field=None, offset_key=None
+    ):
+        for record in self.paginate(
+            path, params=params, data_field=data_field, offset_key=offset_key,
+        ):
+            replication_value = self.get_replication_value(record, replication_path)
+            yield record, replication_value
 
     def get_replication_value(
         self, obj: dict, path_to_replication_key=None, default=None
@@ -94,28 +163,33 @@ class Hubspot:
     def datetime_to_milliseconds(self, d: datetime.datetime):
         return int(d.timestamp() * 1000) if d else None
 
-    def get_records(self, start_date, end_date):
-        while self.hasmore:
-            url, params = self.get_url_params(start_date, end_date)
-            records = self.call_api(url, params=params)
-            if records:
-                replication_value = map(
-                    lambda record: self.get_replication_value(
-                        obj=record,
-                        path_to_replication_key=self.REPLICATION_PATH.get(
-                            self.tap_stream_id
-                        ),
-                    ),
-                    records,
-                )
-                yield from zip(records, replication_value)
-            else:
-                break
+    def paginate(
+        self, path: str, params: Dict = None, data_field: str = None, offset_key=None
+    ):
+        offset_value = None
+        while True:
+            if offset_value:
+                if offset_key == "vid-offset":
+                    params["vidOffset"] = offset_value
+                else:
+                    params[offset_key] = offset_value
 
-    def streams(self, start_date, end_date):
-        start_date = self.datetime_to_milliseconds(start_date)
-        end_date = self.datetime_to_milliseconds(end_date)
-        yield from self.get_records(start_date, end_date)
+            data = self.call_api(path, params=params)
+
+            if not data_field:
+                # non paginated list
+                yield from data
+                return
+            else:
+                d = data.get(data_field, [])
+                yield from d
+                if not d:
+                    return
+
+            if offset_key:
+                offset_value = data.get(offset_key)
+            if not offset_value:
+                break
 
     @backoff.on_exception(
         backoff.expo,
@@ -128,31 +202,13 @@ class Hubspot:
     @limits(calls=100, period=10)
     def call_api(self, url, params={}):
         response = self.SESSION.get(
-            url, headers={"Authorization": f"Bearer {self.access_token}"}, params=params
+            f"{self.BASE_URL}{url}",
+            headers={"Authorization": f"Bearer {self.access_token}"},
+            params=params,
         )
         LOGGER.info(response.url)
         response.raise_for_status()
-        data = self.get_offset(response.json())
-
-        return data
-
-    def get_offset(self, data):
-        data_path = self.DATA_PATH.get(self.tap_stream_id)
-        if isinstance(data, list):
-            self.hasmore = False
-            return data
-
-        if self.tap_stream_id == "deal_pipelines":
-            self.hasmore = False
-
-        offset = [k for k in data.keys() if k.endswith("offset")]
-        if offset:
-            offset = offset[0]
-            self.offset_value = data.get(offset)
-            self.offset_key = "vidOffset" if offset == "vid-offset" else "offset"
-        data = data[data_path] if data_path else data
-
-        return data
+        return response.json()
 
     def refresh_access_token(self):
         payload = {
