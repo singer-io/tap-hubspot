@@ -40,10 +40,10 @@ class Hubspot:
         "engagements": ["engagement", "lastUpdated"],
         "forms": ["updatedAt"],
     }
-    LIMIT = 250
 
-    def __init__(self, config, tap_stream_id, properties):
+    def __init__(self, config, tap_stream_id, properties, limit=250):
         self.SESSION = requests.Session()
+        self.limit = limit
         self.access_token = None
         self.tap_stream_id = tap_stream_id
         self.config = config
@@ -53,18 +53,18 @@ class Hubspot:
         self.offset_key = None
         self.hasmore = True
         self.PARAMS = {
-            "companies": {"limit": self.LIMIT, "properties": properties,},
+            "companies": {"limit": self.limit, "properties": properties,},
             "contacts": {
                 "showListMemberships": True,
                 "includeVersion": True,
-                "count": self.LIMIT,
+                "count": self.limit,
             },
-            "engagements": {"limit": self.LIMIT},
+            "engagements": {"limit": self.limit},
             "deals": {
-                "count": self.LIMIT,
+                "count": self.limit,
                 "includeAssociations": False,
                 "properties": properties,
-                "limit": self.LIMIT,
+                "limit": self.limit,
             },
         }
 
