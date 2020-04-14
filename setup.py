@@ -21,20 +21,6 @@ setup(
           tap-hubspot=tap_hubspot:main
       """,
     packages=["tap_hubspot"],
-    package_data={
-        "tap_hubspot/schemas": [
-            "campaigns.json",
-            "companies.json",
-            "contact_lists.json",
-            "contacts.json",
-            "deals.json",
-            "email_events.json",
-            "forms.json",
-            "keywords.json",
-            "owners.json",
-            "subscription_changes.json",
-            "workflows.json",
-        ],
-    },
+    package_data={"tap_hubspot/schemas": ["*.json"]},
     include_package_data=True,
 )
