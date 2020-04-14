@@ -13,7 +13,6 @@ LOGGER = singer.get_logger()
 
 
 class Hubspot:
-    SESSION = requests.Session()
     BASE_URL = "https://api.hubapi.com"
     ENDPOINTS = {
         "companies": "/companies/v2/companies/paged",
@@ -44,6 +43,7 @@ class Hubspot:
     LIMIT = 250
 
     def __init__(self, config, tap_stream_id, properties):
+        self.SESSION = requests.Session()
         self.access_token = None
         self.tap_stream_id = tap_stream_id
         self.config = config
