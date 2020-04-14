@@ -5,6 +5,7 @@ import json
 import singer
 from singer import utils, metadata, Catalog, CatalogEntry, Schema
 from tap_hubspot.stream import Stream
+from pathlib import Path
 
 KEY_PROPERTIES = "id"
 STREAMS = {
@@ -44,18 +45,12 @@ REQUIRED_CONFIG_KEYS = [
 LOGGER = singer.get_logger()
 
 
-def get_abs_path(path):
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
-
-
 def load_schemas():
     schemas = {}
-
-    for filename in os.listdir(get_abs_path("schemas")):
-        path = get_abs_path("schemas") + "/" + filename
-        file_raw = filename.replace(".json", "")
-        with open(path) as file:
-            schemas[file_raw] = json.load(file)
+    schemas_path = Path(__file__).parent.absolute() / "schemas"
+    for schema_path in schemas_path.iterdir():
+        stream_name = schema_path.stem
+        schemas[stream_name] = json.loads(schema_path.read_text())
 
     return schemas
 
