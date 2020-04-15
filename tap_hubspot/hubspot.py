@@ -40,7 +40,7 @@ class Hubspot:
             raise NotImplementedError(f"unknown stream_id: {tap_stream_id}")
 
     def get_companies(self, properties):
-        path = "/contacts/v1/lists/all/contacts/all"
+        path = "/companies/v2/companies/paged"
         data_field = "companies"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
         params = {
