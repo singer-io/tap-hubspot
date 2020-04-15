@@ -37,7 +37,7 @@ class Hubspot:
         elif tap_stream_id == "forms":
             yield from self.get_forms()
         else:
-            return []
+            raise NotImplementedError(f"unknown stream_id: {tap_stream_id}")
 
     def get_companies(self, properties):
         path = "/contacts/v1/lists/all/contacts/all"
