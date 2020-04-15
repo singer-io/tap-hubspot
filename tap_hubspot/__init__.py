@@ -7,13 +7,10 @@ from pathlib import Path
 
 KEY_PROPERTIES = "id"
 STREAMS = {
-    "email_events": {
-        "valid_replication_keys": ["startTimestamp"],
-        "key_properties": "id",
-    },
+    "email_events": {"valid_replication_keys": ["created"], "key_properties": "id",},
     "forms": {"valid_replication_keys": ["updatedAt"], "key_properties": "guid",},
     "contacts": {
-        "valid_replication_keys": ["versionTimestamp"],
+        "valid_replication_keys": ["lastmodifieddate"],
         "key_properties": "vid",
     },
     "companies": {
