@@ -100,7 +100,7 @@ class Hubspot:
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
         params = {
             "count": self.limit,
-            "includeAssociations": False,
+            "includeAssociations": True,
             "properties": properties,
             "limit": self.limit,
         }
