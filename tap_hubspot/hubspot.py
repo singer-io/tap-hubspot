@@ -36,6 +36,8 @@ class Hubspot:
             yield from self.get_email_events(start_date, end_date)
         elif tap_stream_id == "forms":
             yield from self.get_forms()
+        elif tap_stream_id == "submissions":
+            yield from self.get_submissions()
         else:
             raise NotImplementedError(f"unknown stream_id: {tap_stream_id}")
 
@@ -133,25 +135,43 @@ class Hubspot:
         replication_path = ["updatedAt"]
         yield from self.get_records(path, replication_path)
 
+    def get_submissions(self):
+        # submission data is retrieved according to guid from forms
+        replication_path = ["submittedAt"]
+        data_field = "results"
+        offset_key = "after"
+        params = {"limit": 50}  # maxmimum limit is 50
+        forms = self.get_forms()
+        for form, _ in forms:
+            guid = form["guid"]
+            path = f"/form-integrations/v1/submissions/forms/{guid}"
+            yield from self.get_records(
+                path,
+                replication_path,
+                params=params,
+                data_field=data_field,
+                offset_key=offset_key,
+            )
+
     def get_records(
         self, path, replication_path, params={}, data_field=None, offset_key=None
     ):
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
-            replication_value = self.get_replication_value(record, replication_path)
+            replication_value = self.milliseconds_to_datetime(
+                self.get_value(record, replication_path)
+            )
             yield record, replication_value
 
-    def get_replication_value(
-        self, obj: dict, path_to_replication_key=None, default=None
-    ):
+    def get_value(self, obj: dict, path_to_replication_key=None, default=None):
         if not path_to_replication_key:
             return default
         for path_element in path_to_replication_key:
             obj = obj.get(path_element)
             if not obj:
                 return default
-        return self.milliseconds_to_datetime(obj)
+        return obj
 
     def milliseconds_to_datetime(self, ms: str):
         return (
@@ -187,7 +207,10 @@ class Hubspot:
                     return
 
             if offset_key:
-                offset_value = data.get(offset_key)
+                if "paging" in data:
+                    offset_value = self.get_value(data, ["paging", "next", "after"])
+                else:
+                    offset_value = data.get(offset_key)
             if not offset_value:
                 break
 
