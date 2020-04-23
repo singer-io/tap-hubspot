@@ -28,6 +28,7 @@ STREAMS = {
         "valid_replication_keys": ["lastUpdated"],
         "key_properties": "engagement_id",
     },
+    "submissions": {"valid_replication_keys": ["submittedAt"], "key_properties": []},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
