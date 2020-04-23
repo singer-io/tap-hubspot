@@ -36,6 +36,8 @@ class Hubspot:
             yield from self.get_email_events(start_date, end_date)
         elif tap_stream_id == "forms":
             yield from self.get_forms()
+        elif tap_stream_id == "submissions":
+            yield from self.get_submissions()
         else:
             raise NotImplementedError(f"unknown stream_id: {tap_stream_id}")
 
@@ -132,6 +134,24 @@ class Hubspot:
         path = "/forms/v2/forms"
         replication_path = ["updatedAt"]
         yield from self.get_records(path, replication_path)
+
+    def get_submissions(self):
+        # submission data is retrieved according to guid from forms
+        replication_path = ["submittedAt"]
+        data_field = "results"
+        offset_key = "after"
+        params = {"limit": 50}  # maxmimum limit is 50
+        forms = self.get_forms()
+        for form, _ in forms:
+            guid = form["guid"]
+            path = f"/form-integrations/v1/submissions/forms/{guid}"
+            yield from self.get_records(
+                path,
+                replication_path,
+                params=params,
+                data_field=data_field,
+                offset_key=offset_key,
+            )
 
     def get_records(
         self, path, replication_path, params={}, data_field=None, offset_key=None
