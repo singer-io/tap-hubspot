@@ -5,7 +5,6 @@ from singer import utils, metadata, Catalog, CatalogEntry, Schema
 from tap_hubspot.stream import Stream
 from pathlib import Path
 
-KEY_PROPERTIES = "id"
 STREAMS = {
     "email_events": {"valid_replication_keys": ["created"], "key_properties": "id",},
     "forms": {"valid_replication_keys": ["updatedAt"], "key_properties": "guid",},
@@ -55,17 +54,18 @@ def discover() -> Catalog:
     streams = []
 
     for tap_stream_id, props in STREAMS.items():
+        key_properties = props.get("key_properties", None)
         schema = schemas[tap_stream_id]
         mdata = metadata.get_standard_metadata(
             schema=schema,
-            key_properties=props.get("key_properties", None),
+            key_properties=key_properties,
             valid_replication_keys=props.get("valid_replication_keys", []),
         )
         streams.append(
             CatalogEntry(
                 stream=tap_stream_id,
                 tap_stream_id=tap_stream_id,
-                key_properties=KEY_PROPERTIES,
+                key_properties=key_properties,
                 schema=Schema.from_dict(schema),
                 metadata=mdata,
             )
