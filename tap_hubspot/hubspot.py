@@ -159,19 +159,19 @@ class Hubspot:
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
-            replication_value = self.get_replication_value(record, replication_path)
+            replication_value = self.milliseconds_to_datetime(
+                self.get_value(record, replication_path)
+            )
             yield record, replication_value
 
-    def get_replication_value(
-        self, obj: dict, path_to_replication_key=None, default=None
-    ):
+    def get_value(self, obj: dict, path_to_replication_key=None, default=None):
         if not path_to_replication_key:
             return default
         for path_element in path_to_replication_key:
             obj = obj.get(path_element)
             if not obj:
                 return default
-        return self.milliseconds_to_datetime(obj)
+        return obj
 
     def milliseconds_to_datetime(self, ms: str):
         return (
@@ -207,7 +207,10 @@ class Hubspot:
                     return
 
             if offset_key:
-                offset_value = data.get(offset_key)
+                if "paging" in data:
+                    offset_value = self.get_value(data, ["paging", "next", "after"])
+                else:
+                    offset_value = data.get(offset_key)
             if not offset_value:
                 break
 
