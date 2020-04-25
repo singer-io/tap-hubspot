@@ -13,34 +13,35 @@ LOGGER = singer.get_logger()
 class Hubspot:
     BASE_URL = "https://api.hubapi.com"
 
-    def __init__(self, config, limit=250):
+    def __init__(self, config, tap_stream_id, limit=250):
         self.SESSION = requests.Session()
         self.limit = limit
         self.access_token = None
         self.config = config
         self.refresh_access_token()
+        self.tap_stream_id = tap_stream_id
 
-    def streams(self, tap_stream_id, start_date, end_date, properties):
-        if tap_stream_id == "companies":
+    def streams(self, start_date, end_date, properties):
+        if self.tap_stream_id == "companies":
             yield from self.get_companies(properties)
-        elif tap_stream_id == "contacts":
+        elif self.tap_stream_id == "contacts":
             yield from self.get_contacts()
-        elif tap_stream_id == "engagements":
+        elif self.tap_stream_id == "engagements":
             yield from self.get_engagements()
-        elif tap_stream_id == "deal_pipelines":
+        elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
-        elif tap_stream_id == "deals":
+        elif self.tap_stream_id == "deals":
             yield from self.get_deals(properties)
-        elif tap_stream_id == "email_events":
+        elif self.tap_stream_id == "email_events":
             start_date = self.datetime_to_milliseconds(start_date)
             end_date = self.datetime_to_milliseconds(end_date)
             yield from self.get_email_events(start_date, end_date)
-        elif tap_stream_id == "forms":
+        elif self.tap_stream_id == "forms":
             yield from self.get_forms()
-        elif tap_stream_id == "submissions":
+        elif self.tap_stream_id == "submissions":
             yield from self.get_submissions()
         else:
-            raise NotImplementedError(f"unknown stream_id: {tap_stream_id}")
+            raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
     def get_companies(self, properties):
         path = "/companies/v2/companies/paged"
@@ -160,6 +161,7 @@ class Hubspot:
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
+            if self.tap_stream_id == "contacts":
                 record = record_nodash(record)
             replication_value = self.milliseconds_to_datetime(
                 self.get_value(record, replication_path)

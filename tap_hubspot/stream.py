@@ -22,7 +22,7 @@ class Stream:
         self.mdata = metadata.to_map(catalog.metadata)
         self.bookmark_key = self.mdata.get(()).get("valid-replication-keys")[0]
         self.config = config
-        self.hubspot = Hubspot(config)
+        self.hubspot = Hubspot(config, self.tap_stream_id)
 
     def get_properties(self):
         properties = []
@@ -41,15 +41,13 @@ class Stream:
         start_date, end_date = self.__get_start_end(state)
         with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
             try:
-                data = self.hubspot.streams(
-                    self.tap_stream_id, start_date, end_date, self.get_properties()
-                )
+                data = self.hubspot.streams(start_date, end_date, self.get_properties())
                 for d, replication_value in data:
                     if replication_value and (
                         start_date >= replication_value or end_date <= replication_value
                     ):
                         continue
-                    
+
                     record = transformer.transform(d, self.schema, self.mdata)
                     singer.write_record(self.tap_stream_id, record)
                     if not replication_value:
