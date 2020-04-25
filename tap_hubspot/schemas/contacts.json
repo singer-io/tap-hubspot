@@ -1,31 +1,41 @@
 {
   "type": "object",
   "properties": {
+    "addedAt": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
     "vid": {
       "type": ["null", "integer"]
     },
+    "canonical-vid": {
+      "type": ["null", "integer"]
+    },
+    "portal-id": {
+      "type": ["null", "integer"]
+    },
+    "is-contact": {
+      "type": ["null", "boolean"]
+    },
+    "profile-token": {
+      "type": ["null", "string"]
+    },
+    "profile-url": {
+      "type": ["null", "string"]
+    },
     "properties": {
-      "type": "object",
+      "type": ["null", "object"],
       "properties": {
-        "email": {
-          "type": "object",
+        "firstname": {
+          "type": ["null", "object"],
           "properties": {
             "value": {
               "type": ["null", "string"]
             }
           }
         },
-        "createdate": {
-          "type": "object",
-          "properties": {
-            "value": {
-              "type": ["null", "string"],
-              "format": "date-time"
-            }
-          }
-        },
         "lastmodifieddate": {
-          "type": "object",
+          "type": ["null", "object"],
           "properties": {
             "value": {
               "type": ["null", "string"],
@@ -33,11 +43,93 @@
             }
           }
         },
-        "associatedcompanyid": {
-          "type": "object",
+        "company": {
+          "type": ["null", "object"],
           "properties": {
             "value": {
-              "type": ["null", "number"]
+              "type": "string"
+            }
+          }
+        },
+        "lastname": {
+          "type": ["null", "object"],
+          "properties": {
+            "value": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
+    },
+    "form-submissions": {
+      "type": ["null", "array"],
+
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "conversion-id": {
+            "type": ["null", "string"]
+          },
+          "timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "form-id": {
+            "type": ["null", "string"]
+          },
+          "portal-id": {
+            "type": ["null", "integer"]
+          },
+          "title": {
+            "type": ["null", "string"]
+          },
+          "form-type": {
+            "type": ["null", "string"]
+          },
+          "contact-associated-by": {
+            "type": "array",
+            "items": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+      }
+    },
+    "identity-profiles": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "object"],
+        "properties": {
+          "vid": {
+            "type": ["null", "integer"]
+          },
+          "saved-at-timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "deleted-changed-timestamp": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "identities": {
+            "type": ["null", "array"],
+            "items": {
+              "type": ["null", "object"],
+              "properties": {
+                "type": {
+                  "type": ["null", "string"]
+                },
+                "value": {
+                  "type": ["null", "string"]
+                },
+                "timestamp": {
+                  "type": ["null", "string"],
+                  "format": "date-time"
+                },
+                "is-primary": {
+                  "type": ["null", "boolean"]
+                }
+              }
             }
           }
         }
