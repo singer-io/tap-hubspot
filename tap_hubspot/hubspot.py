@@ -5,6 +5,7 @@ import singer
 import backoff
 import datetime
 from typing import Dict
+from tap_hubspot.util import record_nodash
 
 LOGGER = singer.get_logger()
 
@@ -159,6 +160,7 @@ class Hubspot:
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
+                record = record_nodash(record)
             replication_value = self.milliseconds_to_datetime(
                 self.get_value(record, replication_path)
             )
