@@ -12,6 +12,7 @@ LOGGER = singer.get_logger()
 
 class Hubspot:
     BASE_URL = "https://api.hubapi.com"
+    CONTACT_DEFINITION_IDS = {"companyId": 1, "dealId": 4}
 
     def __init__(self, config, tap_stream_id, limit=250):
         self.SESSION = requests.Session()
@@ -77,6 +78,21 @@ class Hubspot:
             data_field=data_field,
             offset_key=offset_key,
         )
+
+    def get_association(self, vid, definition_id):
+        path = (
+            f"/crm-associations/v1/associations/{vid}/HUBSPOT_DEFINED/{definition_id}"
+        )
+        record = self.call_api(url=path)["results"]
+        if record:
+            return int(record[0])
+        else:
+            return None
+
+    def set_associations(self, record):
+        for association, definition_id in self.CONTACT_DEFINITION_IDS.items():
+            record[association] = self.get_association(record["vid"], definition_id)
+        return record
 
     def get_engagements(self):
         path = "/engagements/v1/engagements/paged"
@@ -156,7 +172,7 @@ class Hubspot:
             )
 
     def get_records(
-        self, path, replication_path, params={}, data_field=None, offset_key=None
+        self, path, replication_path=None, params={}, data_field=None, offset_key=None
     ):
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
