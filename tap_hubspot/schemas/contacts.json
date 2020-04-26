@@ -8,6 +8,12 @@
     "vid": {
       "type": ["null", "integer"]
     },
+    "companyId": {
+      "type": ["null", "integer"]
+    },
+    "dealId": {
+      "type": ["null", "integer"]
+    },
     "canonical-vid": {
       "type": ["null", "integer"]
     },
