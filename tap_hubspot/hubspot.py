@@ -12,7 +12,7 @@ LOGGER = singer.get_logger()
 
 class Hubspot:
     BASE_URL = "https://api.hubapi.com"
-    CONTACT_DEFINITION_IDS = {"companyId": 1, "dealId": 4}
+    CONTACT_DEFINITION_IDS = {"companyId": 1}
 
     def __init__(self, config, tap_stream_id, limit=250):
         self.SESSION = requests.Session()
