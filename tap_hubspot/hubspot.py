@@ -6,6 +6,7 @@ import backoff
 import datetime
 from typing import Dict
 from tap_hubspot.util import record_nodash
+from dateutil import parser
 
 LOGGER = singer.get_logger()
 
@@ -26,7 +27,7 @@ class Hubspot:
         if self.tap_stream_id == "companies":
             yield from self.get_companies(properties)
         elif self.tap_stream_id == "contacts":
-            yield from self.get_contacts()
+            yield from self.get_contacts(properties)
         elif self.tap_stream_id == "engagements":
             yield from self.get_engagements()
         elif self.tap_stream_id == "deal_pipelines":
@@ -61,16 +62,15 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_contacts(self):
-        path = "/contacts/v1/lists/all/contacts/all"
-        data_field = "contacts"
-        replication_path = ["properties", "lastmodifieddate", "value"]
+    def get_contacts(self, properties):
+        path = "/crm/v3/objects/contacts"
+        data_field = "results"
+        offset_key = "after"
+        replication_path = ["updatedAt"]
         params = {
-            "showListMemberships": True,
-            "includeVersion": True,
-            "count": self.limit,
+            "limit": 100,
+            "properties": properties,
         }
-        offset_key = "vid-offset"
         yield from self.get_records(
             path,
             replication_path,
@@ -177,11 +177,14 @@ class Hubspot:
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
-            if self.tap_stream_id == "contacts":
-                record = record_nodash(record)
-            replication_value = self.milliseconds_to_datetime(
-                self.get_value(record, replication_path)
-            )
+            if self.tap_stream_id in ["contacts"]:
+                replication_value = parser.isoparse(
+                    self.get_value(record, replication_path)
+                )
+            else:
+                replication_value = self.milliseconds_to_datetime(
+                    self.get_value(record, replication_path)
+                )
             yield record, replication_value
 
     def get_value(self, obj: dict, path_to_replication_key=None, default=None):
@@ -209,10 +212,7 @@ class Hubspot:
         offset_value = None
         while True:
             if offset_value:
-                if offset_key == "vid-offset":
-                    params["vidOffset"] = offset_value
-                else:
-                    params[offset_key] = offset_value
+                params[offset_key] = offset_value
 
             data = self.call_api(path, params=params)
 

@@ -1,142 +1,57 @@
 {
   "type": "object",
   "properties": {
-    "addedAt": {
-      "type": ["null", "string"],
-      "format": "date-time"
-    },
-    "vid": {
-      "type": ["null", "integer"]
-    },
-    "companyId": {
-      "type": ["null", "integer"]
-    },
-    "canonical-vid": {
-      "type": ["null", "integer"]
-    },
-    "portal-id": {
-      "type": ["null", "integer"]
-    },
-    "is-contact": {
-      "type": ["null", "boolean"]
-    },
-    "profile-token": {
-      "type": ["null", "string"]
-    },
-    "profile-url": {
+    "id": {
       "type": ["null", "string"]
     },
     "properties": {
-      "type": ["null", "object"],
+      "type": "object",
       "properties": {
-        "firstname": {
-          "type": ["null", "object"],
-          "properties": {
-            "value": {
-              "type": ["null", "string"]
-            }
-          }
+        "associatedcompanyid": {
+          "type": ["null", "string"]
         },
-        "lastmodifieddate": {
-          "type": ["null", "object"],
-          "properties": {
-            "value": {
-              "type": ["null", "string"],
-              "format": "date-time"
-            }
-          }
+        "country": {
+          "type": ["null", "string"]
         },
-        "company": {
-          "type": ["null", "object"],
-          "properties": {
-            "value": {
-              "type": "string"
-            }
-          }
+        "createdate": {
+          "type": ["null", "string"]
         },
-        "lastname": {
-          "type": ["null", "object"],
-          "properties": {
-            "value": {
-              "type": ["null", "string"]
-            }
-          }
+        "email": {
+          "type": ["null", "string"]
+        },
+        "hs_email_domain": {
+          "type": ["null", "string"]
+        },
+        "hs_object_id": {
+          "type": ["null", "string"]
+        },
+        "ip_country_code": {
+          "type": ["null", "string"]
+        },
+        "ip_state": {
+          "type": ["null", "string"]
+        },
+        "jobtitle": {
+          "type": ["null", "string"]
+        },
+        "num_associated_deals": {
+          "type": ["null", "string"]
+        },
+        "state": {
+          "type": ["null", "string"]
         }
       }
     },
-    "form-submissions": {
-      "type": ["null", "array"],
-
-      "items": {
-        "type": ["null", "object"],
-        "properties": {
-          "conversion-id": {
-            "type": ["null", "string"]
-          },
-          "timestamp": {
-            "type": ["null", "string"],
-            "format": "date-time"
-          },
-          "form-id": {
-            "type": ["null", "string"]
-          },
-          "portal-id": {
-            "type": ["null", "integer"]
-          },
-          "title": {
-            "type": ["null", "string"]
-          },
-          "form-type": {
-            "type": ["null", "string"]
-          },
-          "contact-associated-by": {
-            "type": "array",
-            "items": {
-              "type": ["null", "string"]
-            }
-          }
-        }
-      }
+    "createdAt": {
+      "type": ["null", "string"],
+      "format": ["null", "date-time"]
     },
-    "identity-profiles": {
-      "type": ["null", "array"],
-      "items": {
-        "type": ["null", "object"],
-        "properties": {
-          "vid": {
-            "type": ["null", "integer"]
-          },
-          "saved-at-timestamp": {
-            "type": ["null", "string"],
-            "format": "date-time"
-          },
-          "deleted-changed-timestamp": {
-            "type": ["null", "string"],
-            "format": "date-time"
-          },
-          "identities": {
-            "type": ["null", "array"],
-            "items": {
-              "type": ["null", "object"],
-              "properties": {
-                "type": {
-                  "type": ["null", "string"]
-                },
-                "value": {
-                  "type": ["null", "string"]
-                },
-                "timestamp": {
-                  "type": ["null", "string"],
-                  "format": "date-time"
-                },
-                "is-primary": {
-                  "type": ["null", "boolean"]
-                }
-              }
-            }
-          }
-        }
-      }
+    "updatedAt": {
+      "type": ["null", "string"],
+      "format": ["null", "date-time"]
+    },
+    "archived": {
+      "type": ["null", "boolean"]
     }
   }
 }

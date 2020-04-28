@@ -47,8 +47,6 @@ class Stream:
                         start_date >= replication_value or end_date <= replication_value
                     ):
                         continue
-                    if self.tap_stream_id == "contacts":
-                        d = self.hubspot.set_associations(d)
 
                     record = transformer.transform(d, self.schema, self.mdata)
                     singer.write_record(self.tap_stream_id, record)

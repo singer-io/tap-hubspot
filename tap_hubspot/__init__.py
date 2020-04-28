@@ -9,10 +9,7 @@ from tap_hubspot.util import schema_nodash
 STREAMS = {
     "email_events": {"valid_replication_keys": ["created"], "key_properties": "id",},
     "forms": {"valid_replication_keys": ["updatedAt"], "key_properties": "guid",},
-    "contacts": {
-        "valid_replication_keys": ["lastmodifieddate"],
-        "key_properties": "vid",
-    },
+    "contacts": {"valid_replication_keys": ["updatedAt"], "key_properties": "id",},
     "companies": {
         "valid_replication_keys": ["hs_lastmodifieddate"],
         "key_properties": "companyId",
