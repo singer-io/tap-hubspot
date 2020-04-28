@@ -14,7 +14,8 @@
           "type": ["null", "string"]
         },
         "createdate": {
-          "type": ["null", "string"]
+          "type": ["null", "string"],
+          "format": "date-time"
         },
         "email": {
           "type": ["null", "string"]
@@ -44,11 +45,11 @@
     },
     "createdAt": {
       "type": ["null", "string"],
-      "format": ["null", "date-time"]
+      "format": "date-time"
     },
     "updatedAt": {
       "type": ["null", "string"],
-      "format": ["null", "date-time"]
+      "format": "date-time"
     },
     "archived": {
       "type": ["null", "boolean"]
