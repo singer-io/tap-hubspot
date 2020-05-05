@@ -1,3 +1,4 @@
+import sys
 import requests
 from ratelimit import limits
 import ratelimit
@@ -246,11 +247,20 @@ class Hubspot:
     )
     @limits(calls=100, period=10)
     def call_api(self, url, params={}):
-        response = self.SESSION.get(
-            f"{self.BASE_URL}{url}",
-            headers={"Authorization": f"Bearer {self.access_token}"},
-            params=params,
-        )
+        url = f"{self.BASE_URL}{url}"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+
+        try:
+            response = self.SESSION.get(url, headers=headers, params=params)
+        except requests.exceptions.HTTPError as err:
+            if not err.response.status_code == 401:
+                raise
+
+            # attempt to refresh access token
+            self.refresh_access_token()
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            response = self.SESSION.get(url, headers=headers, params=params)
+
         LOGGER.info(response.url)
         response.raise_for_status()
         return response.json()
