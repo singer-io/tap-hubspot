@@ -242,6 +242,7 @@ class Hubspot:
             requests.exceptions.HTTPError,
             ratelimit.exception.RateLimitException,
         ),
+        max_tries=10,
     )
     @limits(calls=100, period=10)
     def call_api(self, url, params={}):
