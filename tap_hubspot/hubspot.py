@@ -238,6 +238,7 @@ class Hubspot:
         backoff.expo,
         (
             requests.exceptions.RequestException,
+            requests.exceptions.ReadTimeout,
             requests.exceptions.HTTPError,
             ratelimit.exception.RateLimitException,
         ),
