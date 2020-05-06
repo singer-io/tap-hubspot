@@ -53,7 +53,7 @@ def discover() -> Catalog:
     streams = []
 
     for tap_stream_id, props in STREAMS.items():
-        key_properties = props.get("key_properties", None)
+        key_properties = []
         schema = schemas[tap_stream_id]
         mdata = metadata.get_standard_metadata(
             schema=schema,
