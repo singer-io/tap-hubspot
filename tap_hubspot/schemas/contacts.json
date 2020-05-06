@@ -13,10 +13,6 @@
         "country": {
           "type": ["null", "string"]
         },
-        "createdate": {
-          "type": ["null", "string"],
-          "format": "date-time"
-        },
         "email": {
           "type": ["null", "string"]
         },
