@@ -20,7 +20,10 @@ class Stream:
         self.schema = catalog.schema.to_dict()
         self.key_properties = catalog.key_properties
         self.mdata = metadata.to_map(catalog.metadata)
-        self.bookmark_key = self.mdata.get(()).get("valid-replication-keys")[0]
+        valid_replication_keys = self.mdata.get(()).get("valid-replication-keys")
+        self.bookmark_key = (
+            None if not valid_replication_keys else valid_replication_keys[0]
+        )
         self.config = config
         self.hubspot = Hubspot(config, self.tap_stream_id)
 

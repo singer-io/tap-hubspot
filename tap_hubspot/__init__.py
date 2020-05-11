@@ -26,7 +26,7 @@ STREAMS = {
         "valid_replication_keys": ["lastUpdated"],
         "key_properties": "engagement_id",
     },
-    "submissions": {"valid_replication_keys": ["submittedAt"], "key_properties": []},
+    "submissions": {"key_properties": []},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
@@ -35,6 +35,7 @@ REQUIRED_CONFIG_KEYS = [
     "refresh_token",
     "redirect_uri",
 ]
+FULL_TABLE_STREAM = ["submissions"]
 LOGGER = singer.get_logger()
 
 
@@ -67,6 +68,9 @@ def discover() -> Catalog:
                 key_properties=key_properties,
                 schema=Schema.from_dict(schema),
                 metadata=mdata,
+                replication_method="FULL_TABLE"
+                if tap_stream_id in FULL_TABLE_STREAM
+                else "INCREMENTAL",
             )
         )
     return Catalog(streams)
