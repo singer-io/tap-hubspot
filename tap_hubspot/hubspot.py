@@ -10,6 +10,7 @@ from tap_hubspot.util import record_nodash
 from dateutil import parser
 
 LOGGER = singer.get_logger()
+hs_calculated_form_submissions = []
 
 
 class Hubspot:
@@ -154,23 +155,49 @@ class Hubspot:
         replication_path = ["updatedAt"]
         yield from self.get_records(path, replication_path)
 
+    def get_guids_from_contacts(self) -> set:
+        forms = set()
+        if not hs_calculated_form_submissions:
+            return forms
+        for submission in hs_calculated_form_submissions:
+            forms_times = submission.split(";")
+
+            for form_time in forms_times:
+                guid = form_time[: form_time.index(":")]
+                forms.add(guid)
+        return forms
+
+    def get_guids_from_endpoint(self) -> set:
+        forms = set()
+        forms_from_endpoint = self.get_forms()
+        if not forms_from_endpoint:
+            return forms
+        for form, _ in forms_from_endpoint:
+            guid = form["guid"]
+            forms.add(guid)
+        return forms
+
     def get_submissions(self):
         # submission data is retrieved according to guid from forms
-        replication_path = ["submittedAt"]
+        # and hs_calculated_form_submissions field in contacts endpoint
         data_field = "results"
         offset_key = "after"
         params = {"limit": 50}  # maxmimum limit is 50
-        forms = self.get_forms()
-        for form, _ in forms:
-            guid = form["guid"]
-            path = f"/form-integrations/v1/submissions/forms/{guid}"
-            yield from self.get_records(
-                path,
-                replication_path,
-                params=params,
-                data_field=data_field,
-                offset_key=offset_key,
-            )
+        guids_from_contacts = self.get_guids_from_contacts()
+        guids_from_endpoint = self.get_guids_from_endpoint()
+        guids = guids_from_contacts.union(guids_from_endpoint)
+        with open("workable_guid.txt", "w") as w:
+            for guid in guids:
+                path = f"/form-integrations/v1/submissions/forms/{guid}"
+                try:
+                    # some of the guids don't work
+                    self.test_form(path)
+                    w.write(str(guid) + "\n")
+                except:
+                    continue
+                yield from self.get_records(
+                    path, params=params, data_field=data_field, offset_key=offset_key,
+                )
 
     def get_records(
         self, path, replication_path=None, params={}, data_field=None, offset_key=None
@@ -182,6 +209,11 @@ class Hubspot:
                 replication_value = parser.isoparse(
                     self.get_value(record, replication_path)
                 )
+                form_summissions = self.get_value(
+                    record, ["properties", "hs_calculated_form_submissions"]
+                )
+                if form_summissions:
+                    hs_calculated_form_submissions.append(form_summissions)
             else:
                 replication_value = self.milliseconds_to_datetime(
                     self.get_value(record, replication_path)
@@ -216,6 +248,7 @@ class Hubspot:
                 params[offset_key] = offset_value
 
             data = self.call_api(path, params=params)
+            params[offset_key] = None
 
             if not data_field:
                 # non paginated list
@@ -223,9 +256,9 @@ class Hubspot:
                 return
             else:
                 d = data.get(data_field, [])
-                yield from d
                 if not d:
                     return
+                yield from d
 
             if offset_key:
                 if "paging" in data:
@@ -264,6 +297,12 @@ class Hubspot:
         LOGGER.info(response.url)
         response.raise_for_status()
         return response.json()
+
+    def test_form(self, url, params={}):
+        url = f"{self.BASE_URL}{url}"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        response = self.SESSION.get(url, headers=headers, params=params)
+        response.raise_for_status()
 
     def refresh_access_token(self):
         payload = {
