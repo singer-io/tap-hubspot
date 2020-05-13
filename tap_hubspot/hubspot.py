@@ -294,7 +294,7 @@ class Hubspot:
             headers = {"Authorization": f"Bearer {self.access_token}"}
             response = self.SESSION.get(url, headers=headers, params=params)
 
-        LOGGER.info(response.url)
+        LOGGER.debug(response.url)
         response.raise_for_status()
         return response.json()
 
