@@ -42,33 +42,39 @@ class Stream:
         )
         prev_bookmark = None
         start_date, end_date = self.__get_start_end(state)
-        with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
-            try:
-                data = self.hubspot.streams(start_date, end_date, self.get_properties())
-                for d, replication_value in data:
-                    if replication_value and (
-                        start_date >= replication_value or end_date <= replication_value
-                    ):
-                        continue
+        with singer.metrics.record_counter(self.tap_stream_id) as counter:
 
-                    record = transformer.transform(d, self.schema, self.mdata)
-                    singer.write_record(self.tap_stream_id, record)
-                    if not replication_value:
-                        continue
+            with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+                try:
+                    data = self.hubspot.streams(
+                        start_date, end_date, self.get_properties()
+                    )
+                    for d, replication_value in data:
+                        if replication_value and (
+                            start_date >= replication_value
+                            or end_date <= replication_value
+                        ):
+                            continue
 
-                    new_bookmark = replication_value
-                    if not prev_bookmark:
-                        prev_bookmark = new_bookmark
+                        record = transformer.transform(d, self.schema, self.mdata)
+                        singer.write_record(self.tap_stream_id, record)
+                        counter.increment(1)
+                        if not replication_value:
+                            continue
 
-                    if prev_bookmark < new_bookmark:
-                        state = self.__advance_bookmark(state, prev_bookmark)
-                        prev_bookmark = new_bookmark
+                        new_bookmark = replication_value
+                        if not prev_bookmark:
+                            prev_bookmark = new_bookmark
 
-                return self.__advance_bookmark(state, prev_bookmark)
+                        if prev_bookmark < new_bookmark:
+                            state = self.__advance_bookmark(state, prev_bookmark)
+                            prev_bookmark = new_bookmark
 
-            except Exception:
-                self.__advance_bookmark(state, prev_bookmark)
-                raise
+                    return self.__advance_bookmark(state, prev_bookmark)
+
+                except Exception:
+                    self.__advance_bookmark(state, prev_bookmark)
+                    raise
 
     def __get_start_end(self, state: dict):
         end_date = pytz.utc.localize(datetime.utcnow())
