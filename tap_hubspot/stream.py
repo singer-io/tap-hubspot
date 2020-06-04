@@ -73,6 +73,8 @@ class Stream:
                         if prev_bookmark < new_bookmark:
                             state = self.__advance_bookmark(state, prev_bookmark)
                             prev_bookmark = new_bookmark
+                    if self.tap_stream_id == "contacts_events":
+                        prev_bookmark = end_date
 
                     return self.__advance_bookmark(state, prev_bookmark)
 
