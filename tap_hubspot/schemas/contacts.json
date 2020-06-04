@@ -126,6 +126,14 @@
         },
         "state": {
           "type": ["null", "string"]
+        },
+        "recent_conversion_date": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_analytics_last_timestamp": {
+          "type": ["null", "string"],
+          "format": "date-time"
         }
       }
     },
