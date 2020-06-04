@@ -25,7 +25,6 @@ class Stream:
             None if not valid_replication_keys else valid_replication_keys[0]
         )
         self.config = config
-        self.hubspot = Hubspot(config, self.tap_stream_id)
 
     def get_properties(self):
         properties = []
@@ -42,13 +41,18 @@ class Stream:
         )
         prev_bookmark = None
         start_date, end_date = self.__get_start_end(state)
+        hubspot = Hubspot(
+            config=self.config,
+            tap_stream_id=self.tap_stream_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
         with singer.metrics.record_counter(self.tap_stream_id) as counter:
 
             with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
                 try:
-                    data = self.hubspot.streams(
-                        start_date, end_date, self.get_properties()
-                    )
+                    data = hubspot.streams(properties=self.get_properties())
                     for d, replication_value in data:
                         if replication_value and (
                             start_date >= replication_value
