@@ -186,18 +186,16 @@ class Hubspot:
         guids_from_contacts = self.get_guids_from_contacts()
         guids_from_endpoint = self.get_guids_from_endpoint()
         guids = guids_from_contacts.union(guids_from_endpoint)
-        with open("workable_guid.txt", "w") as w:
-            for guid in guids:
-                path = f"/form-integrations/v1/submissions/forms/{guid}"
-                try:
-                    # some of the guids don't work
-                    self.test_form(path)
-                    w.write(str(guid) + "\n")
-                except:
-                    continue
-                yield from self.get_records(
-                    path, params=params, data_field=data_field, offset_key=offset_key,
-                )
+        for guid in guids:
+            path = f"/form-integrations/v1/submissions/forms/{guid}"
+            try:
+                # some of the guids don't work
+                self.test_form(path)
+            except:
+                continue
+            yield from self.get_records(
+                path, params=params, data_field=data_field, offset_key=offset_key,
+            )
 
     def get_records(
         self, path, replication_path=None, params={}, data_field=None, offset_key=None
