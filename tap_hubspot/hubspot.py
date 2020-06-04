@@ -82,21 +82,6 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_association(self, vid, definition_id):
-        path = (
-            f"/crm-associations/v1/associations/{vid}/HUBSPOT_DEFINED/{definition_id}"
-        )
-        record = self.call_api(url=path)["results"]
-        if record:
-            return int(record[0])
-        else:
-            return None
-
-    def set_associations(self, record):
-        for association, definition_id in self.CONTACT_DEFINITION_IDS.items():
-            record[association] = self.get_association(record["vid"], definition_id)
-        return record
-
     def get_engagements(self):
         path = "/engagements/v1/engagements/paged"
         data_field = "results"
