@@ -4,10 +4,11 @@ from ratelimit import limits
 import ratelimit
 import singer
 import backoff
-import datetime
-from typing import Dict
+from datetime import datetime, timezone
+from typing import Dict, List, Optional
 from tap_hubspot.util import record_nodash
 from dateutil import parser
+import urllib
 
 LOGGER = singer.get_logger()
 hs_calculated_form_submissions = []
