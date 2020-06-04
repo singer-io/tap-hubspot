@@ -12,6 +12,8 @@ import urllib
 
 LOGGER = singer.get_logger()
 hs_calculated_form_submissions = []
+event_contact_ids = []
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class Hubspot:
@@ -52,6 +54,8 @@ class Hubspot:
             yield from self.get_forms()
         elif self.tap_stream_id == "submissions":
             yield from self.get_submissions()
+        elif self.tap_stream_id == "contacts_events":
+            yield from self.get_contacts_events()
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -192,6 +196,75 @@ class Hubspot:
                 path, params=params, data_field=data_field, offset_key=offset_key,
             )
 
+    def get_contacts_events(self):
+        # contacts_events data is retrieved according to contact id
+        start_date: str = self.start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        end_date: str = self.end_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        data_field = "results"
+        offset_key = "after"
+        path = "/events/v3/events"
+
+        for contact_id in event_contact_ids:
+
+            params = {
+                "limit": self.limit,
+                "objectType": "contact",
+                "objectId": contact_id,
+                "occurredBefore": end_date,
+                "occurredAfter": start_date,
+            }
+            yield from self.get_records(
+                path, params=params, data_field=data_field, offset_key=offset_key,
+            )
+
+    def check_id(
+        self,
+        record: Dict,
+        visited_page_date: Optional[str],
+        submitted_form_date: Optional[str],
+    ):
+        contact_id = record["id"]
+        if visited_page_date:
+            visited_page_date = parser.isoparse(visited_page_date)
+            if (
+                visited_page_date > self.start_date
+                and visited_page_date <= self.end_date
+            ):
+                return contact_id
+        if submitted_form_date:
+            submitted_form_date = parser.isoparse(submitted_form_date)
+            if (
+                submitted_form_date > self.start_date
+                and submitted_form_date <= self.end_date
+            ):
+                return contact_id
+        return None
+
+    def store_ids_submissions(self, record: Dict):
+
+        # get form guids from contacts to sync submissions data
+        form_summissions = self.get_value(
+            record, ["properties", "hs_calculated_form_submissions"]
+        )
+        if form_summissions:
+            hs_calculated_form_submissions.append(form_summissions)
+
+        # get contacts ids to sync events_contacts data
+        # check if certain contact_id needs to be synced according to hs_analytics_last_timestamp and recent_conversion_date fields in contact record
+        visited_page_date: Optional[str] = self.get_value(
+            record, ["properties", "hs_analytics_last_timestamp"]
+        )
+        submitted_form_date: Optional[str] = self.get_value(
+            record, ["properties", "recent_conversion_date"]
+        )
+        contact_id = self.check_id(
+            record=record,
+            visited_page_date=visited_page_date,
+            submitted_form_date=submitted_form_date,
+        )
+        if contact_id:
+            event_contact_ids.append(contact_id)
+
     def get_records(
         self, path, replication_path=None, params={}, data_field=None, offset_key=None
     ):
@@ -202,11 +275,8 @@ class Hubspot:
                 replication_value = parser.isoparse(
                     self.get_value(record, replication_path)
                 )
-                form_summissions = self.get_value(
-                    record, ["properties", "hs_calculated_form_submissions"]
-                )
-                if form_summissions:
-                    hs_calculated_form_submissions.append(form_summissions)
+                self.store_ids_submissions(record)
+
             else:
                 replication_value = self.milliseconds_to_datetime(
                     self.get_value(record, replication_path)
