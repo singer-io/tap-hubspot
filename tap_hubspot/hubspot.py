@@ -48,7 +48,7 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
-    def get_companies(self, properties):
+    def get_companies(self, properties: List):
         path = "/companies/v2/companies/paged"
         data_field = "companies"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
@@ -65,7 +65,7 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_contacts(self, properties):
+    def get_contacts(self, properties: List):
         path = "/crm/v3/objects/contacts"
         data_field = "results"
         offset_key = "after"
@@ -117,7 +117,7 @@ class Hubspot:
         replication_path = ["updatedAt"]
         yield from self.get_records(path, replication_path, data_field=data_field)
 
-    def get_deals(self, properties):
+    def get_deals(self, properties: List):
         path = "/deals/v1/deal/paged"
         data_field = "deals"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
@@ -235,7 +235,7 @@ class Hubspot:
             else None
         )
 
-    def datetime_to_milliseconds(self, d: datetime.datetime):
+    def datetime_to_milliseconds(self, d: datetime):
         return int(d.timestamp() * 1000) if d else None
 
     def paginate(
