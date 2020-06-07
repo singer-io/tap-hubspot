@@ -198,8 +198,8 @@ class Hubspot:
 
     def get_contacts_events(self):
         # contacts_events data is retrieved according to contact id
-        start_date: str = self.start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        end_date: str = self.end_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        start_date: str = self.start_date.strftime(DATE_FORMAT)
+        end_date: str = self.end_date.strftime(DATE_FORMAT)
         data_field = "results"
         offset_key = "after"
         path = "/events/v3/events"
