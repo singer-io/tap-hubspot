@@ -36,7 +36,9 @@ class Hubspot:
     ):
         self.refresh_access_token()
         if self.tap_stream_id == "companies":
-            yield from self.get_companies(properties)
+            yield from self.get_companies(
+                properties, start_date=start_date, end_date=end_date
+            )
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(
                 properties, start_date=start_date, end_date=end_date
@@ -46,7 +48,9 @@ class Hubspot:
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals(properties)
+            yield from self.get_deals(
+                properties, start_date=start_date, end_date=end_date
+            )
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
@@ -58,7 +62,9 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
-    def get_companies(self, properties: List):
+    def get_companies(self, properties: List, start_date: datetime, end_date: datetime):
+        self.event_state["companies_start_date"] = start_date
+        self.event_state["companies_end_date"] = end_date
         path = "/companies/v2/companies/paged"
         data_field = "companies"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
@@ -114,7 +120,9 @@ class Hubspot:
         replication_path = ["updatedAt"]
         yield from self.get_records(path, replication_path, data_field=data_field)
 
-    def get_deals(self, properties: List):
+    def get_deals(self, properties: List, start_date: datetime, end_date: datetime):
+        self.event_state["deals_start_date"] = start_date
+        self.event_state["deals_end_date"] = end_date
         path = "/deals/v1/deal/paged"
         data_field = "deals"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
