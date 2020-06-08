@@ -4,7 +4,6 @@ import singer
 from singer import utils, metadata, Catalog, CatalogEntry, Schema
 from tap_hubspot.stream import Stream
 from pathlib import Path
-from tap_hubspot.util import schema_nodash
 from collections import defaultdict
 from typing import DefaultDict, Set
 
@@ -52,7 +51,7 @@ def load_schemas():
     schemas_path = Path(__file__).parent.absolute() / "schemas"
     for schema_path in schemas_path.iterdir():
         stream_name = schema_path.stem
-        schemas[stream_name] = schema_nodash(json.loads(schema_path.read_text()))
+        schemas[stream_name] = json.loads(schema_path.read_text())
 
     return schemas
 
