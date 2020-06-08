@@ -1,0 +1,106 @@
+{
+  "type": "object",
+  "properties": {
+    "objectType": {
+      "type": ["null", "string"]
+    },
+    "objectId": {
+      "type": ["null", "string"]
+    },
+    "eventType": {
+      "type": ["null", "string"]
+    },
+    "occurredAt": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "id": {
+      "type": ["null", "string"]
+    },
+    "properties": {
+      "type": "object",
+      "properties": {
+        "hs_session_id": {
+          "type": ["null", "string"]
+        },
+        "hs_session_source": {
+          "type": ["null", "string"]
+        },
+        "hs_url": {
+          "type": ["null", "string"]
+        },
+        "hs_title": {
+          "type": ["null", "string"]
+        },
+        "hs_referrer": {
+          "type": ["null", "string"]
+        },
+        "hs_user_agent": {
+          "type": ["null", "string"]
+        },
+        "hs_city": {
+          "type": ["null", "string"]
+        },
+        "hs_region": {
+          "type": ["null", "string"]
+        },
+        "hs_country": {
+          "type": ["null", "string"]
+        },
+        "hs_form_id": {
+          "type": ["null", "string"]
+        },
+        "hs_email_send_id": {
+          "type": ["null", "string"]
+        },
+        "hs_sequence_id": {
+          "type": ["null", "string"]
+        },
+        "hs_action_type": {
+          "type": ["null", "string"]
+        },
+        "hs_sequence_step_order": {
+          "type": ["null", "string"]
+        },
+        "hs_enrolled_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_enrolled_by": {
+          "type": ["null", "string"]
+        },
+        "hs_sequence_enrollment_id": {
+          "type": ["null", "string"]
+        },
+        "hs_sequence_step_enrollment_id": {
+          "type": ["null", "string"]
+        },
+        "hs_source_type": {
+          "type": ["null", "string"]
+        },
+        "hs_list_id": {
+          "type": ["null", "string"]
+        },
+        "hs_object_seg_source": {
+          "type": ["null", "string"]
+        },
+        "hs_list_change_status": {
+          "type": ["null", "string"]
+        },
+        "hs_first_added_timestamp": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_bot_completion_status": {
+          "type": ["null", "string"]
+        },
+        "hs_bot_id": {
+          "type": ["null", "string"]
+        },
+        "hs_bot_module_id": {
+          "type": ["null", "string"]
+        }
+      }
+    }
+  }
+}

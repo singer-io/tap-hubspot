@@ -5,7 +5,7 @@ from singer import (
     Transformer,
     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
 )
-from typing import Union
+from typing import DefaultDict, Set, Union, Dict
 from datetime import timedelta, datetime
 from dateutil import parser
 from tap_hubspot.hubspot import Hubspot
@@ -25,7 +25,6 @@ class Stream:
             None if not valid_replication_keys else valid_replication_keys[0]
         )
         self.config = config
-        self.hubspot = Hubspot(config, self.tap_stream_id)
 
     def get_properties(self):
         properties = []
@@ -36,18 +35,33 @@ class Stream:
             properties = [key for key in additional_properties.keys()]
         return properties
 
-    def do_sync(self, state):
+    def store_event_state(self, event_state: DefaultDict[str, Set], data: Dict):
+        if self.tap_stream_id == "deals":
+            event_state["deals_events_ids"].add(data["dealId"])
+        elif self.tap_stream_id == "companies":
+            event_state["companies_events_ids"].add(data["companyId"])
+        return event_state
+
+    def do_sync(self, state: Dict, event_state: DefaultDict[Set, str]):
         singer.write_schema(
             self.tap_stream_id, self.schema, self.key_properties,
         )
         prev_bookmark = None
         start_date, end_date = self.__get_start_end(state)
+        hubspot = Hubspot(
+            config=self.config,
+            event_state=event_state,
+            tap_stream_id=self.tap_stream_id,
+        )
+
         with singer.metrics.record_counter(self.tap_stream_id) as counter:
 
             with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
                 try:
-                    data = self.hubspot.streams(
-                        start_date, end_date, self.get_properties()
+                    data = hubspot.streams(
+                        properties=self.get_properties(),
+                        start_date=start_date,
+                        end_date=end_date,
                     )
                     for d, replication_value in data:
                         if replication_value and (
@@ -55,6 +69,11 @@ class Stream:
                             or end_date < replication_value
                         ):
                             continue
+
+                        if self.tap_stream_id in ["deals", "companies"]:
+                            hubspot.event_state = self.store_event_state(
+                                event_state=hubspot.event_state, data=d
+                            )
 
                         record = transformer.transform(d, self.schema, self.mdata)
                         singer.write_record(self.tap_stream_id, record)
@@ -70,11 +89,30 @@ class Stream:
                             state = self.__advance_bookmark(state, prev_bookmark)
                             prev_bookmark = new_bookmark
 
-                    return self.__advance_bookmark(state, prev_bookmark)
+                    return self.output_state(
+                        state=state,
+                        prev_bookmark=prev_bookmark,
+                        event_state=hubspot.event_state,
+                    )
 
                 except Exception:
                     self.__advance_bookmark(state, prev_bookmark)
                     raise
+
+    def output_state(self, state, prev_bookmark, event_state):
+
+        if self.tap_stream_id in [
+            "contacts_events",
+            "companies_events",
+            "deals_events",
+        ]:
+            date_source = self.tap_stream_id.split("_")[0]
+            prev_bookmark = event_state[f"{date_source}_end_date"]
+
+        return (
+            self.__advance_bookmark(state, prev_bookmark),
+            event_state,
+        )
 
     def __get_start_end(self, state: dict):
         end_date = pytz.utc.localize(datetime.utcnow())
