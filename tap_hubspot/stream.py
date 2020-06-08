@@ -45,15 +45,17 @@ class Stream:
             config=self.config,
             event_state=event_state,
             tap_stream_id=self.tap_stream_id,
-            start_date=start_date,
-            end_date=end_date,
         )
 
         with singer.metrics.record_counter(self.tap_stream_id) as counter:
 
             with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
                 try:
-                    data = hubspot.streams(properties=self.get_properties())
+                    data = hubspot.streams(
+                        properties=self.get_properties(),
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
                     for d, replication_value in data:
                         if replication_value and (
                             start_date >= replication_value

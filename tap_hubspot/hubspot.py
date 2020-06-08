@@ -31,11 +31,16 @@ class Hubspot:
         self.tap_stream_id = tap_stream_id
         self.event_state = event_state
 
+    def streams(
+        self, properties: List, start_date: datetime, end_date: datetime,
+    ):
         self.refresh_access_token()
         if self.tap_stream_id == "companies":
             yield from self.get_companies(properties)
         elif self.tap_stream_id == "contacts":
-            yield from self.get_contacts(properties)
+            yield from self.get_contacts(
+                properties, start_date=start_date, end_date=end_date
+            )
         elif self.tap_stream_id == "engagements":
             yield from self.get_engagements()
         elif self.tap_stream_id == "deal_pipelines":
@@ -43,7 +48,7 @@ class Hubspot:
         elif self.tap_stream_id == "deals":
             yield from self.get_deals(properties)
         elif self.tap_stream_id == "email_events":
-            yield from self.get_email_events()
+            yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
             yield from self.get_forms()
         elif self.tap_stream_id == "submissions":
@@ -128,9 +133,11 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_email_events(self):
-        start_date: int = self.datetime_to_milliseconds(self.start_date)
-        end_date: int = self.datetime_to_milliseconds(self.end_date)
+    def get_email_events(
+        self, start_date: datetime, end_date: datetime,
+    ):
+        start_date: int = self.datetime_to_milliseconds(start_date)
+        end_date: int = self.datetime_to_milliseconds(end_date)
         path = "/email/public/v1/events"
         data_field = "events"
         replication_path = ["created"]
