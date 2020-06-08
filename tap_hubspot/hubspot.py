@@ -210,6 +210,20 @@ class Hubspot:
                 path, params=params, data_field=data_field, offset_key=offset_key,
             )
 
+    def is_enterprise(self):
+        path = "/events/v3/events"
+        try:
+            self.test_endpoint(url=path)
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 403:
+                LOGGER.info(
+                    "The company's account does not belong to Marketing Hub Enterprise. No event data can be retrieved"
+                )
+            else:
+                raise
+            return False
+        return True
+
     def get_contacts_events(self):
         # contacts_events data is retrieved according to contact id
         start_date: str = self.event_state["contacts_start_date"].strftime(DATE_FORMAT)
@@ -217,8 +231,9 @@ class Hubspot:
         data_field = "results"
         offset_key = "after"
         path = "/events/v3/events"
-
-        for contact_id in self.event_state["event_contact_ids"]:
+        if not self.is_enterprise():
+            return None, None
+        for contact_id in self.event_state["contacts_events_ids"]:
 
             params = {
                 "limit": self.limit,
