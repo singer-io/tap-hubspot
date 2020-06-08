@@ -76,17 +76,31 @@ class Stream:
                         if prev_bookmark < new_bookmark:
                             state = self.__advance_bookmark(state, prev_bookmark)
                             prev_bookmark = new_bookmark
-                    if self.tap_stream_id in ["contacts_events"]:
-                        prev_bookmark = event_state["contacts_end_date"]
 
-                    return (
-                        self.__advance_bookmark(state, prev_bookmark),
-                        hubspot.event_state,
+                    return self.output_state(
+                        state=state,
+                        prev_bookmark=prev_bookmark,
+                        event_state=hubspot.event_state,
                     )
 
                 except Exception:
                     self.__advance_bookmark(state, prev_bookmark)
                     raise
+
+    def output_state(self, state, prev_bookmark, event_state):
+
+        if self.tap_stream_id in [
+            "contacts_events",
+            "companies_events",
+            "deals_events",
+        ]:
+            date_source = self.tap_stream_id.split("_")[0]
+            prev_bookmark = event_state[f"{date_source}_end_date"]
+
+        return (
+            self.__advance_bookmark(state, prev_bookmark),
+            event_state,
+        )
 
     def __get_start_end(self, state: dict):
         end_date = pytz.utc.localize(datetime.utcnow())
