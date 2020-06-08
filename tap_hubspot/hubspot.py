@@ -222,9 +222,7 @@ class Hubspot:
                 LOGGER.info(
                     "The company's account does not belong to Marketing Hub Enterprise. No event data can be retrieved"
                 )
-            else:
-                raise
-            return False
+                return False
         return True
 
     def get_contacts_events(self):
