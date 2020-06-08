@@ -30,6 +30,11 @@ STREAMS = {
     },
     "submissions": {"key_properties": []},
     "contacts_events": {"valid_replication_keys": ["lastSynced"], "key_properties": []},
+    "companies_events": {
+        "valid_replication_keys": ["lastSynced"],
+        "key_properties": [],
+    },
+    "deals_events": {"valid_replication_keys": ["lastSynced"], "key_properties": []},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
