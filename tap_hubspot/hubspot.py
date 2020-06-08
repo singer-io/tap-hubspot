@@ -295,11 +295,7 @@ class Hubspot:
         return obj
 
     def milliseconds_to_datetime(self, ms: str):
-        return (
-            datetime.datetime.fromtimestamp((int(ms) / 1000), datetime.timezone.utc)
-            if ms
-            else None
-        )
+        return datetime.fromtimestamp((int(ms) / 1000), timezone.utc) if ms else None
 
     def datetime_to_milliseconds(self, d: datetime):
         return int(d.timestamp() * 1000) if d else None
