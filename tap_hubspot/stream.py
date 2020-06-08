@@ -35,6 +35,13 @@ class Stream:
             properties = [key for key in additional_properties.keys()]
         return properties
 
+    def store_event_state(self, event_state: DefaultDict[str, Set], data: Dict):
+        if self.tap_stream_id == "deals":
+            event_state["deals_events_ids"].add(data["dealId"])
+        elif self.tap_stream_id == "companies":
+            event_state["companies_events_ids"].add(data["companyId"])
+        return event_state
+
     def do_sync(self, state: Dict, event_state: DefaultDict[Set, str]):
         singer.write_schema(
             self.tap_stream_id, self.schema, self.key_properties,
@@ -62,6 +69,11 @@ class Stream:
                             or end_date < replication_value
                         ):
                             continue
+
+                        if self.tap_stream_id in ["deals", "companies"]:
+                            hubspot.event_state = self.store_event_state(
+                                event_state=hubspot.event_state, data=d
+                            )
 
                         record = transformer.transform(d, self.schema, self.mdata)
                         singer.write_record(self.tap_stream_id, record)
