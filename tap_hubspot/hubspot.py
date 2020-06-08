@@ -195,7 +195,7 @@ class Hubspot:
             path = f"/form-integrations/v1/submissions/forms/{guid}"
             try:
                 # some of the guids don't work
-                self.test_form(path)
+                self.test_endpoint(path)
             except:
                 continue
             yield from self.get_records(
@@ -223,7 +223,7 @@ class Hubspot:
                 path, params=params, data_field=data_field, offset_key=offset_key,
             )
 
-    def check_id(
+    def check_contact_id(
         self,
         record: Dict,
         visited_page_date: Optional[str],
@@ -265,7 +265,7 @@ class Hubspot:
         submitted_form_date: Optional[str] = self.get_value(
             record, ["properties", "recent_conversion_date"]
         )
-        contact_id = self.check_id(
+        contact_id = self.check_contact_id(
             record=record,
             visited_page_date=visited_page_date,
             submitted_form_date=submitted_form_date,
@@ -365,7 +365,7 @@ class Hubspot:
         response.raise_for_status()
         return response.json()
 
-    def test_form(self, url, params={}):
+    def test_endpoint(self, url, params={}):
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
         response = self.SESSION.get(url, headers=headers, params=params)
