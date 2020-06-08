@@ -35,7 +35,7 @@ class Stream:
             properties = [key for key in additional_properties.keys()]
         return properties
 
-    def do_sync(self, state):
+    def do_sync(self, state: Dict, event_state: DefaultDict[Set, str]):
         singer.write_schema(
             self.tap_stream_id, self.schema, self.key_properties,
         )
@@ -43,6 +43,7 @@ class Stream:
         start_date, end_date = self.__get_start_end(state)
         hubspot = Hubspot(
             config=self.config,
+            event_state=event_state,
             tap_stream_id=self.tap_stream_id,
             start_date=start_date,
             end_date=end_date,
@@ -73,10 +74,13 @@ class Stream:
                         if prev_bookmark < new_bookmark:
                             state = self.__advance_bookmark(state, prev_bookmark)
                             prev_bookmark = new_bookmark
-                    if self.tap_stream_id == "contacts_events":
-                        prev_bookmark = end_date
+                    if self.tap_stream_id in ["contacts_events"]:
+                        prev_bookmark = event_state["contacts_end_date"]
 
-                    return self.__advance_bookmark(state, prev_bookmark)
+                    return (
+                        self.__advance_bookmark(state, prev_bookmark),
+                        hubspot.event_state,
+                    )
 
                 except Exception:
                     self.__advance_bookmark(state, prev_bookmark)

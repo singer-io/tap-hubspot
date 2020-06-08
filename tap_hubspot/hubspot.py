@@ -11,8 +11,6 @@ from dateutil import parser
 import urllib
 
 LOGGER = singer.get_logger()
-hs_calculated_form_submissions = []
-event_contact_ids = []
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
@@ -24,8 +22,7 @@ class Hubspot:
         self,
         config: Dict,
         tap_stream_id: str,
-        start_date: datetime,
-        end_date: datetime,
+        event_state: DefaultDict[Set, str],
         limit=250,
     ):
         self.SESSION = requests.Session()
@@ -34,8 +31,7 @@ class Hubspot:
         self.config = config
         self.refresh_access_token()
         self.tap_stream_id = tap_stream_id
-        self.start_date = start_date
-        self.end_date = end_date
+        self.event_state = event_state
 
     def streams(self, properties: List):
         if self.tap_stream_id == "companies":
@@ -76,7 +72,9 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_contacts(self, properties: List):
+    def get_contacts(self, properties: List, start_date: datetime, end_date: datetime):
+        self.event_state["contacts_start_date"] = start_date
+        self.event_state["contacts_end_date"] = end_date
         path = "/crm/v3/objects/contacts"
         data_field = "results"
         offset_key = "after"
@@ -156,6 +154,9 @@ class Hubspot:
 
     def get_guids_from_contacts(self) -> set:
         forms = set()
+        hs_calculated_form_submissions = self.event_state[
+            "hs_calculated_form_submissions"
+        ]
         if not hs_calculated_form_submissions:
             return forms
         for submission in hs_calculated_form_submissions:
@@ -198,13 +199,13 @@ class Hubspot:
 
     def get_contacts_events(self):
         # contacts_events data is retrieved according to contact id
-        start_date: str = self.start_date.strftime(DATE_FORMAT)
-        end_date: str = self.end_date.strftime(DATE_FORMAT)
+        start_date: str = self.event_state["contacts_start_date"].strftime(DATE_FORMAT)
+        end_date: str = self.event_state["contacts_end_date"].strftime(DATE_FORMAT)
         data_field = "results"
         offset_key = "after"
         path = "/events/v3/events"
 
-        for contact_id in event_contact_ids:
+        for contact_id in self.event_state["event_contact_ids"]:
 
             params = {
                 "limit": self.limit,
@@ -223,19 +224,21 @@ class Hubspot:
         visited_page_date: Optional[str],
         submitted_form_date: Optional[str],
     ):
+        contacts_start_date = self.event_state["contacts_start_date"]
+        contacts_end_date = self.event_state["contacts_end_date"]
         contact_id = record["id"]
         if visited_page_date:
-            visited_page_date = parser.isoparse(visited_page_date)
+            visited_page_date: datetime = parser.isoparse(visited_page_date)
             if (
-                visited_page_date > self.start_date
-                and visited_page_date <= self.end_date
+                visited_page_date > contacts_start_date
+                and visited_page_date <= contacts_end_date
             ):
                 return contact_id
         if submitted_form_date:
-            submitted_form_date = parser.isoparse(submitted_form_date)
+            submitted_form_date: datetime = parser.isoparse(submitted_form_date)
             if (
-                submitted_form_date > self.start_date
-                and submitted_form_date <= self.end_date
+                submitted_form_date > contacts_start_date
+                and submitted_form_date <= contacts_end_date
             ):
                 return contact_id
         return None
@@ -247,7 +250,7 @@ class Hubspot:
             record, ["properties", "hs_calculated_form_submissions"]
         )
         if form_summissions:
-            hs_calculated_form_submissions.append(form_summissions)
+            self.event_state["hs_calculated_form_submissions"].add(form_summissions)
 
         # get contacts ids to sync events_contacts data
         # check if certain contact_id needs to be synced according to hs_analytics_last_timestamp and recent_conversion_date fields in contact record
@@ -263,7 +266,7 @@ class Hubspot:
             submitted_form_date=submitted_form_date,
         )
         if contact_id:
-            event_contact_ids.append(contact_id)
+            self.event_state["event_contact_ids"].add(contact_id)
 
     def get_records(
         self, path, replication_path=None, params={}, data_field=None, offset_key=None

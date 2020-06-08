@@ -80,12 +80,13 @@ def discover() -> Catalog:
 
 
 def sync(catalog, config, state=None):
+    event_state: DefaultDict[Set, str] = defaultdict(set)
     for catalog_entry in catalog.streams:
         if not catalog_entry.is_selected():
             continue
         LOGGER.info(f"syncing {catalog_entry.tap_stream_id}")
         stream = Stream(catalog_entry, config)
-        stream.do_sync(state)
+        state, event_state = stream.do_sync(state, event_state)
 
 
 @utils.handle_top_exception(LOGGER)
