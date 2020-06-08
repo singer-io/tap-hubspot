@@ -61,6 +61,8 @@ class Hubspot:
             yield from self.get_contacts_events()
         elif self.tap_stream_id == "deals_events":
             yield from self.get_deals_events()
+        elif self.tap_stream_id == "companies_events":
+            yield from self.get_companies_events()
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -269,6 +271,29 @@ class Hubspot:
             yield from self.get_records(
                 path, params=params, data_field=data_field, offset_key=offset_key,
             )
+
+    def get_companies_events(self):
+        # companies_events data is retrieved according to companyId
+        start_date: str = self.event_state["companies_start_date"].strftime(DATE_FORMAT)
+        end_date: str = self.event_state["companies_end_date"].strftime(DATE_FORMAT)
+        data_field = "results"
+        offset_key = "after"
+        path = "/events/v3/events"
+        if not self.is_enterprise():
+            return None, None
+        for company_id in self.event_state["companies_events_ids"]:
+
+            params = {
+                "limit": self.limit,
+                "objectType": "company",
+                "objectId": company_id,
+                "occurredBefore": end_date,
+                "occurredAfter": start_date,
+            }
+            yield from self.get_records(
+                path, params=params, data_field=data_field, offset_key=offset_key,
+            )
+
     def check_contact_id(
         self,
         record: Dict,
