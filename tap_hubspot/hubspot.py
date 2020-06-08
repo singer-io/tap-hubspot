@@ -28,11 +28,10 @@ class Hubspot:
         self.limit = limit
         self.access_token = None
         self.config = config
-        self.refresh_access_token()
         self.tap_stream_id = tap_stream_id
         self.event_state = event_state
 
-    def streams(self, properties: List):
+        self.refresh_access_token()
         if self.tap_stream_id == "companies":
             yield from self.get_companies(properties)
         elif self.tap_stream_id == "contacts":
