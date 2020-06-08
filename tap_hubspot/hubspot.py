@@ -294,7 +294,7 @@ class Hubspot:
             submitted_form_date=submitted_form_date,
         )
         if contact_id:
-            self.event_state["event_contact_ids"].add(contact_id)
+            self.event_state["contacts_events_ids"].add(contact_id)
 
     def get_records(
         self, path, replication_path=None, params={}, data_field=None, offset_key=None
