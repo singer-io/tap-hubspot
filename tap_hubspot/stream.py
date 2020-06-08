@@ -5,7 +5,7 @@ from singer import (
     Transformer,
     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
 )
-from typing import Union
+from typing import DefaultDict, Set, Union, Dict
 from datetime import timedelta, datetime
 from dateutil import parser
 from tap_hubspot.hubspot import Hubspot

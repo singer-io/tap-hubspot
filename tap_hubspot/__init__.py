@@ -5,6 +5,8 @@ from singer import utils, metadata, Catalog, CatalogEntry, Schema
 from tap_hubspot.stream import Stream
 from pathlib import Path
 from tap_hubspot.util import schema_nodash
+from collections import defaultdict
+from typing import DefaultDict, Set
 
 STREAMS = {
     "email_events": {"valid_replication_keys": ["created"], "key_properties": "id",},

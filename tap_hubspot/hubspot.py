@@ -5,7 +5,7 @@ import ratelimit
 import singer
 import backoff
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, DefaultDict, Set
 from tap_hubspot.util import record_nodash
 from dateutil import parser
 import urllib
