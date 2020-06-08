@@ -16,7 +16,6 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 class Hubspot:
     BASE_URL = "https://api.hubapi.com"
-    CONTACT_DEFINITION_IDS = {"companyId": 1}
 
     def __init__(
         self,
