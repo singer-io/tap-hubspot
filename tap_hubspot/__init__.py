@@ -89,7 +89,7 @@ ENDPOINTS = {
     "email_events":         "/email/public/v1/events",
     "contact_lists":        "/contacts/v1/lists",
     "forms":                "/forms/v2/forms",
-    "workflows":            "/automation/v3/workflows",
+    # "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
 }
 
@@ -755,34 +755,34 @@ def sync_forms(STATE, ctx):
 
     return STATE
 
-def sync_workflows(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get('metadata'))
-    schema = load_schema("workflows")
-    bookmark_key = 'updatedAt'
-    singer.write_schema("workflows", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
-    start = get_start(STATE, "workflows", bookmark_key)
-    max_bk_value = start
+# def sync_workflows(STATE, ctx):
+#     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+#     mdata = metadata.to_map(catalog.get('metadata'))
+#     schema = load_schema("workflows")
+#     bookmark_key = 'updatedAt'
+#     singer.write_schema("workflows", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
+#     start = get_start(STATE, "workflows", bookmark_key)
+#     max_bk_value = start
 
-    STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, max_bk_value)
-    singer.write_state(STATE)
+#     STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, max_bk_value)
+#     singer.write_state(STATE)
 
-    LOGGER.info("sync_workflows from %s", start)
+#     LOGGER.info("sync_workflows from %s", start)
 
-    data = request(get_url("workflows")).json()
-    time_extracted = utils.now()
+#     data = request(get_url("workflows")).json()
+#     time_extracted = utils.now()
 
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data['workflows']:
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-            if record[bookmark_key] >= start:
-                singer.write_record("workflows", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
+#     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+#         for row in data['workflows']:
+#             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+#             if record[bookmark_key] >= start:
+#                 singer.write_record("workflows", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+#             if record[bookmark_key] >= max_bk_value:
+#                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-    return STATE
+#     STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, max_bk_value)
+#     singer.write_state(STATE)
+#     return STATE
 
 def sync_owners(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
@@ -894,7 +894,7 @@ STREAMS = [
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
-    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
+    # Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
     Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
@@ -932,11 +932,19 @@ def do_sync(STATE, catalog):
     ctx = Context(catalog)
     validate_dependencies(ctx)
 
+    LOGGER.info('Configuring Sync. Received Catalog {}'.format(catalog))
+    LOGGER.info('Configuring Sync. Received Ctx {}'.format(ctx))
+    LOGGER.info('Configuring Sync. Received STATE {}'.format(STATE))
+
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, ctx)
+
+    LOGGER.info('Configuring Sync. Remaining Streams {}'.format(remaining_streams))
+    LOGGER.info('Configuring Sync. Selected Streams {}'.format(selected_streams))
+
     LOGGER.info('Starting sync. Will sync these streams: %s',
-                [stream.tap_stream_id for stream in selected_streams])
-    for stream in selected_streams:
+                [stream.tap_stream_id for stream in remaining_streams])
+    for stream in remaining_streams:
         LOGGER.info('Syncing %s', stream.tap_stream_id)
         STATE = singer.set_currently_syncing(STATE, stream.tap_stream_id)
         singer.write_state(STATE)
