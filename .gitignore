@@ -95,6 +95,7 @@ ENV/
 # Custom stuff
 env.sh
 config.json
+catalog.json
 .autoenv.zsh
 *~
 env-vars*
