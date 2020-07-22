@@ -31,25 +31,19 @@ class Hubspot:
         self.event_state = event_state
 
     def streams(
-        self, properties: List, start_date: datetime, end_date: datetime,
+        self, start_date: datetime, end_date: datetime,
     ):
         self.refresh_access_token()
         if self.tap_stream_id == "companies":
-            yield from self.get_companies(
-                properties, start_date=start_date, end_date=end_date
-            )
+            yield from self.get_companies(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "contacts":
-            yield from self.get_contacts(
-                properties, start_date=start_date, end_date=end_date
-            )
+            yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
             yield from self.get_engagements()
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals(
-                properties, start_date=start_date, end_date=end_date
-            )
+            yield from self.get_deals(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
@@ -58,22 +52,25 @@ class Hubspot:
             yield from self.get_submissions()
         elif self.tap_stream_id == "contacts_events":
             yield from self.get_contacts_events()
-        elif self.tap_stream_id == "deals_events":
-            yield from self.get_deals_events()
-        elif self.tap_stream_id == "companies_events":
-            yield from self.get_companies_events()
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
-    def get_companies(self, properties: List, start_date: datetime, end_date: datetime):
-        self.event_state["companies_start_date"] = start_date
-        self.event_state["companies_end_date"] = end_date
-        path = "/companies/v2/companies/paged"
-        data_field = "companies"
-        replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
+    def get_properties(self, tap_stream_id: str) -> List:
+        path = f"/crm/v3/properties/{tap_stream_id}"
+        results = self.call_api(url=path)
+        properties = []
+        for prop in results["results"]:
+            properties.append(prop["name"])
+        return properties
+
+    def get_companies(self, start_date: datetime, end_date: datetime):
+        path = "/crm/v3/objects/companies"
+        data_field = "results"
+        replication_path = ["updatedAt"]
         params = {
-            "limit": self.limit,
-            "properties": properties,
+            "limit": 100,
+            "properties": self.get_properties("companies"),
+            "archived": False,
         }
         offset_key = "offset"
         yield from self.get_records(
@@ -84,7 +81,7 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_contacts(self, properties: List, start_date: datetime, end_date: datetime):
+    def get_contacts(self, start_date: datetime, end_date: datetime):
         self.event_state["contacts_start_date"] = start_date
         self.event_state["contacts_end_date"] = end_date
         path = "/crm/v3/objects/contacts"
@@ -93,7 +90,8 @@ class Hubspot:
         replication_path = ["updatedAt"]
         params = {
             "limit": 100,
-            "properties": properties,
+            "properties": self.get_properties("contacts"),
+            "archived": False,
         }
         yield from self.get_records(
             path,
@@ -118,24 +116,31 @@ class Hubspot:
         )
 
     def get_deal_pipelines(self):
-        path = "/crm-pipelines/v1/pipelines/deals"
+        path = "/crm/v3/pipelines/deals"
+        data_field = "results"
+        offset_key = "after"
+        replication_path = ["updatedAt"]
+        params = {
+            "archived": False,
+        }
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_deals(self, start_date: datetime, end_date: datetime):
+        path = "/crm/v3/objects/deals"
         data_field = "results"
         replication_path = ["updatedAt"]
-        yield from self.get_records(path, replication_path, data_field=data_field)
-
-    def get_deals(self, properties: List, start_date: datetime, end_date: datetime):
-        self.event_state["deals_start_date"] = start_date
-        self.event_state["deals_end_date"] = end_date
-        path = "/deals/v1/deal/paged"
-        data_field = "deals"
-        replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
         params = {
-            "count": self.limit,
-            "includeAssociations": True,
-            "properties": properties,
-            "limit": self.limit,
+            "limit": 100,
+            "archived": False,
+            "properties": self.get_properties("deals"),
         }
-        offset_key = "offset"
+        offset_key = "after"
         yield from self.get_records(
             path,
             replication_path,
@@ -247,50 +252,6 @@ class Hubspot:
                 path, params=params, data_field=data_field, offset_key=offset_key,
             )
 
-    def get_deals_events(self):
-        # deals_events data is retrieved according to dealId
-        start_date: str = self.event_state["deals_start_date"].strftime(DATE_FORMAT)
-        end_date: str = self.event_state["deals_end_date"].strftime(DATE_FORMAT)
-        data_field = "results"
-        offset_key = "after"
-        path = "/events/v3/events"
-        if not self.is_enterprise():
-            return None, None
-        for deal_id in self.event_state["deals_events_ids"]:
-
-            params = {
-                "limit": self.limit,
-                "objectType": "deal",
-                "objectId": deal_id,
-                "occurredBefore": end_date,
-                "occurredAfter": start_date,
-            }
-            yield from self.get_records(
-                path, params=params, data_field=data_field, offset_key=offset_key,
-            )
-
-    def get_companies_events(self):
-        # companies_events data is retrieved according to companyId
-        start_date: str = self.event_state["companies_start_date"].strftime(DATE_FORMAT)
-        end_date: str = self.event_state["companies_end_date"].strftime(DATE_FORMAT)
-        data_field = "results"
-        offset_key = "after"
-        path = "/events/v3/events"
-        if not self.is_enterprise():
-            return None, None
-        for company_id in self.event_state["companies_events_ids"]:
-
-            params = {
-                "limit": self.limit,
-                "objectType": "company",
-                "objectId": company_id,
-                "occurredBefore": end_date,
-                "occurredAfter": start_date,
-            }
-            yield from self.get_records(
-                path, params=params, data_field=data_field, offset_key=offset_key,
-            )
-
     def check_contact_id(
         self,
         record: Dict,
@@ -347,7 +308,12 @@ class Hubspot:
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
-            if self.tap_stream_id in ["contacts"]:
+            if self.tap_stream_id in [
+                "contacts",
+                "companies",
+                "deals",
+                "deal_pipelines",
+            ]:
                 replication_value = parser.isoparse(
                     self.get_value(record, replication_path)
                 )
