@@ -15,15 +15,9 @@ LOGGER = singer.get_logger()
 
 
 class Stream:
-    def __init__(self, catalog: CatalogEntry, config):
-        self.tap_stream_id = catalog.tap_stream_id
-        self.schema = catalog.schema.to_dict()
-        self.key_properties = catalog.key_properties
-        self.mdata = metadata.to_map(catalog.metadata)
-        valid_replication_keys = self.mdata.get(()).get("valid-replication-keys")
-        self.bookmark_key = (
-            None if not valid_replication_keys else valid_replication_keys[0]
-        )
+    def __init__(self, config: Dict, tap_stream_id: str, stream_config: Dict):
+        self.tap_stream_id = tap_stream_id
+        self.bookmark_key = stream_config.get("bookmark_key")
         self.config = config
 
     def get_properties(self):
@@ -43,9 +37,7 @@ class Stream:
         return event_state
 
     def do_sync(self, state: Dict, event_state: DefaultDict[Set, str]):
-        singer.write_schema(
-            self.tap_stream_id, self.schema, self.key_properties,
-        )
+
         prev_bookmark = None
         start_date, end_date = self.__get_start_end(state)
         hubspot = Hubspot(
