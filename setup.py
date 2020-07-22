@@ -21,6 +21,5 @@ setup(
           tap-hubspot=tap_hubspot:main
       """,
     packages=["tap_hubspot"],
-    package_data={"tap_hubspot/schemas": ["*.json"]},
     include_package_data=True,
 )
