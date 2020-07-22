@@ -31,25 +31,19 @@ class Hubspot:
         self.event_state = event_state
 
     def streams(
-        self, properties: List, start_date: datetime, end_date: datetime,
+        self, start_date: datetime, end_date: datetime,
     ):
         self.refresh_access_token()
         if self.tap_stream_id == "companies":
-            yield from self.get_companies(
-                properties, start_date=start_date, end_date=end_date
-            )
+            yield from self.get_companies(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "contacts":
-            yield from self.get_contacts(
-                properties, start_date=start_date, end_date=end_date
-            )
+            yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
             yield from self.get_engagements()
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals(
-                properties, start_date=start_date, end_date=end_date
-            )
+            yield from self.get_deals(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
@@ -61,6 +55,13 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
+    def get_properties(self, tap_stream_id: str) -> List:
+        path = f"/crm/v3/properties/{tap_stream_id}"
+        results = self.call_api(url=path)
+        properties = []
+        for prop in results["results"]:
+            properties.append(prop["name"])
+
     def get_companies(self, properties: List, start_date: datetime, end_date: datetime):
         self.event_state["companies_start_date"] = start_date
         self.event_state["companies_end_date"] = end_date
@@ -68,8 +69,7 @@ class Hubspot:
         data_field = "companies"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
         params = {
-            "limit": self.limit,
-            "properties": properties,
+            "properties": self.get_properties("companies"),
         }
         offset_key = "offset"
         yield from self.get_records(
@@ -89,7 +89,7 @@ class Hubspot:
         replication_path = ["updatedAt"]
         params = {
             "limit": 100,
-            "properties": properties,
+            "properties": self.get_properties("contacts"),
         }
         yield from self.get_records(
             path,
@@ -126,10 +126,7 @@ class Hubspot:
         data_field = "deals"
         replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
         params = {
-            "count": self.limit,
-            "includeAssociations": True,
-            "properties": properties,
-            "limit": self.limit,
+            "properties": self.get_properties("deals"),
         }
         offset_key = "offset"
         yield from self.get_records(
