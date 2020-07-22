@@ -61,15 +61,16 @@ class Hubspot:
         properties = []
         for prop in results["results"]:
             properties.append(prop["name"])
+        return properties
 
-    def get_companies(self, properties: List, start_date: datetime, end_date: datetime):
-        self.event_state["companies_start_date"] = start_date
-        self.event_state["companies_end_date"] = end_date
-        path = "/companies/v2/companies/paged"
-        data_field = "companies"
-        replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
+    def get_companies(self, start_date: datetime, end_date: datetime):
+        path = "/crm/v3/objects/companies"
+        data_field = "results"
+        replication_path = ["updatedAt"]
         params = {
+            "limit": 100,
             "properties": self.get_properties("companies"),
+            "archived": False,
         }
         offset_key = "offset"
         yield from self.get_records(
@@ -80,7 +81,7 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_contacts(self, properties: List, start_date: datetime, end_date: datetime):
+    def get_contacts(self, start_date: datetime, end_date: datetime):
         self.event_state["contacts_start_date"] = start_date
         self.event_state["contacts_end_date"] = end_date
         path = "/crm/v3/objects/contacts"
@@ -90,6 +91,7 @@ class Hubspot:
         params = {
             "limit": 100,
             "properties": self.get_properties("contacts"),
+            "archived": False,
         }
         yield from self.get_records(
             path,
@@ -114,21 +116,31 @@ class Hubspot:
         )
 
     def get_deal_pipelines(self):
-        path = "/crm-pipelines/v1/pipelines/deals"
+        path = "/crm/v3/pipelines/deals"
+        data_field = "results"
+        offset_key = "after"
+        replication_path = ["updatedAt"]
+        params = {
+            "archived": False,
+        }
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_deals(self, start_date: datetime, end_date: datetime):
+        path = "/crm/v3/objects/deals"
         data_field = "results"
         replication_path = ["updatedAt"]
-        yield from self.get_records(path, replication_path, data_field=data_field)
-
-    def get_deals(self, properties: List, start_date: datetime, end_date: datetime):
-        self.event_state["deals_start_date"] = start_date
-        self.event_state["deals_end_date"] = end_date
-        path = "/deals/v1/deal/paged"
-        data_field = "deals"
-        replication_path = ["properties", "hs_lastmodifieddate", "timestamp"]
         params = {
+            "limit": 100,
+            "archived": False,
             "properties": self.get_properties("deals"),
         }
-        offset_key = "offset"
+        offset_key = "after"
         yield from self.get_records(
             path,
             replication_path,
@@ -296,7 +308,12 @@ class Hubspot:
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
-            if self.tap_stream_id in ["contacts"]:
+            if self.tap_stream_id in [
+                "contacts",
+                "companies",
+                "deals",
+                "deal_pipelines",
+            ]:
                 replication_value = parser.isoparse(
                     self.get_value(record, replication_path)
                 )
