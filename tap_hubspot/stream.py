@@ -75,9 +75,8 @@ class Stream:
                     event_state=hubspot.event_state,
                 )
 
-                except Exception:
-                    self.__advance_bookmark(state, prev_bookmark)
-                    raise
+            finally:
+                self.__advance_bookmark(state, prev_bookmark)
 
     def output_state(self, state, prev_bookmark, event_state):
 
