@@ -19,23 +19,6 @@ class Stream:
         self.tap_stream_id = tap_stream_id
         self.bookmark_key = stream_config.get("bookmark_key")
         self.config = config
-
-    def get_properties(self):
-        properties = []
-        if self.mdata.get(("properties", "properties"), {}).get("selected"):
-            additional_properties = (
-                self.schema.get("properties").get("properties").get("properties")
-            )
-            properties = [key for key in additional_properties.keys()]
-        return properties
-
-    def store_event_state(self, event_state: DefaultDict[str, Set], data: Dict):
-        if self.tap_stream_id == "deals":
-            event_state["deals_events_ids"].add(data["dealId"])
-        elif self.tap_stream_id == "companies":
-            event_state["companies_events_ids"].add(data["companyId"])
-        return event_state
-
     def do_sync(self, state: Dict, event_state: DefaultDict[Set, str]):
 
         prev_bookmark = None
@@ -82,8 +65,6 @@ class Stream:
 
         if self.tap_stream_id in [
             "contacts_events",
-            "companies_events",
-            "deals_events",
         ]:
             date_source = self.tap_stream_id.split("_")[0]
             prev_bookmark = event_state[f"{date_source}_end_date"]
