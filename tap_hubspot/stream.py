@@ -48,44 +48,32 @@ class Stream:
 
         with singer.metrics.record_counter(self.tap_stream_id) as counter:
 
-            with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
-                try:
-                    data = hubspot.streams(
-                        properties=self.get_properties(),
-                        start_date=start_date,
-                        end_date=end_date,
-                    )
-                    for d, replication_value in data:
-                        if replication_value and (
-                            start_date >= replication_value
-                            or end_date < replication_value
-                        ):
-                            continue
+            try:
+                data = hubspot.streams(start_date=start_date, end_date=end_date,)
+                for record, replication_value in data:
+                    if replication_value and (
+                        start_date >= replication_value or end_date < replication_value
+                    ):
+                        continue
 
-                        if self.tap_stream_id in ["deals", "companies"]:
-                            hubspot.event_state = self.store_event_state(
-                                event_state=hubspot.event_state, data=d
-                            )
+                    singer.write_record(self.tap_stream_id, record)
+                    counter.increment(1)
+                    if not replication_value:
+                        continue
 
-                        record = transformer.transform(d, self.schema, self.mdata)
-                        singer.write_record(self.tap_stream_id, record)
-                        counter.increment(1)
-                        if not replication_value:
-                            continue
+                    new_bookmark = replication_value
+                    if not prev_bookmark:
+                        prev_bookmark = new_bookmark
 
-                        new_bookmark = replication_value
-                        if not prev_bookmark:
-                            prev_bookmark = new_bookmark
+                    if prev_bookmark < new_bookmark:
+                        state = self.__advance_bookmark(state, prev_bookmark)
+                        prev_bookmark = new_bookmark
 
-                        if prev_bookmark < new_bookmark:
-                            state = self.__advance_bookmark(state, prev_bookmark)
-                            prev_bookmark = new_bookmark
-
-                    return self.output_state(
-                        state=state,
-                        prev_bookmark=prev_bookmark,
-                        event_state=hubspot.event_state,
-                    )
+                return self.output_state(
+                    state=state,
+                    prev_bookmark=prev_bookmark,
+                    event_state=hubspot.event_state,
+                )
 
                 except Exception:
                     self.__advance_bookmark(state, prev_bookmark)
