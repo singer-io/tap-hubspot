@@ -11,6 +11,39 @@ import urllib
 
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+MANDATORY_PROPERTIES = {
+    "companies": [
+        "name",
+        "country",
+        "domain",
+        "website",
+        "numberofemployees",
+        "industry",
+    ],
+    "contacts": [
+        "email",
+        "utm_campaign_original",
+        "utm_medium_original",
+        "utm_source_original",
+        "utm_term_original",
+        "hs_analytics_source",
+        "hs_analytics_source_data_1",
+        "hs_analytics_source_data_2",
+        "hs_analytics_first_referrer",
+        "hs_analytics_first_url",
+        "associatedcompanyid",
+    ],
+    "deals": [
+        "amount_in_home_currency",
+        "closedate",
+        "deal_currency_code",
+        "dealname",
+        "dealstage",
+        "dealtype",
+        "hs_is_closed",
+        "pipeline",
+    ],
+}
 
 
 class Hubspot:
@@ -55,21 +88,13 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
-    def get_properties(self, tap_stream_id: str) -> List:
-        path = f"/crm/v3/properties/{tap_stream_id}"
-        results = self.call_api(url=path)
-        properties = []
-        for prop in results["results"]:
-            properties.append(prop["name"])
-        return properties
-
     def get_companies(self, start_date: datetime, end_date: datetime):
         path = "/crm/v3/objects/companies"
         data_field = "results"
         replication_path = ["updatedAt"]
         params = {
             "limit": 100,
-            "properties": self.get_properties("companies"),
+            "properties": MANDATORY_PROPERTIES["companies"],
             "archived": False,
         }
         offset_key = "offset"
@@ -90,7 +115,7 @@ class Hubspot:
         replication_path = ["updatedAt"]
         params = {
             "limit": 100,
-            "properties": self.get_properties("contacts"),
+            "properties": MANDATORY_PROPERTIES["contacts"],
             "archived": False,
         }
         yield from self.get_records(
@@ -138,7 +163,8 @@ class Hubspot:
         params = {
             "limit": 100,
             "archived": False,
-            "properties": self.get_properties("deals"),
+            "associations": "company",
+            "properties": MANDATORY_PROPERTIES["deals"],
         }
         offset_key = "after"
         yield from self.get_records(
