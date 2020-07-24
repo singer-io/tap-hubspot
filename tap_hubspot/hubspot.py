@@ -103,7 +103,7 @@ class Hubspot:
             "properties": MANDATORY_PROPERTIES["companies"],
             "archived": False,
         }
-        offset_key = "offset"
+        offset_key = "after"
         yield from self.get_records(
             path,
             replication_path,
