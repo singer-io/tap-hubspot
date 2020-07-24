@@ -32,6 +32,8 @@ MANDATORY_PROPERTIES = {
         "hs_analytics_first_referrer",
         "hs_analytics_first_url",
         "associatedcompanyid",
+        "hs_analytics_last_timestamp",
+        "recent_conversion_date",
     ],
     "deals": [
         "amount_in_home_currency",
