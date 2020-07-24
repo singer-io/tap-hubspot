@@ -8,15 +8,15 @@ from collections import defaultdict
 from typing import DefaultDict, Set
 
 STREAMS = {
-    "email_events": {"bookmark_key": "created"},
     "forms": {"bookmark_key": "updatedAt"},
     "contacts": {"bookmark_key": "updatedAt",},
-    "companies": {"bookmark_key": "updatedAt"},
-    "deals": {"bookmark_key": "updatedAt"},
+    "contacts_events": {"bookmark_key": "lastSynced"},
     "deal_pipelines": {"bookmark_key": "updatedAt"},
     "engagements": {"bookmark_key": "lastUpdated"},
     "submissions": {},
-    "contacts_events": {"bookmark_key": "lastSynced"},
+    "email_events": {"bookmark_key": "created"},
+    "deals": {"bookmark_key": "updatedAt"},
+    "companies": {"bookmark_key": "updatedAt"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
