@@ -35,6 +35,9 @@ MANDATORY_PROPERTIES = {
         "hs_analytics_last_timestamp",
         "recent_conversion_date",
         "hs_calculated_form_submissions",
+        "hs_all_contact_vids",
+        "hs_facebook_click_id",
+        "hs_google_click_id"
     ],
     "deals": [
         "amount_in_home_currency",
