@@ -34,6 +34,7 @@ MANDATORY_PROPERTIES = {
         "associatedcompanyid",
         "hs_analytics_last_timestamp",
         "recent_conversion_date",
+        "hs_calculated_form_submissions",
     ],
     "deals": [
         "amount_in_home_currency",
