@@ -32,12 +32,14 @@ def sync(config, state=None):
     event_state: DefaultDict[Set, str] = defaultdict(set)
 
     for tap_stream_id, stream_config in STREAMS.items():
-        LOGGER.info(f"syncing {tap_stream_id}")
-        stream = Stream(
-            config=config, tap_stream_id=tap_stream_id, stream_config=stream_config
-        )
-        state, event_state = stream.do_sync(state, event_state)
-
+        try:
+            LOGGER.info(f"syncing {tap_stream_id}")
+            stream = Stream(
+                config=config, tap_stream_id=tap_stream_id, stream_config=stream_config
+            )
+            state, event_state = stream.do_sync(state, event_state)
+        except:
+            continue
 
 @utils.handle_top_exception(LOGGER)
 def main():
