@@ -25,7 +25,7 @@
           "format": "date-time"
         },
         "ownerId": {
-          "type": "integer"
+          "type": ["null", "integer"]
         },
         "type": {
           "type": "string"
