@@ -96,7 +96,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
