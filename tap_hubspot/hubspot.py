@@ -37,7 +37,7 @@ MANDATORY_PROPERTIES = {
         "hs_calculated_form_submissions",
         "hs_all_contact_vids",
         "hs_facebook_click_id",
-        "hs_google_click_id"
+        "hs_google_click_id",
     ],
     "deals": [
         "amount_in_home_currency",
@@ -98,11 +98,7 @@ class Hubspot:
         path = "/crm/v3/objects/companies"
         data_field = "results"
         replication_path = ["updatedAt"]
-        params = {
-            "limit": 100,
-            "properties": MANDATORY_PROPERTIES["companies"],
-            "archived": False,
-        }
+        params = {"limit": 100, "properties": MANDATORY_PROPERTIES["companies"]}
         offset_key = "after"
         yield from self.get_records(
             path,
@@ -119,11 +115,7 @@ class Hubspot:
         data_field = "results"
         offset_key = "after"
         replication_path = ["updatedAt"]
-        params = {
-            "limit": 100,
-            "properties": MANDATORY_PROPERTIES["contacts"],
-            "archived": False,
-        }
+        params = {"limit": 100, "properties": MANDATORY_PROPERTIES["contacts"]}
         yield from self.get_records(
             path,
             replication_path,
@@ -151,15 +143,8 @@ class Hubspot:
         data_field = "results"
         offset_key = "after"
         replication_path = ["updatedAt"]
-        params = {
-            "archived": False,
-        }
         yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
+            path, replication_path, data_field=data_field, offset_key=offset_key,
         )
 
     def get_deals(self, start_date: datetime, end_date: datetime):
@@ -168,7 +153,6 @@ class Hubspot:
         replication_path = ["updatedAt"]
         params = {
             "limit": 100,
-            "archived": False,
             "associations": "company",
             "properties": MANDATORY_PROPERTIES["deals"],
         }
