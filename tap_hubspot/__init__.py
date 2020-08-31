@@ -143,7 +143,7 @@ def get_field_type_schema(field_type):
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
@@ -153,7 +153,7 @@ def get_field_schema(field_type, extras=False):
         }
     else:
         return {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
                 "value": get_field_type_schema(field_type),
             }
@@ -186,7 +186,7 @@ def load_schema(entity_name):
     if entity_name in ["contacts", "companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": custom_schema,
         }
 
@@ -287,14 +287,6 @@ def request(url, params=None):
 #pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
     print("______________")
-    print("bla bla bla")
-    print("bla bla bla")
-    print("bla bla bla")
-    print("bla bla bla")
-    print("bla bla bla")
-    print("bla bla bla")
-    print("bla bla bla")
-    print("bla bla bla")
     print("bla bla bla")
     print("_______________")
     if len(offset_keys) != len(offset_targets):
@@ -797,7 +789,7 @@ def sync_engagements(STATE, ctx):
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
-                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                #singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
                 if record['engagement'][bookmark_key] >= max_bk_value:
                     max_bk_value = record['engagement'][bookmark_key]
 
@@ -906,7 +898,7 @@ class Context(object):
 
         self.catalog = catalog
 
-    def get_catalog_from_id(self,tap_stream_id):
+    def get_catalog_from_id(self, tap_stream_id):
         return [c for c in self.catalog.get('streams')
                if c.get('stream') == tap_stream_id][0]
 
@@ -932,7 +924,6 @@ def load_discovered_schema(stream):
 
     mdata = metadata.write(mdata, (), 'table-key-properties', stream.key_properties)
     mdata = metadata.write(mdata, (), 'forced-replication-method', stream.replication_method)
-
     if stream.replication_key:
         mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
 
@@ -971,6 +962,7 @@ def discover_schemas():
 
 def do_discover():
     LOGGER.info('Loading schemas')
+    discover_schemas()
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
 def main_impl():
