@@ -286,6 +286,9 @@ def request(url, params=None):
 
 #pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
+    print("______________")
+    print("bla bla bla")
+    print("_______________")
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -293,16 +296,13 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
         params.update(singer.get_offset(STATE, tap_stream_id))
 
     with metrics.record_counter(tap_stream_id) as counter:
+        i = 0
         while True:
             data = request(url, params).json()
-            params["offset"] = data.get("offset")
 
             for row in data[path]:
                 counter.increment()
                 yield row
-
-            if not data.get(more_key, False):
-                break
 
             STATE = singer.clear_offset(STATE, tap_stream_id)
             for key, target in zip(offset_keys, offset_targets):
@@ -311,6 +311,9 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                     STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
 
             singer.write_state(STATE)
+            if not data.get(more_key, False): # check if this doesn't break too early before getting the last page data
+                break
+
 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
@@ -753,15 +756,40 @@ def sync_engagements(STATE, ctx):
     top_level_key = "results"
     engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
     time_extracted = utils.now()
-
+    h = 0
+    i = 0
+    j = 0
+    k = 0
+    l = 0
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema, mdata)
             if record['engagement'][bookmark_key] >= start:
+                if record["engagement"]["type"] == "TASK":
+                    h += 1
+                    print("Nombre de taches vers record : ")
+                    print(h)
+                if record["engagement"]["type"] == "NOTE":
+                    i += 1
+                    print("Nombre de note vers record : ")
+                    print(i)
+                if record["engagement"]["type"] == "CALL":
+                    j += 1
+                    print("Nombre de call vers record : ")
+                    print(j)
+                if record["engagement"]["type"] == "MEETING":
+                    k += 1
+                    print("Nombre de meeting vers record : ")
+                    print(k)
+                if "EMAIL" in record["engagement"]["type"]:
+                    l += 1
+                    print("Nombre de mail incoming et mail vers record : ")
+                    print(l)
+
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
-                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                #singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
                 if record['engagement'][bookmark_key] >= max_bk_value:
                     max_bk_value = record['engagement'][bookmark_key]
 
