@@ -286,9 +286,6 @@ def request(url, params=None):
 
 #pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
-    print("______________")
-    print("bla bla bla")
-    print("_______________")
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -765,31 +762,10 @@ def sync_engagements(STATE, ctx):
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema, mdata)
             if record['engagement'][bookmark_key] >= start:
-                if record["engagement"]["type"] == "TASK":
-                    h += 1
-                    print("Nombre de taches vers record : ")
-                    print(h)
-                if record["engagement"]["type"] == "NOTE":
-                    i += 1
-                    print("Nombre de note vers record : ")
-                    print(i)
-                if record["engagement"]["type"] == "CALL":
-                    j += 1
-                    print("Nombre de call vers record : ")
-                    print(j)
-                if record["engagement"]["type"] == "MEETING":
-                    k += 1
-                    print("Nombre de meeting vers record : ")
-                    print(k)
-                if "EMAIL" in record["engagement"]["type"]:
-                    l += 1
-                    print("Nombre de mail incoming et mail vers record : ")
-                    print(l)
-
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
-                #singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
                 if record['engagement'][bookmark_key] >= max_bk_value:
                     max_bk_value = record['engagement'][bookmark_key]
 
