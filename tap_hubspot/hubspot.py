@@ -374,7 +374,6 @@ class Hubspot:
             if self.tap_stream_id in [
                 "contacts",
                 "companies",
-                "deals",
                 "deal_pipelines",
             ]:
                 replication_value = parser.isoparse(
