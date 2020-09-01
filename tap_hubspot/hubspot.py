@@ -134,7 +134,7 @@ class Hubspot:
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals(start_date=start_date, end_date=end_date)
+            yield from self.get_deals()
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
@@ -199,10 +199,9 @@ class Hubspot:
             path, replication_path, data_field=data_field, offset_key=offset_key,
         )
 
-    def get_deals(self, start_date: datetime, end_date: datetime):
+    def get_deals(self):
         path = "/crm/v3/objects/deals"
         data_field = "results"
-        replication_path = ["updatedAt"]
         params = {
             "limit": 100,
             "associations": "company",
@@ -210,11 +209,7 @@ class Hubspot:
         }
         offset_key = "after"
         yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
+            path, params=params, data_field=data_field, offset_key=offset_key,
         )
 
     def get_email_events(
