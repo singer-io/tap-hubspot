@@ -19,9 +19,33 @@ MANDATORY_PROPERTIES = {
         "website",
         "numberofemployees",
         "industry",
+        "hs_user_ids_of_all_owners",
+        "owneremail",
+        "ownername",
+        "hubspot_owner_id",
+        "hs_all_owner_ids",
+        "industrynaics",
+        "industrysic",
+        "what_industry_company_",
+        "industry",
+        "number_of_employees_company",
+        "numberofemployees",
+        "employeesinalllocations",
+        "employeesinalllocationsnum",
+        "annualrevenue",
+        "salesannual",
+        "salesannualnum",
+        "total_revenue",
+        "type",
+        "hs_persona",
+        "salutation",
+        "website_source",
     ],
     "contacts": [
         "email",
+        "emailadresse",
+        "hs_email_domain",
+        "domain",
         "utm_campaign_original",
         "utm_medium_original",
         "utm_source_original",
@@ -31,6 +55,12 @@ MANDATORY_PROPERTIES = {
         "hs_analytics_source_data_2",
         "hs_analytics_first_referrer",
         "hs_analytics_first_url",
+        "hs_analytics_last_url",
+        "hs_analytics_num_page_views",
+        "hs_analytics_num_visits",
+        "hs_analytics_num_event_completions",
+        "hs_analytics_first_touch_converting_campaign",
+        "hs_analytics_last_touch_converting_campaign",
         "associatedcompanyid",
         "hs_analytics_last_timestamp",
         "recent_conversion_date",
@@ -38,6 +68,18 @@ MANDATORY_PROPERTIES = {
         "hs_all_contact_vids",
         "hs_facebook_click_id",
         "hs_google_click_id",
+        "jobtitle",
+        "firstname",
+        "lastname",
+        "date_of_birth",
+        "first_conversion_date",
+        "first_conversion_event_name",
+        "form_submission_url",
+        "numemployees",
+        "employees_all_sites_",
+        "jobseniority",
+        "seniority",
+        "hs_buying_role",
     ],
     "deals": [
         "amount_in_home_currency",
@@ -48,6 +90,16 @@ MANDATORY_PROPERTIES = {
         "dealtype",
         "hs_is_closed",
         "pipeline",
+        "hs_merged_object_ids",
+        "hs_analytics_source",
+        "hs_analytics_source_data_1",
+        "hs_analytics_source_data_2",
+        "hs_campaign",
+        "engagements_last_meeting_booked_campaign",
+        "engagements_last_meeting_booked_medium",
+        "engagements_last_meeting_booked_source",
+        "closed_lost_reason",
+        "closed_won_reason",
     ],
 }
 
@@ -82,7 +134,7 @@ class Hubspot:
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals(start_date=start_date, end_date=end_date)
+            yield from self.get_deals()
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
@@ -147,10 +199,9 @@ class Hubspot:
             path, replication_path, data_field=data_field, offset_key=offset_key,
         )
 
-    def get_deals(self, start_date: datetime, end_date: datetime):
+    def get_deals(self):
         path = "/crm/v3/objects/deals"
         data_field = "results"
-        replication_path = ["updatedAt"]
         params = {
             "limit": 100,
             "associations": "company",
@@ -158,11 +209,7 @@ class Hubspot:
         }
         offset_key = "after"
         yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
+            path, params=params, data_field=data_field, offset_key=offset_key,
         )
 
     def get_email_events(
