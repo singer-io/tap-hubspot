@@ -768,7 +768,7 @@ def sync_engagements(STATE, ctx):
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
-                #singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
                 if record['engagement'][bookmark_key] >= max_bk_value:
                     max_bk_value = record['engagement'][bookmark_key]
 
