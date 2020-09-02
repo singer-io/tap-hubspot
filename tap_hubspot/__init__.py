@@ -154,6 +154,7 @@ def get_field_schema(field_type, extras=False):
                 "timestamp": get_field_type_schema("datetime"),
                 "source": get_field_type_schema("string"),
                 "sourceId": get_field_type_schema("string"),
+                "default": "N/A"
             }
         }
     else:
@@ -162,6 +163,7 @@ def get_field_schema(field_type, extras=False):
             "default": "N/A",
             "properties": {
                 "value": get_field_type_schema(field_type),
+                "default": "N/A",
             }
         }
 
