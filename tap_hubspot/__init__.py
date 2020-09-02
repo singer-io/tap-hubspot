@@ -186,7 +186,6 @@ def load_associated_company_schema():
     associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
     associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
     associated_company_schema['type'] = ['null', 'object']
-    associated_company_schema['properties']['type'] = ['null', 'object']
     return associated_company_schema
 
 def load_schema(entity_name):
