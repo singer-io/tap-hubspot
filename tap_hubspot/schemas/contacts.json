@@ -27,7 +27,6 @@
     },
     "associated-company" : {
         "type": ["null", "object"],
-        "default": null,
         "properties" : {}
     },
     "identity-profiles": {
