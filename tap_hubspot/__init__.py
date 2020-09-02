@@ -154,7 +154,6 @@ def get_field_schema(field_type, extras=False):
                 "timestamp": get_field_type_schema("datetime"),
                 "source": get_field_type_schema("string"),
                 "sourceId": get_field_type_schema("string"),
-                "default": "N/A"
             }
         }
     else:
@@ -163,7 +162,6 @@ def get_field_schema(field_type, extras=False):
             "default": "N/A",
             "properties": {
                 "value": get_field_type_schema(field_type),
-                "default": "N/A",
             }
         }
 
@@ -187,6 +185,8 @@ def load_associated_company_schema():
     #pylint: disable=line-too-long
     associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
     associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
+    associated_company_schema['type'] = ['null', 'object']
+    associated_company_schema['properties']['type'] = ['null', 'object']
     return associated_company_schema
 
 def load_schema(entity_name):
@@ -769,7 +769,7 @@ def sync_engagements(STATE, ctx):
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
-                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                #singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
                 if record['engagement'][bookmark_key] >= max_bk_value:
                     max_bk_value = record['engagement'][bookmark_key]
 
