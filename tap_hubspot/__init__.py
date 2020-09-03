@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import json
+import ast
 
 import attr
 import backoff
@@ -134,15 +135,37 @@ def get_field_type_schema(field_type):
                 "format": "date-time",
                 "default": None}
 
+    elif field_type == "date":
+        return {"type": ["null", "date"],
+                "default": None}
+
     elif field_type == "number":
         # A value like 'N/A' can be returned for this type,
         # so we have to let this be a string sometimes
-        return {"type": ["null", "number"],
+        return {"type": ["null", "number", "string"],
+                "default": None}
+
+    elif field_type == "enumeration":
+        # A value like 'N/A' can be returned for this type,
+        # so we have to let this be a string sometimes
+        return {"type": ["null", "enumeration"],
                 "default": None}
 
     else:
         return {"type": ["null", "string"],
                 "default": "N/A"}
+
+def set_nullable_fields(field_type):
+    if type(field_type) == "str" :
+        field_type = ast.literal_eval(field_type)
+    if isinstance(field_type, dict):
+        for k, v in field_type.items():
+            if isinstance(v, dict):
+                set_nullable_fields(v)
+            else:
+                if "null" not in v:
+                    field_type[k] = ["null", v]
+    return field_type
 
 def get_field_schema(field_type, extras=False):
     if extras:
@@ -150,6 +173,7 @@ def get_field_schema(field_type, extras=False):
             "type": ["null", "object"],
             "default": "N/A",
             "properties": {
+                "type": ["null", "object"],
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
                 "source": get_field_type_schema("string"),
@@ -161,6 +185,7 @@ def get_field_schema(field_type, extras=False):
             "type": ["null", "object"],
             "default": "N/A",
             "properties": {
+                "type": ["null", "object"],
                 "value": get_field_type_schema(field_type),
             }
         }
@@ -765,6 +790,7 @@ def sync_engagements(STATE, ctx):
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema, mdata)
             if record['engagement'][bookmark_key] >= start:
+
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
@@ -923,6 +949,7 @@ def discover_schemas():
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         schema, mdata = load_discovered_schema(stream)
+        schema = set_nullable_fields(schema)
         result['streams'].append({'stream': stream.tap_stream_id,
                                   'tap_stream_id': stream.tap_stream_id,
                                   'schema': schema,
