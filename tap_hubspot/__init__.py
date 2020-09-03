@@ -568,8 +568,9 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
+    v3_fields = None
     has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
-    if properties_selected or has_selected_custom_field(mdata):
+    if has_selected_properties or has_selected_custom_field(mdata):
         # On 2/12/20, hubspot added a lot of additional properties for
         # deals, and appending all of them to requests ended up leading to
         # 414 (url-too-long) errors. Hubspot recommended we use the
