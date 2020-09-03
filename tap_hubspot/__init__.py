@@ -156,8 +156,6 @@ def get_field_type_schema(field_type):
                 "default": "N/A"}
 
 def set_nullable_fields(field_type):
-    if type(field_type) == "str" :
-        field_type = ast.literal_eval(field_type)
     if isinstance(field_type, dict):
         for k, v in field_type.items():
             if isinstance(v, dict):
@@ -165,7 +163,7 @@ def set_nullable_fields(field_type):
             else:
                 if v is None:
                     continue
-                elif "null" not in v:
+                elif "null" not in v and k == "type":
                     field_type[k] = ["null", v]
     return field_type
 
