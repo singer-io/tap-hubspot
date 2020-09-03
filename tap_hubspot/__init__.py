@@ -128,28 +128,26 @@ def get_url(endpoint, **kwargs):
 def get_field_type_schema(field_type):
     if field_type == "bool":
         return {"type": ["null", "boolean"],
-                "default": None}
+                }
 
     elif field_type == "datetime":
         return {"type": ["null", "string"],
                 "format": "date-time",
-                "default": None}
+                }
 
     elif field_type == "date":
         return {"type": ["null", "date"],
-                "default": None}
+                }
 
     elif field_type == "number":
         # A value like 'N/A' can be returned for this type,
         # so we have to let this be a string sometimes
         return {"type": ["null", "number", "string"],
-                "default": None}
+                }
 
     elif field_type == "enumeration":
-        # A value like 'N/A' can be returned for this type,
-        # so we have to let this be a string sometimes
         return {"type": ["null", "enumeration"],
-                "default": None}
+                }
 
     else:
         return {"type": ["null", "string"],
@@ -171,7 +169,6 @@ def get_field_schema(field_type, extras=False):
     if extras:
         return {
             "type": ["null", "object"],
-            "default": "N/A",
             "properties": {
                 "type": ["null", "object"],
                 "value": get_field_type_schema(field_type),
@@ -183,7 +180,6 @@ def get_field_schema(field_type, extras=False):
     else:
         return {
             "type": ["null", "object"],
-            "default": "N/A",
             "properties": {
                 "type": ["null", "object"],
                 "value": get_field_type_schema(field_type),
