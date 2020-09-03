@@ -6,7 +6,6 @@ import os
 import re
 import sys
 import json
-import ast
 
 import attr
 import backoff
@@ -127,50 +126,25 @@ def get_url(endpoint, **kwargs):
 
 def get_field_type_schema(field_type):
     if field_type == "bool":
-        return {"type": ["null", "boolean"],
-                }
+        return {"type": ["null", "boolean"]}
 
     elif field_type == "datetime":
         return {"type": ["null", "string"],
-                "format": "date-time",
-                }
-
-    elif field_type == "date":
-        return {"type": ["null", "date"],
-                }
+                "format": "date-time"}
 
     elif field_type == "number":
         # A value like 'N/A' can be returned for this type,
         # so we have to let this be a string sometimes
-        return {"type": ["null", "number", "string"],
-                }
-
-    elif field_type == "enumeration":
-        return {"type": ["null", "enumeration"],
-                }
+        return {"type": ["null", "number"]}
 
     else:
-        return {"type": ["null", "string"],
-                "default": "N/A"}
-
-def set_nullable_fields(field_type):
-    if isinstance(field_type, dict):
-        for k, v in field_type.items():
-            if isinstance(v, dict):
-                set_nullable_fields(v)
-            else:
-                if v is None:
-                    continue
-                elif "null" not in v and k == "type":
-                    field_type[k] = ["null", v]
-    return field_type
+        return {"type": ["null", "string"]}
 
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
             "type": ["null", "object"],
             "properties": {
-                "type": ["null", "object"],
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
                 "source": get_field_type_schema("string"),
@@ -181,7 +155,6 @@ def get_field_schema(field_type, extras=False):
         return {
             "type": ["null", "object"],
             "properties": {
-                "type": ["null", "object"],
                 "value": get_field_type_schema(field_type),
             }
         }
@@ -206,7 +179,6 @@ def load_associated_company_schema():
     #pylint: disable=line-too-long
     associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
     associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
-    associated_company_schema['type'] = ['null', 'object']
     return associated_company_schema
 
 def load_schema(entity_name):
@@ -314,6 +286,9 @@ def request(url, params=None):
 
 #pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
+    print("______________")
+    print("bla bla bla")
+    print("_______________")
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -781,16 +756,40 @@ def sync_engagements(STATE, ctx):
     top_level_key = "results"
     engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
     time_extracted = utils.now()
-
+    h = 0
+    i = 0
+    j = 0
+    k = 0
+    l = 0
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema, mdata)
             if record['engagement'][bookmark_key] >= start:
+                if record["engagement"]["type"] == "TASK":
+                    h += 1
+                    print("Nombre de taches vers record : ")
+                    print(h)
+                if record["engagement"]["type"] == "NOTE":
+                    i += 1
+                    print("Nombre de note vers record : ")
+                    print(i)
+                if record["engagement"]["type"] == "CALL":
+                    j += 1
+                    print("Nombre de call vers record : ")
+                    print(j)
+                if record["engagement"]["type"] == "MEETING":
+                    k += 1
+                    print("Nombre de meeting vers record : ")
+                    print(k)
+                if "EMAIL" in record["engagement"]["type"]:
+                    l += 1
+                    print("Nombre de mail incoming et mail vers record : ")
+                    print(l)
 
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
-                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                #singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
                 if record['engagement'][bookmark_key] >= max_bk_value:
                     max_bk_value = record['engagement'][bookmark_key]
 
@@ -945,7 +944,6 @@ def discover_schemas():
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         schema, mdata = load_discovered_schema(stream)
-        schema = set_nullable_fields(schema)
         result['streams'].append({'stream': stream.tap_stream_id,
                                   'tap_stream_id': stream.tap_stream_id,
                                   'schema': schema,

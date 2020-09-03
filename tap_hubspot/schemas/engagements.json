@@ -80,23 +80,23 @@
           "type": ["null", "object"],
           "properties": {
             "email": {
-              "type": "string"
+              "type": ["null", "string"]
             },
             "firstName": {
-              "type": "string"
+              "type": ["null", "string"]
             },
             "lastName": {
-              "type": "string"
+              "type": ["null", "string"]
             }
           }
         },
         "to": {
           "type": ["null", "array"],
           "items": {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
@@ -104,10 +104,10 @@
         "cc": {
           "type": ["null", "array"],
           "items": {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
@@ -115,10 +115,10 @@
         "bcc": {
           "type": ["null", "array"],
           "items": {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
