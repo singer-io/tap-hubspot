@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import DefaultDict, Set
 
 STREAMS = {
+    "owners": {"bookmark_key": "updatedAt"},
     "forms": {"bookmark_key": "updatedAt"},
     "contacts": {"bookmark_key": "updatedAt",},
     "contacts_events": {"bookmark_key": "lastSynced"},
@@ -40,6 +41,7 @@ def sync(config, state=None):
             state, event_state = stream.do_sync(state, event_state)
         except:
             continue
+
 
 @utils.handle_top_exception(LOGGER)
 def main():

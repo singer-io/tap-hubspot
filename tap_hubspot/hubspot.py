@@ -130,8 +130,10 @@ class Hubspot:
         self, start_date: datetime, end_date: datetime,
     ):
         self.refresh_access_token()
-        if self.tap_stream_id == "companies":
-            yield from self.get_companies(start_date=start_date, end_date=end_date)
+        if self.tap_stream_id == "owners":
+            yield from self.get_owners()
+        elif self.tap_stream_id == "companies":
+            yield from self.get_companies()
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
@@ -151,7 +153,21 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
-    def get_companies(self, start_date: datetime, end_date: datetime):
+    def get_owners(self):
+        path = "/crm/v3/owners"
+        data_field = "results"
+        replication_path = ["updatedAt"]
+        params = {"limit": 100}
+        offset_key = "after"
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
+
+    def get_companies(self):
         path = "/crm/v3/objects/companies"
         data_field = "results"
         replication_path = ["updatedAt"]
@@ -377,6 +393,7 @@ class Hubspot:
             path, params=params, data_field=data_field, offset_key=offset_key,
         ):
             if self.tap_stream_id in [
+                "owners",
                 "contacts",
                 "companies",
                 "deal_pipelines",
