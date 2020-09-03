@@ -163,7 +163,9 @@ def set_nullable_fields(field_type):
             if isinstance(v, dict):
                 set_nullable_fields(v)
             else:
-                if "null" not in v:
+                if v is None:
+                    continue
+                elif "null" not in v:
                     field_type[k] = ["null", v]
     return field_type
 
