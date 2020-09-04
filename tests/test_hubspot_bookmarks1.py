@@ -156,7 +156,7 @@ class HubSpotBookmarks1(unittest.TestCase):
 
 
     def get_properties(self):
-        return {'start_date' : '2017-05-01T00:00:00Z'}
+        return {'start_date' : '2017-05-01 00:00:00'}
 
     def perform_field_selection(self, conn_id, catalog):
         schema = menagerie.select_catalog(conn_id, catalog)

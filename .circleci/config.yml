@@ -2,31 +2,28 @@ version: 2
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester
     steps:
       - checkout
       - run:
           name: 'Setup virtual env'
           command: |
-            python3 -m venv /usr/local/share/virtualenvs/tap-hubspot/
-            source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            pip install -U 'pip<19.2' setuptools
-            pip install .[dev]
-      - run:
-          name: 'pylint'
-          command: |
-            source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
+            virtualenv -p python3 ~/.virtualenvs/tap-hubspot
+            source ~/.virtualenvs/tap-hubspot/bin/activate
+            pip install .
+            pip install pylint
             pylint tap_hubspot -d C,R,W
       - run:
           name: 'Unit Tests'
           command: |
-            source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
+            source ~/.virtualenvs/tap-hubspot/bin/activate
+            pip install nose
             nosetests tap_hubspot/tests
       - run:
           name: 'JSON Validator'
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            stitch-validate-json /usr/local/share/virtualenvs/tap-hubspot/lib/python3.5/site-packages/tap_hubspot/schemas/*.json
+            stitch-validate-json ~/.virtualenvs/tap-hubspot/lib/python3.5/site-packages/tap_hubspot/schemas/*.json
       - add_ssh_keys
       - run:
           name: 'Integration Tests'
@@ -45,8 +42,7 @@ workflows:
   version: 2
   commit:
     jobs:
-      - build:
-          context: circleci-user
+      - build
   build_daily:
     triggers:
       - schedule:
@@ -56,5 +52,4 @@ workflows:
               only:
                 - master
     jobs:
-      - build:
-          context: circleci-user
+      - build
