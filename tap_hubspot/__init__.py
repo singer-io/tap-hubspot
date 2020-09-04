@@ -871,6 +871,7 @@ def do_sync(STATE, catalog):
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
+    return
 
 
 class Context(object):
@@ -970,6 +971,7 @@ def main_impl():
         do_sync(STATE, args.properties)
     else:
         LOGGER.info("No properties were selected")
+    return
 
 def main():
     try:
