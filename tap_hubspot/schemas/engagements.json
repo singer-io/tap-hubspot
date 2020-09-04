@@ -5,16 +5,16 @@
       "type": "integer"
     },
     "engagement": {
-      "type": "object",
+      "type": ["null", "object"],
       "properties": {
         "id": {
-          "type": "integer"
+          "type": ["null", "integer"]
         },
         "portalId": {
-          "type": "integer"
+          "type": ["null", "integer"]
         },
         "active": {
-          "type": "boolean"
+          "type": ["null", "boolean"]
         },
         "createdAt": {
           "type": ["null", "string"],
@@ -25,10 +25,10 @@
           "format": "date-time"
         },
         "ownerId": {
-          "type": "integer"
+          "type": ["null", "integer"]
         },
         "type": {
-          "type": "string"
+          "type": ["null", "string"]
         },
         "timestamp": {
           "type": ["null", "string"],
@@ -42,19 +42,19 @@
         "contactIds": {
           "type": ["null", "array"],
           "items": {
-            "type": "integer"
+            "type": ["null", "integer"]
           }
         },
         "companyIds": {
           "type": ["null", "array"],
           "items": {
-            "type": "integer"
+            "type": ["null", "integer"]
           }
         },
         "dealIds": {
           "type": ["null", "array"],
           "items": {
-            "type": "integer"
+            "type": ["null", "integer"]
           }
         }
       }
@@ -62,10 +62,10 @@
     "attachments": {
       "type": ["null", "array"],
       "items": {
-        "type": "object",
+        "type": ["null", "object"],
         "properties": {
           "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
           }
         }
       }
@@ -80,23 +80,23 @@
           "type": ["null", "object"],
           "properties": {
             "email": {
-              "type": "string"
+              "type": ["null", "string"]
             },
             "firstName": {
-              "type": "string"
+              "type": ["null", "string"]
             },
             "lastName": {
-              "type": "string"
+              "type": ["null", "string"]
             }
           }
         },
         "to": {
           "type": ["null", "array"],
           "items": {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
@@ -104,10 +104,10 @@
         "cc": {
           "type": ["null", "array"],
           "items": {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
@@ -115,10 +115,10 @@
         "bcc": {
           "type": ["null", "array"],
           "items": {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }

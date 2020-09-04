@@ -126,24 +126,36 @@ def get_url(endpoint, **kwargs):
 
 def get_field_type_schema(field_type):
     if field_type == "bool":
-        return {"type": ["null", "boolean"]}
+        return {"type": ["null", "boolean"],
+                }
 
     elif field_type == "datetime":
         return {"type": ["null", "string"],
-                "format": "date-time"}
+                "format": "date-time",
+                }
+
+    elif field_type == "date":
+        return {"type": ["null", "date"],
+                }
 
     elif field_type == "number":
         # A value like 'N/A' can be returned for this type,
         # so we have to let this be a string sometimes
-        return {"type": ["null", "number"]}
+        return {"type": ["null", "number", "string"],
+                }
+
+    elif field_type == "enumeration":
+        return {"type": ["null", "enumeration"],
+                }
 
     else:
-        return {"type": ["null", "string"]}
+        return {"type": ["null", "string"],
+                "default": "N/A"}
 
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
@@ -153,7 +165,7 @@ def get_field_schema(field_type, extras=False):
         }
     else:
         return {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
                 "value": get_field_type_schema(field_type),
             }
@@ -186,7 +198,7 @@ def load_schema(entity_name):
     if entity_name in ["contacts", "companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": custom_schema,
         }
 
@@ -231,9 +243,7 @@ def on_giveup(details):
     else:
         url = details['args']
         params = {}
-
-    raise Exception("Giving up on request after {} tries with url {} and params {}" \
-                    .format(details['tries'], url, params))
+    raise Exception("Giving up on request after {} tries with url {} and params {}".format(details['tries'], url, params))
 
 URL_SOURCE_RE = re.compile(BASE_URL + r'/(\w+)/')
 
@@ -295,15 +305,13 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
         params.update(singer.get_offset(STATE, tap_stream_id))
 
     with metrics.record_counter(tap_stream_id) as counter:
+        i = 0
         while True:
             data = request(url, params).json()
 
             for row in data[path]:
                 counter.increment()
                 yield row
-
-            if not data.get(more_key, False):
-                break
 
             STATE = singer.clear_offset(STATE, tap_stream_id)
             for key, target in zip(offset_keys, offset_targets):
@@ -312,6 +320,9 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                     STATE = singer.set_offset(STATE, tap_stream_id, target, data[key])
 
             singer.write_state(STATE)
+            if not data.get(more_key, False): # check if this doesn't break too early before getting the last page data
+                break
+
 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
@@ -753,13 +764,13 @@ def sync_engagements(STATE, ctx):
     params = {'limit': 250}
     top_level_key = "results"
     engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
-
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
             record = bumble_bee.transform(engagement, schema, mdata)
             if record['engagement'][bookmark_key] >= start:
+
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]
@@ -860,6 +871,7 @@ def do_sync(STATE, catalog):
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
+    return
 
 
 class Context(object):
@@ -872,7 +884,7 @@ class Context(object):
 
         self.catalog = catalog
 
-    def get_catalog_from_id(self,tap_stream_id):
+    def get_catalog_from_id(self, tap_stream_id):
         return [c for c in self.catalog.get('streams')
                if c.get('stream') == tap_stream_id][0]
 
@@ -898,7 +910,6 @@ def load_discovered_schema(stream):
 
     mdata = metadata.write(mdata, (), 'table-key-properties', stream.key_properties)
     mdata = metadata.write(mdata, (), 'forced-replication-method', stream.replication_method)
-
     if stream.replication_key:
         mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
 
@@ -937,6 +948,7 @@ def discover_schemas():
 
 def do_discover():
     LOGGER.info('Loading schemas')
+    discover_schemas()
     json.dump(discover_schemas(), sys.stdout, indent=4)
 
 def main_impl():
@@ -959,6 +971,7 @@ def main_impl():
         do_sync(STATE, args.properties)
     else:
         LOGGER.info("No properties were selected")
+    return
 
 def main():
     try:
@@ -966,6 +979,7 @@ def main():
     except Exception as exc:
         LOGGER.critical(exc)
         raise exc
+    return
 
 if __name__ == '__main__':
     main()
