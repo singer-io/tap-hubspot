@@ -979,6 +979,7 @@ def main():
     except Exception as exc:
         LOGGER.critical(exc)
         raise exc
+    return
 
 if __name__ == '__main__':
     main()
