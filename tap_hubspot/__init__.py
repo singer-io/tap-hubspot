@@ -356,22 +356,28 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     if singer.get_offset(STATE, tap_stream_id):
         params.update(singer.get_offset(STATE, tap_stream_id))
 
+    if v3_fields:
+        v3_url = get_url('deals_v3_search')
+        v3_body = {"properties": v3_fields, "limit": 100}
+
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
 
             if v3_fields:
-                url = get_url('deals_v3_search')
-                body = {"properties": v3_fields, "limit": 100}
-                v3_data = post_search_endpoint(url, body)
+                v3_data = post_search_endpoint(v3_url, v3_body)
                 additional_fields = {}
                 for item in v3_data.json()['results']:
-                    # We nest `y` under 'value' in order to match the
+                    # We nest `value` under the key 'value' in order to match the
                     # schema and the shape of other fields in 'properties'
                     additional_fields[int(item['id'])] = {key:{'value': value} for key,value in item['properties'].items()
                                                           if ('hs_date_entered' in key or 'hs_date_exited' in key)}
                 for item in data[path]:
-                    item['properties'] = {**item['properties'], **additional_fields.get(item['dealId'])}
+                    item['properties'] = {**item.get('properties',{}), **additional_fields.get(item['dealId'], {})}
+
+                if 'paging' in v3_data.json().keys():
+                    v3_body['after'] = v3_data.json().get('paging', {}).get('next', {}).get('after')
+
 
             for row in data[path]:
                 counter.increment()
@@ -554,6 +560,7 @@ def sync_deals(STATE, ctx):
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
     params = {'count': 250,
+              'limit': 100,
               'includeAssociations': False,
               'properties' : []}
 
