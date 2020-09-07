@@ -33,9 +33,9 @@
             "type": ["null", "string"]
         },
         "filters": {
-            "type": "array",
+            "type": "object",
             "items": {
-                "type": "array",
+                "type": "object",
                 "items": {
                     "type": "object",
                     "properties": {

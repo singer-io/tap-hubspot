@@ -22,7 +22,7 @@
       "format": "date-time"
     },
     "personaTagIds": {
-      "type": "array",
+      "type": "object",
       "items": {
         "type": "integer"
       }
@@ -37,7 +37,7 @@
           "type": ["null", "integer"]
         },
         "steps": {
-          "type": ["null", "array"],
+          "type": ["null", "object"],
           "items": {
             "type": ["null", "string"]
           }

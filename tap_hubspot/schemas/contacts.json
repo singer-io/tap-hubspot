@@ -8,7 +8,8 @@
       "type": ["null", "integer"]
     },
     "merged-vids": {
-      "type": ["null", "array"],
+      "type": ["null", "object"],
+      "type": ["null", "object"],
       "items": {
         "type": ["null", "integer"]
       }
@@ -30,7 +31,7 @@
         "properties" : {}
     },
     "identity-profiles": {
-        "type": ["null", "array"],
+        "type": ["null", "object"],
         "items": {
             "type": ["null", "object"],
             "properties": {
@@ -46,7 +47,7 @@
                     "type": ["null", "integer"]
                 },
                 "identities": {
-                    "type": ["null", "array"],
+                    "type": ["null", "object"],
                     "items": {
                         "type": ["null", "object"],
                         "properties": {
@@ -67,7 +68,7 @@
         }
     },
     "list-memberships": {
-        "type": ["null", "array"],
+        "type": ["null", "object"],
         "items": {
             "type": ["null", "object"],
             "properties": {
@@ -91,7 +92,7 @@
         }
     },
     "form-submissions": {
-      "type": ["null", "array"],
+      "type": ["null", "object"],
       "items": {
         "type": ["null", "object"],
         "properties": {
@@ -118,7 +119,7 @@
       }
     },
     "merge-audits": {
-      "type": ["null", "array"],
+      "type": ["null", "object"],
       "items": {
         "type": ["null", "object"],
         "properties": {
@@ -154,7 +155,7 @@
                 "type": ["null", "string"]
               },
               "source-vids": {
-                "type": ["null", "array"],
+                "type": ["null", "object"],
                 "items": {
                   "type": ["null", "integer"]
                 }

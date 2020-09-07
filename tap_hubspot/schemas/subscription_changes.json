@@ -12,7 +12,7 @@
       "type": ["null", "string"]
     },
     "changes": {
-      "type": ["null", "array"],
+      "type": ["null", "object"],
       "items": {
         "type": ["null", "object"],
         "properties": {
