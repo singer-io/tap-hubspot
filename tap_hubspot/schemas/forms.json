@@ -38,12 +38,12 @@
             "type": ["null", "string"]
         },
         "formFieldGroups": {
-            "type": "object",
+            "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
                     "fields": {
-                        "type": "object",
+                        "type": "array",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -87,7 +87,7 @@
                                             "type": ["null", "boolean"]
                                         },
                                         "blockedEmailAddresses": {
-                                            "type": "object",
+                                            "type": "array",
                                             "items": {
                                                 "type": ["null", "string"]
                                             }
@@ -116,7 +116,7 @@
                                     "type": ["null", "boolean"]
                                 },
                                 "options": {
-                                    "type": "object",
+                                    "type": "array",
                                     "items": {
                                         "type": "object",
                                         "properties": {
@@ -145,7 +145,7 @@
                                     }
                                 },
                                 "selectedOptions": {
-                                    "type": "object",
+                                    "type": "array",
                                     "items": {
                                         "type" : ["null", "string"]
                                     }
@@ -212,7 +212,7 @@
             "type": ["null", "string"]
         },
         "metaData": {
-            "type": "object",
+            "type": "array",
             "items": {
                 "type": "object",
                 "properties": {

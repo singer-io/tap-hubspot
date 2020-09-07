@@ -145,7 +145,7 @@ def get_field_type_schema(field_type):
                 }
 
     elif field_type == "enumeration":
-        return {"type": ["null", "object"],
+        return {"type": ["null", "string"],
                 }
 
     else:
