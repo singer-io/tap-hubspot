@@ -155,7 +155,7 @@ def get_field_type_schema(field_type):
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": ["null", "object"],
+            "type": ["null", "string"],
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
@@ -165,7 +165,7 @@ def get_field_schema(field_type, extras=False):
         }
     else:
         return {
-            "type": ["null", "object"],
+            "type": ["null", "string"],
             "properties": {
                 "value": get_field_type_schema(field_type),
             }
@@ -198,7 +198,7 @@ def load_schema(entity_name):
     if entity_name in ["contacts", "companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
-            "type": ["null", "object"],
+            "type": ["null", "string"],
             "properties": custom_schema,
         }
 
