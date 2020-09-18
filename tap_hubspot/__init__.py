@@ -336,7 +336,6 @@ def post_search_endpoint(url, data, params=None):
 
     headers['content-type'] = "application/json"
 
-    # TODO: fix log message
     with metrics.http_request_timer(url) as timer:
         resp = requests.post(
             url=url,
@@ -369,9 +368,16 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                 for item in v3_data.json()['results']:
                     # We nest `y` under 'value' in order to match the
                     # schema and the shape of other fields in 'properties'
-                    additional_fields[int(item['id'])] = {x:{'value': y} for x,y in item['properties'].items()
-                                                          if ('hs_date_entered' in x or 'hs_date_exited' in x)}
+                    additional_fields[int(item['id'])] = {key:{'value': value} for key,value in item['properties'].items()
+                                                          if ('hs_date_entered' in key or 'hs_date_exited' in key)}
                 for item in data[path]:
+
+                    # We don't always have the additional fields for the dealId due
+                    # to a bug in the "post_search_endpoint"
+                    # While waiting for a bugfix, we default the additional fields to nothing when they're is no match
+                    if not item['dealId'] in additional_fields:
+                        additional_fields[item['dealId']] = {}
+
                     item['properties'] = {**item['properties'], **additional_fields.get(item['dealId'])}
 
             for row in data[path]:
@@ -554,7 +560,7 @@ def sync_deals(STATE, ctx):
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
-    params = {'count': 250,
+    params = {'limit': 250,
               'includeAssociations': False,
               'properties' : []}
 

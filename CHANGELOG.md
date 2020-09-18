@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.0
+  * Add fields to Deals stream - `hs_date_entered_*` and `hs_date_exited_*` [#124](https://github.com/singer-io/tap-hubspot/pull/124)
+
 ## 2.7.0
   * Fields nested under `properties` are copied to top level and prepended with `property_` [#107](https://github.com/singer-io/tap-hubspot/pull/107)
 
