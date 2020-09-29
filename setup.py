@@ -15,6 +15,7 @@ setup(name='tap-hubspot',
           'requests==2.20.0',
           'backoff==1.3.2',
           'requests_mock==1.3.0',
+          'python-dateutil==2.8.1'
       ],
       extras_require= {
           'dev': [

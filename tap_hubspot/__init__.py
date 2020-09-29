@@ -7,6 +7,7 @@ import re
 import sys
 import json
 
+import dateutil.parser
 import attr
 import backoff
 import requests
@@ -76,6 +77,7 @@ ENDPOINTS = {
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
+    "deals_v3_all":         "/crm/v3/objects/deals",
     "deals_v3_search":      "/crm/v3/objects/deals/search",
     "deals_v3_properties":  "/crm/v3/properties/deals",
     "deal_pipelines":       "/deals/v1/pipelines",
@@ -174,6 +176,8 @@ def get_custom_schema(entity_name):
     return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
 
 def get_v3_schema(entity_name):
+    if entity_name != "deals":
+        raise Exception("Only deals entity is currently supported")
     url = get_url("deals_v3_properties")
     return parse_custom_schema(entity_name, request(url).json()['results'], force_extras=False)
 
@@ -190,19 +194,13 @@ def load_associated_company_schema():
 
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
+    if entity_name in ["contacts", "companies"]:
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
             "type": "object",
             "properties": custom_schema,
         }
-
-        if entity_name in ["deals"]:
-            v3_schema = get_v3_schema(entity_name)
-            for key, value in v3_schema.items():
-                if 'hs_date_entered' in key or 'hs_date_exited' in key:
-                    custom_schema[key] = value
 
         # Move properties to top level
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
@@ -214,6 +212,18 @@ def load_schema(entity_name):
 
     if entity_name == "contacts":
         schema['properties']['associated-company'] = load_associated_company_schema()
+
+    if entity_name == "deals":
+        custom_schema = get_v3_schema(entity_name)
+
+        schema['properties']['properties'] = {
+            "type": "object",
+            "properties": custom_schema,
+        }
+
+        # Move properties to top level
+        custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
+        schema['properties'].update(custom_schema_top_level)
 
     return schema
 
@@ -308,6 +318,19 @@ def request(url, params=None):
 # }
 # }
 
+# For results of v3 APIs, there is no "versions" info
+# so the lifting need to be adjusted
+def lift_properties_and_versions_v3(record):
+
+    liftedRecord = {}
+
+    for key, value in record.get('properties', {}).items():
+
+        computed_key = "property_{}".format(key)
+        liftedRecord[computed_key] = { 'value': value }
+
+    return liftedRecord
+
 def lift_properties_and_versions(record):
     for key, value in record.get('properties', {}).items():
         computed_key = "property_{}".format(key)
@@ -398,6 +421,64 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
 
+def head_100(a_list):
+    return a_list[:100], a_list[100:]
+
+# This is to fetch v3 endpoints results
+# This implement both the pagination of v3 and also the ability
+# to "chunks" the properties so that we can limit the URL length when doing calls
+# as the properties are passed in the QS
+def gen_request_v3(STATE, tap_stream_id, url, params, path, custom_properties_chunks=[]):
+
+    while True:
+
+        if singer.get_offset(STATE, tap_stream_id):
+            params.update(singer.get_offset(STATE, tap_stream_id))
+
+        # We have to make 1 call per properties chunk
+        # results will contains the list of all records page (so a list of list)
+        results = []
+        for property_chunk in custom_properties_chunks:
+
+            if property_chunk:
+                params['properties'] = ",".join(property_chunk)
+
+            data = request(url, params).json()
+
+            results.append(data[path])
+
+        # We use a dict to merge together all the properties for a given deal
+        # We use the dealId as the dict key
+        records_map = {}
+        for result in results:
+            for record in result:
+
+                # We have to init the dict entry if it doesn't exist
+                if not record["id"] in records_map:
+                    records_map[record["id"]] = { "properties": {} }
+
+                merged_properties = {**records_map[record["id"]]["properties"], **record["properties"]}
+                records_map[record["id"]]["properties"] = merged_properties
+
+        with metrics.record_counter(tap_stream_id) as counter:
+
+            for key, value in records_map.items():
+                counter.increment()
+                yield value
+
+        # This is the paging break signal
+        if not "paging" in data:
+            break
+
+        # We update the paging parameter and go the next page / loop
+        # "after" is the paging offset
+        after = data["paging"]["next"]["after"]
+        STATE = singer.set_offset(STATE, tap_stream_id, "after", after)
+        singer.write_state(STATE)
+
+    # We clear the offset
+    STATE = singer.clear_offset(STATE, tap_stream_id)
+    singer.write_state(STATE)
 
 def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     if len(vids) == 0:
@@ -560,54 +641,44 @@ def sync_deals(STATE, ctx):
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
-    params = {'limit': 250,
-              'includeAssociations': False,
-              'properties' : []}
+    params = {'limit': 100}
 
     schema = load_schema("deals")
     singer.write_schema("deals", schema, ["dealId"], [bookmark_key], catalog.get('stream_alias'))
 
-    # Check if we should  include associations
-    for key in mdata.keys():
-        if 'associations' in key:
-            assoc_mdata = mdata.get(key)
-            if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
-                params['includeAssociations'] = True
+    # We fetch all the deals properties
+    deals_v3_custom_schema = get_v3_schema("deals")
+    properties = []
+    for key, value in deals_v3_custom_schema.items():
+        properties.append(key)
 
-    v3_fields = None
-    has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
-    if has_selected_properties or has_selected_custom_field(mdata):
-        # On 2/12/20, hubspot added a lot of additional properties for
-        # deals, and appending all of them to requests ended up leading to
-        # 414 (url-too-long) errors. Hubspot recommended we use the
-        # `includeAllProperties` and `allpropertiesFetchMode` params
-        # instead.
-        params['includeAllProperties'] = True
-        params['allPropertiesFetchMode'] = 'latest_version'
+    # Splitting properties into chunks of max 100 properties
+    # to avoid asking for too many properties at once
+    # as properties names are passed in the URL
+    # URL have a safe length limit of 2000 chars, so 100 properties max should do it
+    property_chunks = []
+    while len(properties) > 100:
+        head, tail = head_100(properties)
+        property_chunks.append(head)
+        properties = tail
 
-        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
-        v3_fields = [x[1].replace('property_', '')
-                     for x,y in mdata.items() if x and (y.get('selected') == True or has_selected_properties)
-                     and ('hs_date_entered' in x[1] or 'hs_date_exited' in x[1])]
+    property_chunks.append(properties)
 
-    url = get_url('deals_all')
+    url = get_url('deals_v3_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
+        for row in gen_request_v3(STATE, "deals", url, params, "results", custom_properties_chunks=property_chunks):
             row_properties = row['properties']
             modified_time = None
-            if bookmark_key in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_key]['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
-            elif 'createdate' in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
+
+            if 'updatedAt' in row:
+                # Hubspot returns timestamps in ISO 8601
+                modified_time = dateutil.parser.isoparse(row['updatedAt'])
+
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
             if not modified_time or modified_time >= start:
-                record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                record = bumble_bee.transform(lift_properties_and_versions_v3(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
     STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
