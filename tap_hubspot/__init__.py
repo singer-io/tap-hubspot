@@ -460,6 +460,10 @@ def gen_request_v3(STATE, tap_stream_id, url, params, path, custom_properties_ch
                 merged_properties = {**records_map[record["id"]]["properties"], **record["properties"]}
                 records_map[record["id"]]["properties"] = merged_properties
 
+                # Keep the DealId in "dealId" field to preserve the table
+                # primary key that is "dealId" before the switch to v3 API for deals
+                records_map[record["id"]]["dealId"] = record["id"]
+
         with metrics.record_counter(tap_stream_id) as counter:
 
             for key, value in records_map.items():
