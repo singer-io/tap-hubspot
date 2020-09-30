@@ -323,7 +323,7 @@ def request(url, params=None):
 def lift_properties_and_versions_v3(record):
 
     liftedRecord = {}
-
+    liftedRecord["dealId"] = record["dealId"]
     for key, value in record.get('properties', {}).items():
 
         computed_key = "property_{}".format(key)
