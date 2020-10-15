@@ -859,7 +859,9 @@ def do_sync(STATE, catalog):
     for stream in selected_streams:
         LOGGER.info('Syncing %s', stream.tap_stream_id)
         STATE = singer.set_currently_syncing(STATE, stream.tap_stream_id)
-        singer.write_state(STATE)
+
+        if stream.replication_method == "INCREMENTAL":
+            singer.write_state(STATE)
 
         try:
             STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
@@ -869,7 +871,8 @@ def do_sync(STATE, catalog):
             pass
 
     STATE = singer.set_currently_syncing(STATE, None)
-    singer.write_state(STATE)
+    if stream.replication_method == "INCREMENTAL":
+        singer.write_state(STATE)
     LOGGER.info("Sync completed")
     return
 
