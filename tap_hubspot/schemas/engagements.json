@@ -40,19 +40,19 @@
       "type": ["null", "object"],
       "properties": {
         "contactIds": {
-          "type": ["null", "object"],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "integer"]
           }
         },
         "companyIds": {
-          "type": ["null", "object"],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "integer"]
           }
         },
         "dealIds": {
-          "type": ["null", "object"],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "integer"]
           }
@@ -60,7 +60,7 @@
       }
     },
     "attachments": {
-      "type": ["null", "object"],
+      "type": ["null", "array"],
       "items": {
         "type": ["null", "object"],
         "properties": {
@@ -71,7 +71,7 @@
       }
     },
     "metadata": {
-      "type": ["null", "array"],
+      "type": ["null", "object"],
       "properties": {
         "body": {
           "type": ["null", "string"]
@@ -91,7 +91,7 @@
           }
         },
         "to": {
-          "type": ["null", "object"],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "object"],
             "properties": {
@@ -102,7 +102,7 @@
           }
         },
         "cc": {
-          "type": ["null", "object"],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "object"],
             "properties": {
@@ -113,7 +113,7 @@
           }
         },
         "bcc": {
-          "type": ["null", "object"],
+          "type": ["null", "array"],
           "items": {
             "type": ["null", "object"],
             "properties": {
