@@ -71,7 +71,7 @@
       }
     },
     "metadata": {
-      "type": ["null", "object"],
+      "type": ["null", "array"],
       "properties": {
         "body": {
           "type": ["null", "string"]
