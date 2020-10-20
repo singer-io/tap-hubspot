@@ -22,9 +22,6 @@
         "producerUrl": {
           "type": ["null", "string"]
         },
-        "type": {
-          "type": ["null", "string"]
-        },
         "url": {
           "type": ["null", "string"]
         }

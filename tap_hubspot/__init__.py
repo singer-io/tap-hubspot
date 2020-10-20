@@ -145,7 +145,7 @@ def get_field_type_schema(field_type):
                 }
 
     elif field_type == "enumeration":
-        return {"type": ["null", "enumeration"],
+        return {"type": ["null", "string"],
                 }
 
     else:
@@ -155,7 +155,7 @@ def get_field_type_schema(field_type):
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": ["null", "object"],
+            "type": ["null", "string"],
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
@@ -165,7 +165,7 @@ def get_field_schema(field_type, extras=False):
         }
     else:
         return {
-            "type": ["null", "object"],
+            "type": ["null", "string"],
             "properties": {
                 "value": get_field_type_schema(field_type),
             }
@@ -198,7 +198,7 @@ def load_schema(entity_name):
     if entity_name in ["contacts", "companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
-            "type": ["null", "object"],
+            "type": ["null", "string"],
             "properties": custom_schema,
         }
 
@@ -743,6 +743,7 @@ def sync_engagements(STATE, ctx):
     bookmark_key = 'lastUpdated'
     singer.write_schema("engagements", schema, ["engagement_id"], [bookmark_key], catalog.get('stream_alias'))
     start = get_start(STATE, "engagements", bookmark_key)
+    start = CONFIG['start_date']
 
     # Because this stream doesn't query by `lastUpdated`, it cycles
     # through the data set every time. The issue with this is that there
@@ -859,7 +860,9 @@ def do_sync(STATE, catalog):
     for stream in selected_streams:
         LOGGER.info('Syncing %s', stream.tap_stream_id)
         STATE = singer.set_currently_syncing(STATE, stream.tap_stream_id)
-        singer.write_state(STATE)
+
+        if stream.replication_method == "INCREMENTAL":
+            singer.write_state(STATE)
 
         try:
             STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
@@ -869,7 +872,8 @@ def do_sync(STATE, catalog):
             pass
 
     STATE = singer.set_currently_syncing(STATE, None)
-    singer.write_state(STATE)
+    if stream.replication_method == "INCREMENTAL":
+        singer.write_state(STATE)
     LOGGER.info("Sync completed")
     return
 

@@ -5,7 +5,7 @@
       "type": ["null", "string"]
     },
     "stages": {
-      "type": ["null", "array"],
+      "type": ["null", "string"],
       "items": {
         "type": "object",
         "properties": {
