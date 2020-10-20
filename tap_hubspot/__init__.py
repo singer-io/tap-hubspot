@@ -742,7 +742,14 @@ def sync_engagements(STATE, ctx):
     schema = load_schema("engagements")
     bookmark_key = 'lastUpdated'
     singer.write_schema("engagements", schema, ["engagement_id"], [bookmark_key], catalog.get('stream_alias'))
-    start = get_start(STATE, "engagements", bookmark_key)
+    # start = get_start(STATE, "engagements", bookmark_key)
+    start = CONFIG['start_date']
+    print("start date is : ")
+    print("start date is : ")
+    print("start date is : ")
+    print("start date is : ")
+    print("start date is : ")
+    print(start)
 
     # Because this stream doesn't query by `lastUpdated`, it cycles
     # through the data set every time. The issue with this is that there
@@ -750,9 +757,9 @@ def sync_engagements(STATE, ctx):
     # start of this table's sync and the end, causing some updates to not
     # be captured, in order to combat this, we must store the current
     # sync's start in the state and not move the bookmark past this value.
-    current_sync_start = get_current_sync_start(STATE, "engagements") or utils.now()
-    STATE = write_current_sync_start(STATE, "engagements", current_sync_start)
-    singer.write_state(STATE)
+    # current_sync_start = get_current_sync_start(STATE, "engagements") or utils.now()
+    # STATE = write_current_sync_start(STATE, "engagements", current_sync_start)
+    # singer.write_state(STATE)
 
     max_bk_value = start
     LOGGER.info("sync_engagements from %s", start)
