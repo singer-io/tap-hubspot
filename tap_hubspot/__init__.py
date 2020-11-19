@@ -77,6 +77,9 @@ ENDPOINTS = {
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
 
+    "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
+    "deals_v3_properties":  "/crm/v3/properties/deals",
+
     "deal_pipelines":       "/deals/v1/pipelines",
 
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
@@ -307,6 +310,68 @@ def lift_properties_and_versions(record):
             record['properties_versions'] += versions
     return record
 
+
+def post_search_endpoint(url, data, params=None):
+    params = params or {}
+    hapikey = CONFIG['hapikey']
+    if hapikey is None:
+        if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
+            acquire_access_token_from_refresh_token()
+        headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
+    else:
+        params['hapikey'] = hapikey
+        headers = {}
+
+    if 'user_agent' in CONFIG:
+        headers['User-Agent'] = CONFIG['user_agent']
+
+    headers['content-type'] = "application/json"
+
+    with metrics.http_request_timer(url) as timer:
+        resp = requests.post(
+            url=url,
+            json=data,
+            params=params,
+            headers=headers
+        )
+
+        resp.raise_for_status()
+
+    return resp
+
+def merge_responses(v1_data, v3_data):
+    for v1_record in v1_data:
+        v1_id = v1_record.get('dealId')
+        for v3_record in v3_data:
+            v3_id = v3_record.get('id')
+            if str(v1_id) == v3_id:
+                v1_record['properties'] = {**v1_record['properties'],
+                                           **v3_record['properties']}
+
+def process_v3_deals_records(v3_data):
+    """
+    This function:
+    1. filters out fields that don't contain 'hs_date_entered_*' and
+       'hs_date_exited_*'
+    2. changes a key value pair in `properties` to a key paired to an
+       object with a key 'value' and the original value
+    """
+    transformed_v3_data = []
+    for record in v3_data:
+        new_properties = {field_name : {'value': field_value}
+                          for field_name, field_value in record['properties'].items()
+                          if 'hs_date_entered' in field_name or 'hs_date_exited' in field_name}
+        transformed_v3_data.append({**record, 'properties' : new_properties})
+    return transformed_v3_data
+
+def get_v3_deals(v3_fields, v1_data):
+    v1_ids = [{'id': str(record['dealId'])} for record in data[path]]
+    v3_body = {'inputs': v1_ids,
+               'properties': v3_fields,}
+    v3_url = get_url('deals_v3_batch_read')
+    v3_resp = post_search_endpoint(v3_url, v3_body)
+    return v3_resp.json()['results']
+
 #pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
@@ -318,6 +383,14 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
+
+            if v3_fields:
+                v3_data = get_v3_deals(v3_fields, data[path])
+
+                # The shape of v3_data is different than the V1 response,
+                # so we transform v3 to look like v1
+                transformed_v3_data = process_v3_deals_records(v3_data)
+                merge_responses(data[path], transformed_v3_data)
 
             for row in data[path]:
                 counter.increment()
