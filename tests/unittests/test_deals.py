@@ -7,6 +7,7 @@ from tap_hubspot import acquire_access_token_from_refresh_token
 from tap_hubspot import CONFIG
 from tap_hubspot import gen_request
 from tap_hubspot import get_url
+from tap_hubspot import process_v3_deals_records
 
 
 class TestDeals(unittest.TestCase):
@@ -48,3 +49,21 @@ class TestDeals(unittest.TestCase):
             error_msg = ('Could not find "hs_date_entered_appointment_scheduled"'
                          'in {}').format(record)
             self.assertIsNotNone(value, msg=error_msg)
+
+    def test_process_v3_deals_records(self):
+        self.maxDiff = None
+        data = [
+            {'properties': {'field1': 'value1',
+                            'field2': 'value2',
+                            'hs_date_entered_field3': 'value3',
+                            'hs_date_exited_field4': 'value4',}},
+        ]
+
+        expected = [
+            {'properties': {'hs_date_entered_field3': {'value': 'value3'},
+                            'hs_date_exited_field4':  {'value': 'value4'},}},
+        ]
+
+        actual = process_v3_deals_records(data)
+
+        self.assertDictEqual(expected[0]['properties'], actual[0]['properties'])
