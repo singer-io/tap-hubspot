@@ -7,6 +7,7 @@ from tap_hubspot import acquire_access_token_from_refresh_token
 from tap_hubspot import CONFIG
 from tap_hubspot import gen_request
 from tap_hubspot import get_url
+from tap_hubspot import merge_responses
 from tap_hubspot import process_v3_deals_records
 
 
@@ -67,3 +68,34 @@ class TestDeals(unittest.TestCase):
         actual = process_v3_deals_records(data)
 
         self.assertDictEqual(expected[0]['properties'], actual[0]['properties'])
+
+    def test_merge_responses(self):
+        v1_resp = [
+            {'dealId': '1',
+             'properties': {'field1': 'value1',}},
+            {'dealId': '2',
+             'properties': {'field3': 'value3',}},
+        ]
+
+        v3_resp = [
+            {'id': '1',
+             'properties': {'field2': 'value2',}},
+            {'id': '2',
+             'properties': {'field4': 'value4',}},
+        ]
+
+        expected = [
+            {'dealId': '1',
+             'properties': {'field1': 'value1',
+                            'field2': 'value2',}},
+            {'dealId': '2',
+             'properties': {'field3': 'value3',
+                            'field4': 'value4',}},
+        ]
+
+        merge_responses(v1_resp, v3_resp)
+
+        for expected_record in expected:
+            for actual_record in v1_resp:
+                if actual_record['dealId'] == expected_record['dealId']:
+                    self.assertDictEqual(expected_record, actual_record)
