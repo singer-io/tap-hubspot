@@ -36,14 +36,15 @@ class TestDeals(unittest.TestCase):
         params = {'count': 250,
                   'includeAssociations': False,
                   'properties' : []}
+        v3_fields = ['hs_date_entered_appointmentscheduled']
 
         records = list(
-            gen_request(state, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"])
+            gen_request(state, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields)
         )
 
         for record in records:
             # The test account has a deal stage called "appointment scheduled"
-            value = record.get('properties',{}).get('hs_date_entered_appointment_scheduled')
+            value = record.get('properties',{}).get('hs_date_entered_appointmentscheduled')
             error_msg = ('Could not find "hs_date_entered_appointment_scheduled"'
                          'in {}').format(record)
             self.assertIsNotNone(value, msg=error_msg)
