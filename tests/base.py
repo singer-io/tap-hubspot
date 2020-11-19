@@ -5,9 +5,10 @@ from datetime import timedelta
 
 import tap_tester.menagerie   as menagerie
 import tap_tester.connections as connections
+import tap_tester.runner      as runner
 
 
-class TestHubspotBase(unittest.TestCase):
+class HubspotBaseTest(unittest.TestCase):
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
@@ -16,6 +17,10 @@ class TestHubspotBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
+
+    #######################################
+    #  Tap Configurable Metadata Methods  #
+    #######################################
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -36,7 +41,7 @@ class TestHubspotBase(unittest.TestCase):
         return "tap-hubspot"
 
     def get_properties(self):
-        return {'start_date' : '2017-05-01T00:00:00Z'}
+        return {'start_date' : '2020-01-01T00:00:00Z'} # '2017-05-01T00:00:00Z' used by OG tests
 
     def get_credentials(self):
         return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),
@@ -44,59 +49,18 @@ class TestHubspotBase(unittest.TestCase):
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
-    @staticmethod
-    def expected_check_streams():
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
-        }
 
-    # TODO Finish metadata and verify remaining mehtods peratain to tap
-    #      Check the metadata against our docs
-    def expected_metadata(self):
+    def expected_metadata(self):  # TODO go through todo's below and write up bugs accordingly
         """The expected streams and metadata about the streams"""
         return  {
-            "subscription_changes": {
-                self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},
-            },
-            "email_events": {
-                self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},
-
-            },
-            "forms": {
-                self.PRIMARY_KEYS: {"guid"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updatedAt"},
-            },
-            "workflows": {
-                self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updatedAt"},
-
-            },
-            "owners": {
-                self.PRIMARY_KEYS: {"ownerId"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updatedAt"},
-            },
             "campaigns": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+            },
+            "companies": {
+                self.PRIMARY_KEYS: {"companyId"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
@@ -104,32 +68,58 @@ class TestHubspotBase(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "contacts": {
-                self.PRIMARY_KEYS: {'vid'},
+                self.PRIMARY_KEYS: {"vid"},  # TODO listed in stitch docs as 'canonical-vid'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS = {"versionTimestamp"},
+                self.REPLICATION_KEYS: {"versionTimestamp"},  # TODO not listed in stitch docs
             },
-            "companies": {
-                self.PRIMARY_KEYS: {"companyId"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+            "contacts_by_company": {
+                self.PRIMARY_KEYS: {"company-id", "contact-id"},
+                self.REPLICATION_METHOD: self.FULL,
+            },
+            "deal_pipelines": {
+                self.PRIMARY_KEYS: {"pipelineId"},
+                self.REPLICATION_METHOD: self.FULL,
             },
             "deals": {
-                self.PRIMARY_KEYS: {"dealId"},
+                self.PRIMARY_KEYS: {"dealId"},  # TODO docs list 'dealId' and 'portalId
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"hs_lastmodifieddate"}
             },
+            "email_events": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"startTimestamp"},  # TODO docs list 'id'
+            },
             "engagements": {
-                self.PRIMARY_KEYS: {"engagement_id"},
+                self.PRIMARY_KEYS: {"engagement_id"},  # TODO docs list 'id'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
             },
-            "deal_pipelines": {
-                self.PRIMARY_KEYS: {"pipelineId"}
+            "forms": {
+                self.PRIMARY_KEYS: {"guid"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
             },
-            "contacts_by_company": {
-                self.PRIMARY_KEYS = {"company-id", "contact-id"},
+            "owners": {
+                self.PRIMARY_KEYS: {"ownerId"},  # TODO docs list 'portalId'
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+            },
+            "subscription_changes": {
+                self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"startTimestamp"},  # TODO docs list 'timestamp'
+            },
+            "workflows": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+            }
         }
 
+    #############################
+    #  Common Metadata Methods  #
+    #############################
 
     def expected_primary_keys(self):
         """
@@ -182,20 +172,137 @@ class TestHubspotBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    def ensure_connection(self, original=True):
-        def preserve_refresh_token(existing_conns, payload):
-            if not existing_conns:
-                return payload
-            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_conns[0]['id'])
-            # Even though is a credential, this API posts the entire payload using properties
-            payload['properties']['refresh_token'] = conn_with_creds['credentials']['refresh_token']
-            return payload
+    def expected_automatic_fields(self):
+        auto_fields = {}
+        for k, v in self.expected_metadata().items():
+            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set())
+        return auto_fields
 
-        conn_id = connections.ensure_connection(self, payload_hook=preserve_refresh_token, original_properties = original)
+    ##########################
+    #  Common Test Actions   #
+    ##########################
+
+    def create_connection(self, original_properties: bool = True):
+        """Create a new connection with the test name"""
+        # Create the connection
+        conn_id = connections.ensure_connection(self, original_properties)
+
+        # Run a check job using orchestrator (discovery)
+        check_job_name = runner.run_check_mode(self, conn_id)
+
+        # Assert that the check job succeeded
+        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
         return conn_id
 
+    def run_and_verify_check_mode(self, conn_id):
+        """
+        Run the tap in check mode and verify it succeeds.
+        This should be ran prior to field selection and initial sync.
 
-    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True):
+        Return the connection id and found catalogs from menagerie.
+        """
+        # run in check mode
+        check_job_name = runner.run_check_mode(self, conn_id)
+
+        # verify check exit codes
+        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
+
+        found_catalogs = menagerie.get_catalogs(conn_id)
+        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
+
+        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
+        diff = self.expected_streams().symmetric_difference(found_catalog_names)
+        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        print("discovered schemas are OK")
+
+        return found_catalogs
+
+    def run_and_verify_sync(self, conn_id):
+        """
+        Run a sync job and make sure it exited properly.
+        Return a dictionary with keys of streams synced
+        and values of records synced for each stream
+        """
+        # Run a sync job using orchestrator
+        sync_job_name = runner.run_sync_mode(self, conn_id)
+
+        # Verify tap and target exit codes
+        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
+
+        # Verify actual rows were synced
+        sync_record_count = runner.examine_target_output_file(
+            self, conn_id, self.expected_streams(), self.expected_primary_keys())
+        self.assertGreater(
+            sum(sync_record_count.values()), 0,
+            msg="failed to replicate any data: {}".format(sync_record_count)
+        )
+        print("total replicated row count: {}".format(sum(sync_record_count.values())))
+
+        return sync_record_count
+
+    def perform_and_verify_table_and_field_selection(self,
+                                                     conn_id,
+                                                     test_catalogs,
+                                                     select_all_fields=True):
+        """
+        Perform table and field selection based off of the streams to select
+        set and field selection parameters.
+
+        Verify this results in the expected streams selected and all or no
+        fields selected for those streams.
+        """
+
+        # Select all available fields or select no fields from all testable streams
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=test_catalogs, select_all_fields=select_all_fields
+        )
+
+        catalogs = menagerie.get_catalogs(conn_id)
+
+        # Ensure our selection affects the catalog
+        expected_selected = [tc.get('tap_stream_id') for tc in test_catalogs]
+        for cat in catalogs:
+            catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
+
+            # Verify all testable streams are selected
+            selected = catalog_entry.get('annotated-schema').get('selected')
+            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            if cat['stream_name'] not in expected_selected:
+                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                continue # Skip remaining assertions if we aren't selecting this stream
+            self.assertTrue(selected, msg="Stream not selected.")
+
+            if select_all_fields:
+                # Verify all fields within each selected stream are selected
+                for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
+                    field_selected = field_props.get('selected')
+                    print("\tValidating selection on {}.{}: {}".format(
+                        cat['stream_name'], field, field_selected))
+                    self.assertTrue(field_selected, msg="Field not selected.")
+            else:
+                # Verify only automatic fields are selected
+                expected_automatic_fields = self.expected_automatic_fields().get(cat['tap_stream_id'])
+                selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
+                self.assertEqual(expected_automatic_fields, selected_fields)
+
+    @staticmethod
+    def get_selected_fields_from_metadata(metadata):
+        selected_fields = set()
+        for field in metadata:
+            is_field_metadata = len(field['breadcrumb']) > 1
+            inclusion_automatic_or_selected = (
+                field['metadata']['selected'] is True or \
+                field['metadata']['inclusion'] == 'automatic'
+            )
+            if is_field_metadata and inclusion_automatic_or_selected:
+                selected_fields.add(field['breadcrumb'][1])
+        return selected_fields
+
+    @staticmethod
+    def select_all_streams_and_fields(conn_id, catalogs, select_all_fields: bool = True):
         """Select all streams and all fields within streams"""
         for catalog in catalogs:
             schema = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
@@ -204,47 +311,12 @@ class TestHubspotBase(unittest.TestCase):
             if not select_all_fields:
                 # get a list of all properties so that none are selected
                 non_selected_properties = schema.get('annotated-schema', {}).get(
-                    'properties', {})
-                # remove properties that are automatic
-                for prop in self.expected_automatic_fields().get(catalog['stream_name'], []):
-                    if prop in non_selected_properties:
-                        del non_selected_properties[prop]
-                non_selected_properties = non_selected_properties.keys()
-            additional_md = []
+                    'properties', {}).keys()
 
             connections.select_catalog_and_fields_via_metadata(
-                conn_id, catalog, schema, additional_md=additional_md,
-                non_selected_fields=non_selected_properties
-            )
+                conn_id, catalog, schema, [], non_selected_properties)
 
-    ##########################################################################
-    ### Tap Specific Methods
-    ##########################################################################
-    def minimum_record_count_by_stream(self):
-        """
-        The US sandbox comes with the following preset data
 
-          Construction Trade
-            141 transactions
-            31 customers
-            26 vendors
-            4 employees
-            20 items
-            90 accounts
-
-        see their docs for more info:
-        https://developer.intuit.com/app/developer/qbo/docs/develop/sandboxes#launch-a-sandbox
-
-        For the remaining streams at least 1 record existed already, or 1 has been added.
-        """
-        # All streams should have at least a record (thi)
-        record_counts = {stream: 1 for stream in self.expected_check_streams()}
-
-        # By default quickbooks sandbox apps come with the following records
-        record_counts["accounts"]= 90
-        record_counts["customers"] = 29
-        record_counts["employees"] = 2
-        record_counts["items"] = 18
-        record_counts["vendors"] = 26
-
-        return record_counts
+    ################################
+    #  Tap Specific Test Actions   #
+    ################################

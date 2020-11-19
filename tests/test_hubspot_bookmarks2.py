@@ -6,6 +6,7 @@ import os
 import unittest
 
 class HubSpotBookmarks2(unittest.TestCase):
+    # TODO Go through test and update to use base.py
     def setUp(self):
         missing_envs = [x for x in [os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                                     os.getenv('TAP_HUBSPOT_CLIENT_ID'),
