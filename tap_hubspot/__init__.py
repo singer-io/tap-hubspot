@@ -76,7 +76,7 @@ ENDPOINTS = {
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
-    "deals_v3_search":      "/crm/v3/objects/deals/search",
+    "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
     "deals_v3_properties":  "/crm/v3/properties/deals",
     "deal_pipelines":       "/deals/v1/pipelines",
 
@@ -348,6 +348,39 @@ def post_search_endpoint(url, data, params=None):
 
     return resp
 
+def merge_responses(v1_data, v3_data):
+    for v1_record in v1_data:
+        v1_id = v1_record.get('dealId')
+        for v3_record in v3_data:
+            v3_id = v3_record.get('id')
+            if str(v1_id) == v3_id:
+                v1_record['properties'] = {**v1_record['properties'],
+                                           **v3_record['properties']}
+
+def process_v3_deals_records(v3_data):
+    """
+    This function:
+    1. filters out fields that don't contain 'hs_date_entered_*' and
+       'hs_date_exited_*'
+    2. changes a key value pair in `properties` to a key paired to an
+       object with a key 'value' and the original value
+    """
+    transformed_v3_data = []
+    for record in v3_data:
+        new_properties = {field_name : {'value': field_value}
+                          for field_name, field_value in record['properties'].items()
+                          if 'hs_date_entered' in field_name or 'hs_date_exited' in field_name}
+        transformed_v3_data.append({**record, 'properties' : new_properties})
+    return transformed_v3_data
+
+def get_v3_deals(v3_fields, v1_data):
+    v1_ids = [{'id': str(record['dealId'])} for record in data[path]]
+    v3_body = {'inputs': v1_ids,
+               'properties': v3_fields,}
+    v3_url = get_url('deals_v3_batch_read')
+    v3_resp = post_search_endpoint(v3_url, v3_body)
+    return v3_resp.json()['results']
+
 #pylint: disable=line-too-long
 def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, v3_fields=None):
     if len(offset_keys) != len(offset_targets):
@@ -356,28 +389,17 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     if singer.get_offset(STATE, tap_stream_id):
         params.update(singer.get_offset(STATE, tap_stream_id))
 
-    if v3_fields:
-        v3_url = get_url('deals_v3_search')
-        v3_body = {"properties": v3_fields, "limit": 100}
-
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
 
             if v3_fields:
-                v3_data = post_search_endpoint(v3_url, v3_body)
-                additional_fields = {}
-                for item in v3_data.json()['results']:
-                    # We nest `value` under the key 'value' in order to match the
-                    # schema and the shape of other fields in 'properties'
-                    additional_fields[int(item['id'])] = {key:{'value': value} for key,value in item['properties'].items()
-                                                          if ('hs_date_entered' in key or 'hs_date_exited' in key)}
-                for item in data[path]:
-                    item['properties'] = {**item.get('properties',{}), **additional_fields.get(item['dealId'], {})}
+                v3_data = get_v3_deals(v3_fields, data[path])
 
-                if 'paging' in v3_data.json().keys():
-                    v3_body['after'] = v3_data.json().get('paging', {}).get('next', {}).get('after')
-
+                # The shape of v3_data is different than the V1 response,
+                # so we transform v3 to look like v1
+                transformed_v3_data = process_v3_deals_records(v3_data)
+                merge_responses(data[path], transformed_v3_data)
 
             for row in data[path]:
                 counter.increment()
