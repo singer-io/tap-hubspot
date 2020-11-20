@@ -50,7 +50,7 @@ class HubspotBaseTest(unittest.TestCase):
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
 
-    def expected_metadata(self):  # TODO go through todo's below and write up bugs accordingly
+    def expected_metadata(self):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""
         return  {
             "campaigns": {
@@ -68,9 +68,9 @@ class HubspotBaseTest(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "contacts": {
-                self.PRIMARY_KEYS: {"vid"},  # TODO listed in stitch docs as 'canonical-vid'
+                self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"versionTimestamp"},  # TODO not listed in stitch docs
+                self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
@@ -81,17 +81,17 @@ class HubspotBaseTest(unittest.TestCase):
                 self.REPLICATION_METHOD: self.FULL,
             },
             "deals": {
-                self.PRIMARY_KEYS: {"dealId"},  # TODO docs list 'dealId' and 'portalId
+                self.PRIMARY_KEYS: {"dealId"},  # DOCS_BUG docs list 'dealId' and 'portalId
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"}
+                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
             },
             "email_events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # TODO docs list 'id'
+                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
             },
             "engagements": {
-                self.PRIMARY_KEYS: {"engagement_id"},  # TODO docs list 'id'
+                self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
             },
@@ -101,14 +101,14 @@ class HubspotBaseTest(unittest.TestCase):
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "owners": {
-                self.PRIMARY_KEYS: {"ownerId"},  # TODO docs list 'portalId'
+                self.PRIMARY_KEYS: {"ownerId"},  # DOCS_BUG docs list 'portalId'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "subscription_changes": {
                 self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # TODO docs list 'timestamp'
+                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'timestamp'
             },
             "workflows": {
                 self.PRIMARY_KEYS: {"id"},
