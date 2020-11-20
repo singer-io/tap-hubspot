@@ -1006,7 +1006,7 @@ def load_discovered_schema(stream):
         mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
 
     for field_name, props in schema['properties'].items():
-        if field_name in stream.key_properties or field_name == stream.replication_key:
+        if field_name in stream.key_properties or (stream.replication_key and stream.replication_key in field_name):
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
         else:
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'available')

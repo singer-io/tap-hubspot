@@ -60,7 +60,7 @@ class HubspotBaseTest(unittest.TestCase):
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
@@ -70,7 +70,8 @@ class HubspotBaseTest(unittest.TestCase):
             "contacts": {
                 self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
+                self.REPLICATION_KEYS: set(), # it doesn't appear in the catalog
+                # self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
@@ -83,17 +84,18 @@ class HubspotBaseTest(unittest.TestCase):
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},  # DOCS_BUG docs list 'dealId' and 'portalId
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
             },
             "email_events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
+                self.REPLICATION_KEYS: set(),
+                # self.REPLICATION_KEYS: {"property_startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
             },
             "engagements": {
                 self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"lastUpdated"},
+                self.REPLICATION_KEYS: {"engagement", 'lastUpdated'},
             },
             "forms": {
                 self.PRIMARY_KEYS: {"guid"},
@@ -108,7 +110,8 @@ class HubspotBaseTest(unittest.TestCase):
             "subscription_changes": {
                 self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'timestamp'
+                self.REPLICATION_KEYS: set(),
+                # self.REPLICATION_KEYS: {"property_startTimestamp"},  # DOCS_BUG docs list 'timestamp'
             },
             "workflows": {
                 self.PRIMARY_KEYS: {"id"},
@@ -193,6 +196,10 @@ class HubspotBaseTest(unittest.TestCase):
         # Assert that the check job succeeded
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
+        return conn_id
+
+    def ensure_connection(self, original=True):
+        conn_id = connections.ensure_connection(self, original_properties = original)
         return conn_id
 
     def run_and_verify_check_mode(self, conn_id):
