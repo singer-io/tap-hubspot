@@ -60,7 +60,8 @@ class HubspotBaseTest(unittest.TestCase):
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: set(),
+                # self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
@@ -84,7 +85,12 @@ class HubspotBaseTest(unittest.TestCase):
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},  # DOCS_BUG docs list 'dealId' and 'portalId
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: set(),
+                # Technically this is true, but `hs_lastmodifieddate` is a
+                # field on the `properties` object, and we don't select
+                # that, so it doesn't get lifted and the resulting record
+                # is missing this key
+                # self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
             },
             "email_events": {
                 self.PRIMARY_KEYS: {"id"},
@@ -95,7 +101,7 @@ class HubspotBaseTest(unittest.TestCase):
             "engagements": {
                 self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"engagement", 'lastUpdated'},
+                self.REPLICATION_KEYS: {"engagement", "lastUpdated"},
             },
             "forms": {
                 self.PRIMARY_KEYS: {"guid"},

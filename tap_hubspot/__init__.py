@@ -1013,7 +1013,7 @@ def load_discovered_schema(stream):
         mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
 
     for field_name, props in schema['properties'].items():
-        if field_name in stream.key_properties or (stream.replication_key and stream.replication_key in field_name):
+        if field_name in stream.key_properties or field_name == stream.replication_key:
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
         else:
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'available')
@@ -1021,6 +1021,7 @@ def load_discovered_schema(stream):
     # The engagements stream has nested data that we synthesize; The engagement field needs to be automatic
     if stream.tap_stream_id == "engagements":
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
+        mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
 
     return schema, metadata.to_list(mdata)
 
