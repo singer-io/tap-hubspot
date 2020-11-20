@@ -76,8 +76,10 @@ ENDPOINTS = {
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
+
     "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
     "deals_v3_properties":  "/crm/v3/properties/deals",
+
     "deal_pipelines":       "/deals/v1/pipelines",
 
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
@@ -159,23 +161,17 @@ def get_field_schema(field_type, extras=False):
                 "value": get_field_type_schema(field_type),
             }
         }
-def parse_custom_schema(entity_name, data, force_extras=None):
-    if force_extras is not None:
-        extras = force_extras
-    else:
-        extras = entity_name != 'contacts'
+
+def parse_custom_schema(entity_name, data):
     return {
-        field['name']: get_field_schema(field['type'], extras)
+        field['name']: get_field_schema(
+            field['type'], entity_name != "contacts")
         for field in data
     }
 
 
 def get_custom_schema(entity_name):
     return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
-
-def get_v3_schema(entity_name):
-    url = get_url("deals_v3_properties")
-    return parse_custom_schema(entity_name, request(url).json()['results'], force_extras=False)
 
 
 def get_abs_path(path):
@@ -197,12 +193,6 @@ def load_schema(entity_name):
             "type": "object",
             "properties": custom_schema,
         }
-
-        if entity_name in ["deals"]:
-            v3_schema = get_v3_schema(entity_name)
-            for key, value in v3_schema.items():
-                if 'hs_date_entered' in key or 'hs_date_exited' in key:
-                    custom_schema[key] = value
 
         # Move properties to top level
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
@@ -382,7 +372,7 @@ def get_v3_deals(v3_fields, v1_data):
     return v3_resp.json()['results']
 
 #pylint: disable=line-too-long
-def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, v3_fields=None):
+def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -596,9 +586,7 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
-    v3_fields = None
-    has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
-    if has_selected_properties or has_selected_custom_field(mdata):
+    if mdata.get(('properties', 'properties'), {}).get('selected') or has_selected_custom_field(mdata):
         # On 2/12/20, hubspot added a lot of additional properties for
         # deals, and appending all of them to requests ended up leading to
         # 414 (url-too-long) errors. Hubspot recommended we use the
@@ -607,14 +595,9 @@ def sync_deals(STATE, ctx):
         params['includeAllProperties'] = True
         params['allPropertiesFetchMode'] = 'latest_version'
 
-        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
-        v3_fields = [x[1].replace('property_', '')
-                     for x,y in mdata.items() if x and (y.get('selected') == True or has_selected_properties)
-                     and ('hs_date_entered' in x[1] or 'hs_date_exited' in x[1])]
-
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
+        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"]):
             row_properties = row['properties']
             modified_time = None
             if bookmark_key in row_properties:
