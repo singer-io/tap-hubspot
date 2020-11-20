@@ -21,7 +21,7 @@ class TestDealsToSync(unittest.TestCase):
 
         sync_deals({}, mocked_catalog_from_id)
 
-        expected_param = {'count': 250, 'includeAssociations': False, 'properties': []}
+        expected_param = {'count': 250, 'includeAssociations': False, 'properties': [], 'limit': 100}
 
         mocked_gen_request.assert_called_once_with(ANY, ANY, ANY, expected_param, ANY, ANY, ANY, ANY)
 
@@ -42,6 +42,6 @@ class TestDealsToSync(unittest.TestCase):
 
         sync_deals({}, mocked_catalog_from_id)
 
-        expected_param = {'count': 250, 'includeAssociations': True, 'properties': []}
+        expected_param = {'count': 250, 'includeAssociations': True, 'properties': [], 'limit': 100}
 
         mocked_gen_request.assert_called_once_with(ANY, ANY, ANY, expected_param, ANY, ANY, ANY, ANY)
