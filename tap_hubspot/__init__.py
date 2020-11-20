@@ -586,7 +586,9 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
-    if mdata.get(('properties', 'properties'), {}).get('selected') or has_selected_custom_field(mdata):
+    v3_fields = None
+    has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
+    if has_selected_properties or has_selected_custom_field(mdata):
         # On 2/12/20, hubspot added a lot of additional properties for
         # deals, and appending all of them to requests ended up leading to
         # 414 (url-too-long) errors. Hubspot recommended we use the
@@ -595,9 +597,14 @@ def sync_deals(STATE, ctx):
         params['includeAllProperties'] = True
         params['allPropertiesFetchMode'] = 'latest_version'
 
+        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
+        v3_fields = [x[1].replace('property_', '')
+                     for x,y in mdata.items() if x and (y.get('selected') == True or has_selected_properties)
+                     and ('hs_date_entered' in x[1] or 'hs_date_exited' in x[1])]
+
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"]):
+        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
             if bookmark_key in row_properties:
