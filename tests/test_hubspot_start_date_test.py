@@ -104,5 +104,24 @@ class TestHubspotStartDate(HubspotBaseTest):
                 start_date_1 = self.get_properties()['start_date']
                 start_date_2 = self.get_properties(original=False)['start_date']
 
-                # Verify by stream more records were replicated in the first sync, with an older start_date than the second
+                # Verify everthing in sync 2 is in sync 1
+                if first_sync_messages and second_sync_messages:
+                    first_sync_primary_keys = []
+                    sorted_pks = sorted(list(self.expected_metadata()[stream][self.PRIMARY_KEYS]))
+                    for message in first_sync_messages:
+                        record = message['data']
+                        primary_key = tuple([record[k] for k in sorted_pks])
+                        first_sync_primary_keys.append(primary_key)
+
+
+                    second_sync_primary_keys = []
+                    for message in second_sync_messages:
+                        record = message['data']
+                        primary_key = tuple([record[k] for k in sorted_pks])
+                        second_sync_primary_keys.append(primary_key)
+
+                    for pk in sorted(second_sync_primary_keys):
+                        self.assertIn(pk, first_sync_primary_keys)
+
+                # Verify the second sync has less data
                 self.assertGreaterEqual(first_sync_count, second_sync_count)
