@@ -27,7 +27,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
     def expected_streams(self):
         """All streams are under test"""
-        return self.expected_check_streams()
+        return self.expected_check_streams() - {'subscription_changes', 'email_events'}
+
 
     def get_properties(self, original=True):
         if original:

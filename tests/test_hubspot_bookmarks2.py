@@ -66,8 +66,8 @@ class HubSpotBookmarks2(unittest.TestCase):
 
     def expected_sync_streams(self):
         return {
-            "subscription_changes",
-            "email_events",
+            # "subscription_changes",
+            # "email_events",
             "forms",
             "workflows",
             "owners",

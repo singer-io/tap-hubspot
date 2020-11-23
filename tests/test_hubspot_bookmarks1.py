@@ -71,8 +71,8 @@ class HubSpotBookmarks1(HubspotBaseTest):
 
     def expected_sync_streams(self):
         return {
-            "subscription_changes",
-            "email_events",
+            #"subscription_changes",
+            #"email_events",
             "forms",
             "workflows",
             "owners",
@@ -127,13 +127,13 @@ class HubSpotBookmarks1(HubspotBaseTest):
     def expected_bookmarks(self):
         return {'deals' :         ['hs_lastmodifieddate'],
                 'contact_lists' : ['updatedAt'],
-                'email_events' :  ['startTimestamp'],
+                # 'email_events' :  ['startTimestamp'],
                 # 'contacts':       ['versionTimestamp'],
                 'workflows':      ['updatedAt'],
                 'campaigns':      [],
                 'contacts_by_company' : [],
                 'owners' :        ['updatedAt'],
-                'subscription_changes':  ['startTimestamp'],
+                # 'subscription_changes':  ['startTimestamp'],
                 'engagements' :          ['lastUpdated'],
                 'companies'  :           ['hs_lastmodifieddate'],
                 'forms'      :           ['updatedAt'] }
@@ -169,7 +169,8 @@ class HubSpotBookmarks1(HubspotBaseTest):
 
         # Select all Catalogs
         for catalog in found_catalogs:
-            connections.select_catalog_and_fields_via_metadata(conn_id, catalog, menagerie.get_annotated_schema(conn_id, catalog['stream_id']))
+            if catalog['tap_stream_id'] in self.expected_sync_streams():
+                connections.select_catalog_and_fields_via_metadata(conn_id, catalog, menagerie.get_annotated_schema(conn_id, catalog['stream_id']))
 
         #clear state
         menagerie.set_state(conn_id, {})
@@ -205,7 +206,9 @@ class HubSpotBookmarks1(HubspotBaseTest):
         for k,v in sorted(list(self.expected_bookmarks().items())):
             for w in v:
                 bk_value = bookmarks.get(k,{}).get(w)
-                self.assertEqual(utils.strptime_with_tz(bk_value), utils.strptime_with_tz(max_bookmarks_from_records[k]), "Bookmark {} ({}) for stream {} should have been updated to {}".format(bk_value, w, k, max_bookmarks_from_records[k]))
+                self.assertEqual(utils.strptime_with_tz(bk_value),
+                                 utils.strptime_with_tz(max_bookmarks_from_records[k]),
+                                 "Bookmark {} ({}) for stream {} should have been updated to {}".format(bk_value, w, k, max_bookmarks_from_records[k]))
                 print("bookmark {}({}) updated to {} from max record value {}".format(k, w, bk_value, max_bookmarks_from_records[k]))
 
         for k,v in self.expected_offsets().items():

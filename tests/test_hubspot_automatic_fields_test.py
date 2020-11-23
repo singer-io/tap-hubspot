@@ -48,7 +48,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         has a workaround to skip the invalid assertion. See if block in
         test_run for details
         """
-        return self.expected_check_streams()
+        return self.expected_check_streams() - {'subscription_changes', 'email_events'}
 
 
     def test_run(self):
