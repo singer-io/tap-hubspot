@@ -162,10 +162,13 @@ def get_field_schema(field_type, extras=False):
             }
         }
 
-def parse_custom_schema(entity_name, data):
+def parse_custom_schema(entity_name, data, force_extras=None):
+    if force_extras is not None:
+        extras = force_extras
+    else:
+        extras = entity_name != 'contacts'
     return {
-        field['name']: get_field_schema(
-            field['type'], entity_name != "contacts")
+        field['name']: get_field_schema(field['type'], extras)
         for field in data
     }
 
