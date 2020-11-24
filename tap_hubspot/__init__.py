@@ -203,7 +203,7 @@ def load_schema(entity_name):
         if entity_name in ["deals"]:
             v3_schema = get_v3_schema(entity_name)
             for key, value in v3_schema.items():
-                if 'hs_date_entered' in key or 'hs_date_exited' in key:
+                if 'hs_date_entered' in key or 'hs_date_exited' in key or 'hs_time_in' in key:
                     custom_schema[key] = value
 
         # Move properties to top level
@@ -371,12 +371,13 @@ def process_v3_deals_records(v3_data):
     for record in v3_data:
         new_properties = {field_name : {'value': field_value}
                           for field_name, field_value in record['properties'].items()
-                          if 'hs_date_entered' in field_name or 'hs_date_exited' in field_name}
+                          if 'hs_date_entered' in field_name or 'hs_date_exited' in field_name or 'hs_time_in' in field_name}
         transformed_v3_data.append({**record, 'properties' : new_properties})
     return transformed_v3_data
 
 def get_v3_deals(v3_fields, v1_data):
     v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
+
     v3_body = {'inputs': v1_ids,
                'properties': v3_fields,}
     v3_url = get_url('deals_v3_batch_read')
@@ -611,7 +612,7 @@ def sync_deals(STATE, ctx):
         # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
         v3_fields = [x[1].replace('property_', '')
                      for x,y in mdata.items() if x and (y.get('selected') == True or has_selected_properties)
-                     and ('hs_date_entered' in x[1] or 'hs_date_exited' in x[1])]
+                     and ('hs_date_entered' in x[1] or 'hs_date_exited' in x[1] or 'hs_time_in' in x[1])]
 
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
