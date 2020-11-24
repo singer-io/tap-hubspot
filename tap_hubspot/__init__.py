@@ -571,8 +571,7 @@ def sync_deals(STATE, ctx):
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
-    params = {'count': 250,
-              'limit': 100,
+    params = {'limit': 100,
               'includeAssociations': False,
               'properties' : []}
 
