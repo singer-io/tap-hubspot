@@ -173,6 +173,9 @@ def parse_custom_schema(entity_name, data):
 def get_custom_schema(entity_name):
     return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
 
+def get_v3_schema(entity_name):
+    url = get_url("deals_v3_properties")
+    return parse_custom_schema(entity_name, request(url).json()['results'], force_extras=False)
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
@@ -193,6 +196,12 @@ def load_schema(entity_name):
             "type": "object",
             "properties": custom_schema,
         }
+
+        if entity_name in ["deals"]:
+            v3_schema = get_v3_schema(entity_name)
+            for key, value in v3_schema.items():
+                if 'hs_date_entered' in key or 'hs_date_exited' in key:
+                    custom_schema[key] = value
 
         # Move properties to top level
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
