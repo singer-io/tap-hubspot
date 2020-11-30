@@ -112,7 +112,7 @@ class TestHubspotPagination(HubspotBaseTest):
 
                 # Verify the sync meets or exceeds the default record count
                 stream_page_size = self.expected_page_size()[stream]
-                self.assertLessEqual(stream_page_size, record_count)
+                self.assertLess(stream_page_size, record_count)
 
                 # Verify we did not duplicate any records across pages
                 records_pks_set = {message.get('data').get(primary_key) for message in sync_messages}
