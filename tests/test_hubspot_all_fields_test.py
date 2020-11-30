@@ -11,6 +11,28 @@ import tap_tester.runner      as runner
 from base import HubspotBaseTest
 
 
+KNOWN_MISSING_FIELDS = {
+    'deals': {
+        # This field requires attaching conferencing software to
+        # Hubspot and booking a meeting as part of a deal
+        'property_engagements_last_meeting_booked',
+        # These 3 fields are derived from UTM codes attached to the above
+        # meetings
+        'property_engagements_last_meeting_booked_campaign',
+        'property_engagements_last_meeting_booked_medium',
+        'property_engagements_last_meeting_booked_source',
+        # There's a way to associate a deal with a marketing campaign
+        'property_hs_campaign',
+        'property_hs_deal_amount_calculation_preference',
+        # These are calculated properties
+        'property_hs_likelihood_to_close',
+        'property_hs_merged_object_ids',
+        'property_hs_predicted_amount',
+        'property_hs_predicted_amount_in_home_currency',
+        'property_hs_sales_email_last_replied'
+    },
+}
+
 class TestHubspotAllFields(HubspotBaseTest):
     """Test that with all fields selected for a stream we replicate data as expected"""
 
@@ -19,7 +41,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def testable_streams(self):
         return {
-            'deals'
+            'deals',
         }
 
     def test_run(self):
@@ -69,4 +91,8 @@ class TestHubspotAllFields(HubspotBaseTest):
                 print('Number of expected keys ', len(expected_fields))
                 actual_fields = set(runner.examine_target_output_for_fields()[stream])
                 print('Number of actual keys ', len(actual_fields))
-                self.assertSetEqual(expected_fields, actual_fields)
+
+                unexpected_fields = actual_fields & KNOWN_MISSING_FIELDS[stream]
+                if unexpected_fields:
+                    print('WARNING: Found new fields: {}'.format(unexpected_fields))
+                self.assertSetEqual(expected_fields, actual_fields | KNOWN_MISSING_FIELDS[stream])
