@@ -5,7 +5,6 @@ from tap_tester import menagerie
 
 from base import HubspotBaseTest
 
-import singer
 
 class DiscoveryTest(HubspotBaseTest):
     """Test tap discovery mode and metadata/annotated-schema conforms to standards."""
@@ -69,78 +68,98 @@ class DiscoveryTest(HubspotBaseTest):
                 assert catalog  # based on previous tests this should always be found
 
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
-                metadata = singer.metadata.to_map(schema_and_metadata["metadata"])
+                metadata = schema_and_metadata["metadata"]
                 schema = schema_and_metadata["annotated-schema"]
 
                 # verify there is only 1 top level breadcrumb
-                # stream_properties = [item for item in metadata if item.get("breadcrumb") == []]
-                stream_properties = [item for item in metadata if item == ()]
+                stream_properties = [item for item in metadata if item.get("breadcrumb") == []]
                 self.assertTrue(len(stream_properties) == 1,
                                 msg="There is NOT only one top level breadcrumb for {}".format(stream) + \
                                 "\nstream_properties | {}".format(stream_properties))
 
+                # verify replication key(s)
+                self.assertEqual(
+                    set(stream_properties[0].get(
+                        "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, [])),
+                    self.expected_replication_keys()[stream],
+                    msg="expected replication key {} but actual is {}".format(
+                        self.expected_replication_keys()[stream],
+                        set(stream_properties[0].get(
+                            "metadata", {self.REPLICATION_KEYS: None}).get(
+                                self.REPLICATION_KEYS, []))))
 
-                stream_replication_method = metadata[()].get(self.REPLICATION_METHOD)
-                if stream_replication_method == self.INCREMENTAL:
-                    # verify replication key(s) for incremental streams
-                    expected_value = self.expected_replication_keys()[stream]
-                    actual_value = set(metadata[()].get(self.REPLICATION_KEYS, []))
+                # verify primary key(s)
+                self.assertEqual(
+                    set(stream_properties[0].get(
+                        "metadata", {self.PRIMARY_KEYS: []}).get(self.PRIMARY_KEYS, [])),
+                    self.expected_primary_keys()[stream],
+                    msg="expected primary key {} but actual is {}".format(
+                        self.expected_primary_keys()[stream],
+                        set(stream_properties[0].get(
+                            "metadata", {self.PRIMARY_KEYS: None}).get(self.PRIMARY_KEYS, []))))
 
+                # BUG_1 (https://stitchdata.atlassian.net/browse/SRCE-4490)
+                # # verify the actual replication matches our expected replication method
+                # self.assertEqual(
+                #     self.expected_replication_method().get(stream, None),
+                #     actual_replication_method,
+                #     msg="The actual replication method {} doesn't match the expected {}".format(
+                #         actual_replication_method,
+                #         self.expected_replication_method().get(stream, None)))
+
+                # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
+                actual_replication_method = stream_properties[0].get(
+                    "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
+                if stream_properties[0].get(
+                        "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
                     # BUG_1 (https://stitchdata.atlassian.net/browse/SRCE-4490)
-                    # self.assertEqual(expected_value,
-                    #                  actual_value,
-                    #                  msg="expected replication key {} but actual is {}".format(expected_value,
-                    #                                                                            actual_value))
-
+                    pass  # TODO Remove me when bug is addressed
                     # self.assertTrue(actual_replication_method == self.INCREMENTAL,
                     #                 msg="Expected INCREMENTAL replication "
                     #                     "since there is a replication key")
-                elif stream_replication_method == self.FULL:
-                    pass
                 else:
-                    raise AssertionError('Expected replication method to be incremental or full, got {}'.format(stream_replication_method))
-
-                # verify the actual replication matches our expected replication method
-                self.assertEqual(
-                    self.expected_replication_method().get(stream, None),
-                    stream_replication_method,
-                    msg="The actual replication method {} doesn't match the expected {}".format(
-                        stream_replication_method,
-                        self.expected_replication_method().get(stream, None)))
-
+                    self.assertTrue(actual_replication_method == self.FULL,
+                                    msg="Expected FULL replication "
+                                        "since there is no replication key")
 
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
 
-                # verify primary key(s)
-                actual_primary_keys = set(metadata[()].get(self.PRIMARY_KEYS))
-                self.assertEqual(expected_primary_keys,
-                                 actual_primary_keys,
-                                 msg="expected primary key {} but actual is {}".format(expected_primary_keys,
-                                                                                       actual_primary_keys))
+                # verify that primary, replication and foreign keys
+                # are given the inclusion of automatic in annotated schema.
+                # BUG_2 (https://stitchdata.atlassian.net/browse/SRCE-4495)
+                actual_automatic_fields = {key for key, value in schema["properties"].items()
+                                           if value.get("inclusion") == "automatic"}
+                # self.assertEqual(expected_automatic_fields, actual_automatic_fields)
+                         
+
+                # verify that all other fields have inclusion of available
+                # This assumes there are no unsupported fields for SaaS sources
+                self.assertTrue(
+                    all({value.get("inclusion") == "available" for key, value
+                         in schema["properties"].items()
+                         if key not in actual_automatic_fields}),
+                    msg="Not all non key properties are set to available in annotated schema")
 
                 # verify that primary, replication and foreign keys
                 # are given the inclusion of automatic in metadata.
                 # BUG_2 (https://stitchdata.atlassian.net/browse/SRCE-4495)
-                actual_automatic_fields = {breadcrumb[1]
-                                           for breadcrumb, mdata in metadata.items()
-                                           if mdata.get('inclusion') == "automatic"}
-                self.assertEqual(expected_automatic_fields,
-                                 actual_automatic_fields,
-                                 msg="expected {} automatic fields but got {}".format(
-                                     expected_automatic_fields,
-                                     actual_automatic_fields))
+                actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
+                                           for item in metadata
+                                           if item.get("metadata").get("inclusion") == "automatic"}
+                # self.assertEqual(expected_automatic_fields,
+                #                  actual_automatic_fields,
+                #                  msg="expected {} automatic fields but got {}".format(
+                #                      expected_automatic_fields,
+                #                      actual_automatic_fields))
 
-                # verify that all other fields have of available inclusion
+                # verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources
-                for breadcrumb, mdata in metadata.items():
-                    if breadcrumb == ():
-                        continue
-                    field_name = breadcrumb[1]
-                    if mdata.get('inclusion') == 'automatic':
-                        self.assertTrue(field_name in expected_automatic_fields)
-                    elif mdata.get('inclusion') == 'available':
-                        self.assertFalse(field_name in expected_automatic_fields)
-                    else:
-                        raise AssertionError('{} is not inclusion automatic or available'.format(field_name))
+                self.assertTrue(
+                    all({item.get("metadata").get("inclusion") == "available"
+                         for item in metadata
+                         if item.get("breadcrumb", []) != []
+                         and item.get("breadcrumb", ["properties", None])[1]
+                         not in actual_automatic_fields}),
+                    msg="Not all non key properties are set to available in metadata")

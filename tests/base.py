@@ -59,20 +59,18 @@ class HubspotBaseTest(unittest.TestCase):
             },
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
-                self.REPLICATION_METHOD: self.FULL,
-                self.REPLICATION_KEYS: set(),
-                # self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
-                self.REPLICATION_METHOD: self.FULL,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "contacts": {
                 self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
-                self.REPLICATION_METHOD: self.FULL,
-                self.REPLICATION_KEYS: set(), # it doesn't appear in the catalog
-                # self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
@@ -84,46 +82,37 @@ class HubspotBaseTest(unittest.TestCase):
             },
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},  # DOCS_BUG docs list 'dealId' and 'portalId
-                self.REPLICATION_METHOD: self.FULL,
-                self.REPLICATION_KEYS: set(),
-                # Technically this is true, but `hs_lastmodifieddate` is a
-                # field on the `properties` object, and we don't select
-                # that, so it doesn't get lifted and the resulting record
-                # is missing this key
-                # self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
             },
             "email_events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                # self.REPLICATION_KEYS: {'startTimestamp'},
-                self.REPLICATION_KEYS: set(),
-                # self.REPLICATION_KEYS: {"property_startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
+                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
             },
             "engagements": {
                 self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
-                self.REPLICATION_METHOD: self.FULL,
-                self.REPLICATION_KEYS: {"engagement", "lastUpdated"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"lastUpdated"},
             },
             "forms": {
                 self.PRIMARY_KEYS: {"guid"},
-                self.REPLICATION_METHOD: self.FULL,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "owners": {
                 self.PRIMARY_KEYS: {"ownerId"},  # DOCS_BUG docs list 'portalId'
-                self.REPLICATION_METHOD: self.FULL,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
             },
             "subscription_changes": {
                 self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                # self.REPLICATION_KEYS: {'startTimestamp'},
-                self.REPLICATION_KEYS: set(),
-                # self.REPLICATION_KEYS: {"property_startTimestamp"},  # DOCS_BUG docs list 'timestamp'
+                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'timestamp'
             },
             "workflows": {
                 self.PRIMARY_KEYS: {"id"},
-                self.REPLICATION_METHOD: self.FULL,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
             }
         }
