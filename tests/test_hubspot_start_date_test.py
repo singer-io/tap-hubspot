@@ -105,22 +105,25 @@ class TestHubspotStartDate(HubspotBaseTest):
                 start_date_1 = self.get_properties()['start_date']
                 start_date_2 = self.get_properties(original=False)['start_date']
 
-                # Verify everthing in sync 2 is in sync 1
                 if first_sync_messages and second_sync_messages:
-                    first_sync_primary_keys = []
+
                     sorted_pks = sorted(list(self.expected_metadata()[stream][self.PRIMARY_KEYS]))
+
+                    # Get all primary keys for the first sync
+                    first_sync_primary_keys = []
                     for message in first_sync_messages:
                         record = message['data']
                         primary_key = tuple([record[k] for k in sorted_pks])
                         first_sync_primary_keys.append(primary_key)
 
-
+                    # Get all primary keys for the second sync
                     second_sync_primary_keys = []
                     for message in second_sync_messages:
                         record = message['data']
                         primary_key = tuple([record[k] for k in sorted_pks])
                         second_sync_primary_keys.append(primary_key)
 
+                    # Verify everthing in sync 2 is in sync 1
                     for pk in sorted(second_sync_primary_keys):
                         self.assertIn(pk, first_sync_primary_keys)
 
