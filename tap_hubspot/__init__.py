@@ -162,13 +162,10 @@ def get_field_schema(field_type, extras=False):
             }
         }
 
-def parse_custom_schema(entity_name, data, force_extras=None):
-    if force_extras is not None:
-        extras = force_extras
-    else:
-        extras = entity_name != 'contacts'
+def parse_custom_schema(entity_name, data):
+
     return {
-        field['name']: get_field_schema(field['type'], extras)
+        field['name']: get_field_schema(field['type'], entity_name != 'contacts')
         for field in data
     }
 
@@ -178,7 +175,7 @@ def get_custom_schema(entity_name):
 
 def get_v3_schema(entity_name):
     url = get_url("deals_v3_properties")
-    return parse_custom_schema(entity_name, request(url).json()['results'], force_extras=False)
+    return parse_custom_schema(entity_name, request(url).json()['results'])
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
