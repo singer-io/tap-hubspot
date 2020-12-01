@@ -15,11 +15,6 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         }
 
     def expected_streams(self):
-        """
-        All streams are under test with the exception of 'budgets' which
-        has a workaround to skip the invalid assertion. See if block in
-        test_run for details
-        """
         return self.expected_check_streams().difference({
             'subscription_changes',
             'email_events',

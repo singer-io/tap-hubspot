@@ -64,7 +64,7 @@ class TestHubspotAllFields(HubspotBaseTest):
         # Run sync
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
-        replicated_row_count =  reduce(lambda accum,c : accum + c, first_record_count_by_stream.values())
+        replicated_row_count = sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
         # Test by Stream

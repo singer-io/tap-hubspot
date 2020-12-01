@@ -233,7 +233,7 @@ class HubspotBaseTest(unittest.TestCase):
         self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-        self.assertSetEqual(self.expected_streams(), found_catalog_names,
+        self.assertSetEqual(self.expected_check_streams(), found_catalog_names,
                             msg="discovered schemas do not match")
         print("discovered schemas are OK")
 

@@ -5,7 +5,9 @@ import tap_tester.runner      as runner
 import os
 import unittest
 
-class HubSpotBookmarks2(unittest.TestCase):
+from base import HubspotBaseTest
+
+class HubSpotBookmarks2(HubspotBaseTest):
 
     def name(self):
         return "tap_tester_hub_bookmarks_2"
