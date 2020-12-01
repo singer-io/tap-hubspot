@@ -6,31 +6,9 @@ import os
 import unittest
 
 class HubSpotBookmarks2(unittest.TestCase):
-    # TODO Go through test and update to use base.py
-    def setUp(self):
-        missing_envs = [x for x in [os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
-                                    os.getenv('TAP_HUBSPOT_CLIENT_ID'),
-                                    os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
-                                    os.getenv('TAP_HUBSPOT_REFRESH_TOKEN')] if x == None]
-        if len(missing_envs) != 0:
-            #pylint: disable=line-too-long
-            raise Exception("set TAP_HUBSPOT_REDIRECT_URI, TAP_HUBSPOT_CLIENT_ID, TAP_HUBSPOT_CLIENT_SECRET, TAP_HUBSPOT_REFRESH_TOKEN")
 
     def name(self):
         return "tap_tester_hub_bookmarks_2"
-
-    def tap_name(self):
-        return "tap-hubspot"
-
-    def get_type(self):
-        return "platform.hubspot"
-
-    def get_credentials(self):
-        return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),
-                'client_secret': os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
-                'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
-                'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
-
 
     def expected_sync_streams(self):
         return {
