@@ -56,7 +56,7 @@ class HubSpotBookmarks2(HubspotBaseTest):
         return {'start_date' : '2017-05-01T00:00:00Z'}
 
     def test_run(self):
-        conn_id = connections.ensure_connection()
+        conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 

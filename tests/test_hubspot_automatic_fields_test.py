@@ -27,7 +27,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
 
     def test_run(self):
-        conn_id = connections.ensure_connection()
+        conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
