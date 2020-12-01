@@ -211,10 +211,6 @@ class HubspotBaseTest(unittest.TestCase):
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
         return conn_id
 
-    def ensure_connection(self, original=True):
-        conn_id = connections.ensure_connection(self, original_properties = original)
-        return conn_id
-
     def run_and_verify_check_mode(self, conn_id):
         """
         Run the tap in check mode and verify it succeeds.

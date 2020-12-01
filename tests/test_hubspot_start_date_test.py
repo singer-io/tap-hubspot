@@ -26,7 +26,7 @@ class TestHubspotStartDate(HubspotBaseTest):
 
     def test_run(self):
         # SYNC 1
-        conn_id = self.ensure_connection()
+        conn_id = connections.ensure_connection()
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
@@ -39,7 +39,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         first_sync_records = runner.get_records_from_target_output()
 
         # SYNC 2
-        conn_id = self.ensure_connection(original=False)
+        conn_id = connections.ensure_connection(original_properties=False)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]

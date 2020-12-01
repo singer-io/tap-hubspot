@@ -46,7 +46,7 @@ class TestHubspotPagination(HubspotBaseTest):
 
 
     def test_run(self):
-        conn_id = self.ensure_connection()
+        conn_id = connections.ensure_connection()
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
