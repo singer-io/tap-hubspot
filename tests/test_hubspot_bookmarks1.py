@@ -104,16 +104,6 @@ class HubSpotBookmarks1(HubspotBaseTest):
                 'companies'  :           ['hs_lastmodifieddate'],
                 'forms'      :           ['updatedAt'] }
 
-
-    def perform_field_selection(self, conn_id, catalog):
-        schema = menagerie.select_catalog(conn_id, catalog)
-
-        return {'key_properties' :     catalog.get('key_properties'),
-                'schema' :             schema,
-                'tap_stream_id':       catalog.get('tap_stream_id'),
-                'replication_method' : catalog.get('replication_method'),
-                'replication_key'    : catalog.get('replication_key')}
-
     def test_run(self):
         conn_id = connections.ensure_connection(self)
 

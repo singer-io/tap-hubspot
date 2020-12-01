@@ -336,6 +336,14 @@ class HubspotBaseTest(unittest.TestCase):
             connections.select_catalog_and_fields_via_metadata(
                 conn_id, catalog, schema, [], non_selected_properties)
 
+    def perform_field_selection(self, conn_id, catalog):
+        schema = menagerie.select_catalog(conn_id, catalog)
+
+        return {'key_properties' :     catalog.get('key_properties'),
+                'schema' :             schema,
+                'tap_stream_id':       catalog.get('tap_stream_id'),
+                'replication_method' : catalog.get('replication_method'),
+                'replication_key'    : catalog.get('replication_key')}
 
     ################################
     #  Tap Specific Test Actions   #
