@@ -233,8 +233,8 @@ class HubspotBaseTest(unittest.TestCase):
         self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-        diff = self.expected_streams().symmetric_difference(found_catalog_names)
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertSetEqual(self.expected_streams(), found_catalog_names,
+                            msg="discovered schemas do not match")
         print("discovered schemas are OK")
 
         return found_catalogs
@@ -253,13 +253,14 @@ class HubspotBaseTest(unittest.TestCase):
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         # Verify actual rows were synced
-        sync_record_count = runner.examine_target_output_file(
-            self, conn_id, self.expected_streams(), self.expected_primary_keys())
-        self.assertGreater(
-            sum(sync_record_count.values()), 0,
-            msg="failed to replicate any data: {}".format(sync_record_count)
-        )
-        print("total replicated row count: {}".format(sum(sync_record_count.values())))
+        sync_record_count = runner.examine_target_output_file(self,
+                                                              conn_id,
+                                                              self.expected_streams(),
+                                                              self.expected_primary_keys())
+        total_row_count = sum(sync_record_count.values())
+        self.assertGreater(total_row_count, 0,
+                           msg="failed to replicate any data: {}".format(sync_record_count))
+        print("total replicated row count: {}".format(total_row_count))
 
         return sync_record_count
 

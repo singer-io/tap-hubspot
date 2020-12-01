@@ -48,40 +48,16 @@ class TestHubspotPagination(HubspotBaseTest):
     def test_run(self):
         conn_id = self.ensure_connection()
 
-        # Run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        # Verify check exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select only the expected streams tables
         expected_streams = self.expected_streams()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=True)
 
-        for catalog_entry in catalog_entries:
-            stream_schema = menagerie.get_annotated_schema(conn_id, catalog_entry['stream_id'])
-            connections.select_catalog_and_fields_via_metadata(
-                conn_id,
-                catalog_entry,
-                stream_schema
-            )
-
-        # Run a sync job using orchestrator
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        # Verify tap and target exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # Examine target file
+        sync_record_count = self.run_and_verify_sync(conn_id)
         sync_records = runner.get_records_from_target_output()
-        sync_record_count = runner.examine_target_output_file(
-            self, conn_id, self.expected_streams(), self.expected_primary_keys())
+
 
         # Test by stream
         for stream in self.expected_streams():

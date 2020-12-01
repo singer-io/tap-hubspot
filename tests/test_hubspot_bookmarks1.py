@@ -107,21 +107,7 @@ class HubSpotBookmarks1(HubspotBaseTest):
     def test_run(self):
         conn_id = connections.ensure_connection(self)
 
-        #run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        #verify check  exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
-
-        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-
-        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-        print("discovered schemas are kosher")
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select all Catalogs
         for catalog in found_catalogs:
@@ -131,16 +117,7 @@ class HubSpotBookmarks1(HubspotBaseTest):
         #clear state
         menagerie.set_state(conn_id, {})
 
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        #verify tap and target exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_primary_keys())
-        replicated_row_count =  reduce(lambda accum,c : accum + c, record_count_by_stream.values())
-        self.assertGreater(replicated_row_count, 0, msg="failed to replicate any data: {}".format(record_count_by_stream))
-        print("total replicated row count: {}".format(replicated_row_count))
+        record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         max_bookmarks_from_records = runner.get_most_recent_records_from_target(self, self.expected_bookmarks(), self.get_properties()['start_date'])
 

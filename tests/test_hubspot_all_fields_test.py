@@ -47,15 +47,7 @@ class TestHubspotAllFields(HubspotBaseTest):
     def test_run(self):
         conn_id = self.ensure_connection()
 
-        # run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        # verify check exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select only the expected streams tables
         expected_streams = self.testable_streams()
@@ -69,17 +61,9 @@ class TestHubspotAllFields(HubspotBaseTest):
                 stream_schema
             )
 
-        # run sync
-        sync_job_name = runner.run_sync_mode(self, conn_id)
+        # Run sync
+        first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
-        # Verify tap exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # read target output
-        first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                         self.expected_streams(),
-                                                                         self.expected_primary_keys())
         replicated_row_count =  reduce(lambda accum,c : accum + c, first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
