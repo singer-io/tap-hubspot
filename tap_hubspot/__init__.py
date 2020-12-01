@@ -607,9 +607,11 @@ def sync_deals(STATE, ctx):
         params['allPropertiesFetchMode'] = 'latest_version'
 
         # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
-        v3_fields = [x[1].replace('property_', '')
-                     for x,y in mdata.items() if x and (y.get('selected') == True or has_selected_properties)
-                     and ('hs_date_entered' in x[1] or 'hs_date_exited' in x[1] or 'hs_time_in' in x[1])]
+        v3_fields = [breadcrumb[1].replace('property_', '')
+                     for breadcrumb, mdata_map in mdata.items()
+                     if breadcrumb
+                     and (mdata_map.get('selected') == True or has_selected_properties)
+                     and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
 
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
