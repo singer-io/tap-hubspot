@@ -44,6 +44,8 @@ CONTACTS_BY_COMPANY = "contacts_by_company"
 
 DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
 
+V3_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+
 CONFIG = {
     "access_token": None,
     "token_expires": None,
@@ -200,7 +202,7 @@ def load_schema(entity_name):
         if entity_name in ["deals"]:
             v3_schema = get_v3_schema(entity_name)
             for key, value in v3_schema.items():
-                if 'hs_date_entered' in key or 'hs_date_exited' in key or 'hs_time_in' in key:
+                if any(prefix in key for prefix in V3_PREFIXES):
                     custom_schema[key] = value
 
         # Move properties to top level
@@ -368,7 +370,7 @@ def process_v3_deals_records(v3_data):
     for record in v3_data:
         new_properties = {field_name : {'value': field_value}
                           for field_name, field_value in record['properties'].items()
-                          if 'hs_date_entered' in field_name or 'hs_date_exited' in field_name or 'hs_time_in' in field_name}
+                          if any(prefix in field_name for prefix in V3_PREFIXES)}
         transformed_v3_data.append({**record, 'properties' : new_properties})
     return transformed_v3_data
 
