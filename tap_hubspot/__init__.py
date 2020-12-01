@@ -165,7 +165,6 @@ def get_field_schema(field_type, extras=False):
         }
 
 def parse_custom_schema(entity_name, data):
-
     return {
         field['name']: get_field_schema(field['type'], entity_name != 'contacts')
         for field in data
@@ -266,17 +265,13 @@ def parse_source_from_url(url):
         return match.group(1)
     return None
 
-
-@backoff.on_exception(backoff.constant,
-                      (requests.exceptions.RequestException,
-                       requests.exceptions.HTTPError),
-                      max_tries=5,
-                      jitter=None,
-                      giveup=giveup,
-                      on_giveup=on_giveup,
-                      interval=10)
-def request(url, params=None):
-
+def get_params_and_headers(params):
+    """
+    This function makes a params object and headers object based on the
+    authentication values available. If there is an `hapikey` in the config, we
+    need that in `params` and not in the `headers`. Otherwise, we need to get an
+    `access_token` to put in the `headers` and not in the `params`
+    """
     params = params or {}
     hapikey = CONFIG['hapikey']
     if hapikey is None:
@@ -289,6 +284,21 @@ def request(url, params=None):
 
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
+
+    return params, headers
+
+
+@backoff.on_exception(backoff.constant,
+                      (requests.exceptions.RequestException,
+                       requests.exceptions.HTTPError),
+                      max_tries=5,
+                      jitter=None,
+                      giveup=giveup,
+                      on_giveup=on_giveup,
+                      interval=10)
+def request(url, params=None):
+
+    params, headers = get_params_and_headers(params)
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     LOGGER.info("GET %s", req.url)
@@ -322,19 +332,8 @@ def lift_properties_and_versions(record):
     return record
 
 def post_search_endpoint(url, data, params=None):
-    params = params or {}
-    hapikey = CONFIG['hapikey']
-    if hapikey is None:
-        if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
-            acquire_access_token_from_refresh_token()
-        headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
-    else:
-        params['hapikey'] = hapikey
-        headers = {}
 
-    if 'user_agent' in CONFIG:
-        headers['User-Agent'] = CONFIG['user_agent']
-
+    params, headers = get_params_and_headers(params)
     headers['content-type'] = "application/json"
 
     with metrics.http_request_timer(url) as timer:
