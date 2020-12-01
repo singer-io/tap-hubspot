@@ -31,22 +31,6 @@ class HubSpotBookmarks2(unittest.TestCase):
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
-    def expected_pks(self):
-        return {
-            "subscription_changes" : {"timestamp", "portalId", "recipient"},
-            "email_events" :         {'id'},
-            "forms" :                {"guid"},
-            "workflows" :            {"id"},
-            "owners" :               {"ownerId"},
-            "campaigns" :            {"id"},
-            "contact_lists":         {"listId"},
-            "contacts" :             {'vid'},
-            "companies":             {"companyId"},
-            "deals":                 {"dealId"},
-            "engagements":           {"engagement_id"},
-            "contacts_by_company" : {"company-id", "contact-id"},
-            "deal_pipelines" : {"pipelineId"},
-        }
 
     def expected_sync_streams(self):
         return {
@@ -154,7 +138,7 @@ class HubSpotBookmarks2(unittest.TestCase):
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
-        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_pks())
+        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_primary_keys())
 
         #because the bookmarks were set into the future, we should NOT actually replicate any data.
         #minus campaigns, and deal_pipelines because those endpoints do NOT suppport bookmarks

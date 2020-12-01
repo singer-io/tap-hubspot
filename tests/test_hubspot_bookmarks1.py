@@ -19,23 +19,6 @@ class HubSpotBookmarks1(HubspotBaseTest):
     def get_properties(self):  # TODO Determine if we can move this forward so it syncs quicker
         return {'start_date' : '2017-05-01T00:00:00Z'}
 
-    def expected_pks(self):
-        return {
-            "subscription_changes" : {"timestamp", "portalId", "recipient"},
-            "email_events" :         {'id'},
-            "forms" :                {"guid"},
-            "workflows" :            {"id"},
-            "owners" :               {"ownerId"},
-            "campaigns" :            {"id"},
-            "contact_lists":         {"listId"},
-            "contacts" :             {'vid'},
-            "companies":             {"companyId"},
-            "deals":                 {"dealId"},
-            "engagements":           {"engagement_id"},
-            "contacts_by_company" : {"company-id", "contact-id"},
-            "deal_pipelines" : {"pipelineId"},
-        }
-
     def acceptable_bookmarks(self):
         return {
             "subscription_changes",
@@ -164,7 +147,7 @@ class HubSpotBookmarks1(HubspotBaseTest):
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
-        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_pks())
+        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_primary_keys())
         replicated_row_count =  reduce(lambda accum,c : accum + c, record_count_by_stream.values())
         self.assertGreater(replicated_row_count, 0, msg="failed to replicate any data: {}".format(record_count_by_stream))
         print("total replicated row count: {}".format(replicated_row_count))
