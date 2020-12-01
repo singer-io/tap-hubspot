@@ -9,37 +9,9 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
         return "tap_tester_hubspot_combined_test"
 
-    @staticmethod
-    def get_selected_fields_from_metadata(metadata):
-        selected_fields = set()
-        for field in metadata:
-            is_field_metadata = len(field['breadcrumb']) > 1
-            inclusion_automatic_or_selected = (field['metadata'].get('inclusion') == 'automatic'
-                                               or field['metadata'].get('selected') is True)
-            if is_field_metadata and inclusion_automatic_or_selected:
-                selected_fields.add(field['breadcrumb'][1])
-        return selected_fields
-
     def get_properties(self):
         return {
             'start_date' : '2016-06-02T00:00:00Z',
-        }
-
-    def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
         }
 
     def expected_streams(self):

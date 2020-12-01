@@ -313,10 +313,8 @@ class HubspotBaseTest(unittest.TestCase):
         selected_fields = set()
         for field in metadata:
             is_field_metadata = len(field['breadcrumb']) > 1
-            inclusion_automatic_or_selected = (
-                field['metadata']['selected'] is True or \
-                field['metadata']['inclusion'] == 'automatic'
-            )
+            inclusion_automatic_or_selected = (field['metadata'].get('inclusion') == 'automatic'
+                                               or field['metadata'].get('selected') is True)
             if is_field_metadata and inclusion_automatic_or_selected:
                 selected_fields.add(field['breadcrumb'][1])
         return selected_fields
