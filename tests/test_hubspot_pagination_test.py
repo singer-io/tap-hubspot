@@ -9,23 +9,6 @@ class TestHubspotPagination(HubspotBaseTest):
     def name(self):
         return "tap_tester_hubspot_pagination_test"
 
-    def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
-        }
-
     def expected_page_size(self):
         return {
             # "subscription_changes": 10 - 1000,

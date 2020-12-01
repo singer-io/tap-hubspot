@@ -49,6 +49,22 @@ class HubspotBaseTest(unittest.TestCase):
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
+    def expected_check_streams(self):
+        return {
+            "subscription_changes",
+            "email_events",
+            "forms",
+            "workflows",
+            "owners",
+            "campaigns",
+            "contact_lists",
+            "contacts",
+            "companies",
+            "deals",
+            "engagements",
+            "deal_pipelines",
+            "contacts_by_company"
+        }
 
     def expected_metadata(self):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""

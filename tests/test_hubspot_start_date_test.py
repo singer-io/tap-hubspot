@@ -8,23 +8,6 @@ class TestHubspotStartDate(HubspotBaseTest):
     def name(self):
         return "tap_tester_hubspot_combined_test"
 
-    def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
-        }
-
     def expected_streams(self):
         """All streams are under test"""
         return self.expected_check_streams() - {'subscription_changes', 'email_events'}

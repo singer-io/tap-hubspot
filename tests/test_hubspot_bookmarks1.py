@@ -52,23 +52,6 @@ class HubSpotBookmarks1(HubspotBaseTest):
             "contacts_by_company",
         }
 
-    def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
-        }
-
     def expected_sync_streams(self):
         return {
             #"subscription_changes",
