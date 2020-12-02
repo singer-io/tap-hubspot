@@ -394,6 +394,9 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
         while True:
             data = request(url, params).json()
 
+            if data.get(path) is None:
+                raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
+
             if v3_fields:
                 v3_data = get_v3_deals(v3_fields, data[path])
 
@@ -498,6 +501,10 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
             data = request(url, default_contacts_by_company_params).json()
+
+            if data.get(path) is None:
+                raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
+
             for row in data[path]:
                 counter.increment()
                 record = {'company-id' : company_id,
@@ -695,6 +702,9 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
 
                     data = request(url, params).json()
                     time_extracted = utils.now()
+
+                    if data.get(path) is None:
+                        raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
 
                     for row in data[path]:
                         counter.increment()
