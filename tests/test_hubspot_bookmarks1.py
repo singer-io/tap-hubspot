@@ -19,23 +19,6 @@ class HubSpotBookmarks1(HubspotBaseTest):
     def get_properties(self):  # TODO Determine if we can move this forward so it syncs quicker
         return {'start_date' : '2017-05-01T00:00:00Z'}
 
-    def expected_pks(self):
-        return {
-            "subscription_changes" : {"timestamp", "portalId", "recipient"},
-            "email_events" :         {'id'},
-            "forms" :                {"guid"},
-            "workflows" :            {"id"},
-            "owners" :               {"ownerId"},
-            "campaigns" :            {"id"},
-            "contact_lists":         {"listId"},
-            "contacts" :             {'vid'},
-            "companies":             {"companyId"},
-            "deals":                 {"dealId"},
-            "engagements":           {"engagement_id"},
-            "contacts_by_company" : {"company-id", "contact-id"},
-            "deal_pipelines" : {"pipelineId"},
-        }
-
     def acceptable_bookmarks(self):
         return {
             "subscription_changes",
@@ -52,27 +35,10 @@ class HubSpotBookmarks1(HubspotBaseTest):
             "contacts_by_company",
         }
 
-    def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
-        }
-
     def expected_sync_streams(self):
         return {
-            "subscription_changes",
-            "email_events",
+            #"subscription_changes",
+            #"email_events",
             "forms",
             "workflows",
             "owners",
@@ -127,63 +93,31 @@ class HubSpotBookmarks1(HubspotBaseTest):
     def expected_bookmarks(self):
         return {'deals' :         ['hs_lastmodifieddate'],
                 'contact_lists' : ['updatedAt'],
-                'email_events' :  ['startTimestamp'],
+                # 'email_events' :  ['startTimestamp'],
                 # 'contacts':       ['versionTimestamp'],
                 'workflows':      ['updatedAt'],
                 'campaigns':      [],
                 'contacts_by_company' : [],
                 'owners' :        ['updatedAt'],
-                'subscription_changes':  ['startTimestamp'],
+                # 'subscription_changes':  ['startTimestamp'],
                 'engagements' :          ['lastUpdated'],
                 'companies'  :           ['hs_lastmodifieddate'],
                 'forms'      :           ['updatedAt'] }
 
-
-    def perform_field_selection(self, conn_id, catalog):
-        schema = menagerie.select_catalog(conn_id, catalog)
-
-        return {'key_properties' :     catalog.get('key_properties'),
-                'schema' :             schema,
-                'tap_stream_id':       catalog.get('tap_stream_id'),
-                'replication_method' : catalog.get('replication_method'),
-                'replication_key'    : catalog.get('replication_key')}
-
     def test_run(self):
         conn_id = connections.ensure_connection(self)
 
-        #run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        #verify check  exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
-
-        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-
-        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-        print("discovered schemas are kosher")
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select all Catalogs
         for catalog in found_catalogs:
-            connections.select_catalog_and_fields_via_metadata(conn_id, catalog, menagerie.get_annotated_schema(conn_id, catalog['stream_id']))
+            if catalog['tap_stream_id'] in self.expected_sync_streams():
+                connections.select_catalog_and_fields_via_metadata(conn_id, catalog, menagerie.get_annotated_schema(conn_id, catalog['stream_id']))
 
         #clear state
         menagerie.set_state(conn_id, {})
 
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        #verify tap and target exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_pks())
-        replicated_row_count =  reduce(lambda accum,c : accum + c, record_count_by_stream.values())
-        self.assertGreater(replicated_row_count, 0, msg="failed to replicate any data: {}".format(record_count_by_stream))
-        print("total replicated row count: {}".format(replicated_row_count))
+        record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         max_bookmarks_from_records = runner.get_most_recent_records_from_target(self, self.expected_bookmarks(), self.get_properties()['start_date'])
 
@@ -205,7 +139,9 @@ class HubSpotBookmarks1(HubspotBaseTest):
         for k,v in sorted(list(self.expected_bookmarks().items())):
             for w in v:
                 bk_value = bookmarks.get(k,{}).get(w)
-                self.assertEqual(utils.strptime_with_tz(bk_value), utils.strptime_with_tz(max_bookmarks_from_records[k]), "Bookmark {} ({}) for stream {} should have been updated to {}".format(bk_value, w, k, max_bookmarks_from_records[k]))
+                self.assertEqual(utils.strptime_with_tz(bk_value),
+                                 utils.strptime_with_tz(max_bookmarks_from_records[k]),
+                                 "Bookmark {} ({}) for stream {} should have been updated to {}".format(bk_value, w, k, max_bookmarks_from_records[k]))
                 print("bookmark {}({}) updated to {} from max record value {}".format(k, w, bk_value, max_bookmarks_from_records[k]))
 
         for k,v in self.expected_offsets().items():

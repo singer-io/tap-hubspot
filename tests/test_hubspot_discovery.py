@@ -34,30 +34,11 @@ class DiscoveryTest(HubspotBaseTest):
 
         conn_id = self.create_connection()
 
-        # Verify number of actual streams discovered match expected
-        catalogs = menagerie.get_catalogs(conn_id)
-        found_catalogs = [catalog for catalog in catalogs
-                          if catalog.get('tap_stream_id') in streams_to_test]
-
-        self.assertGreater(len(found_catalogs), 0,
-                           msg="unable to locate schemas for connection {}".format(conn_id))
-        self.assertEqual(len(found_catalogs),
-                         len(streams_to_test),
-                         msg="Expected {} streams, actual was {} for connection {}, "
-                             "actual {}".format(
-                                 len(streams_to_test),
-                                 len(found_catalogs),
-                                 found_catalogs,
-                                 conn_id))
-
-        # Verify the stream names discovered were what we expect
-        found_catalog_names = {c['tap_stream_id'] for c in found_catalogs}
-        self.assertEqual(set(streams_to_test),
-                         set(found_catalog_names),
-                         msg="Expected streams don't match actual streams")
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Verify stream names follow naming convention
         # streams should only have lowercase alphas and underscores
+        found_catalog_names = {c['tap_stream_id'] for c in found_catalogs}
         self.assertTrue(all([re.fullmatch(r"[a-z_]+", name) for name in found_catalog_names]),
                         msg="One or more streams don't follow standard naming")
 
@@ -132,7 +113,7 @@ class DiscoveryTest(HubspotBaseTest):
                 actual_automatic_fields = {key for key, value in schema["properties"].items()
                                            if value.get("inclusion") == "automatic"}
                 # self.assertEqual(expected_automatic_fields, actual_automatic_fields)
-                         
+
 
                 # verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources

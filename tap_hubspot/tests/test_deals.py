@@ -21,9 +21,9 @@ class TestDealsToSync(unittest.TestCase):
 
         sync_deals({}, mocked_catalog_from_id)
 
-        expected_param = {'count': 250, 'includeAssociations': False, 'properties': []}
+        expected_param = {'includeAssociations': False, 'properties': [], 'limit': 100}
 
-        mocked_gen_request.assert_called_once_with(ANY, ANY, ANY, expected_param, ANY, ANY, ANY, ANY)
+        mocked_gen_request.assert_called_once_with(ANY, ANY, ANY, expected_param, ANY, ANY, ANY, ANY, v3_fields=None)
 
 
     @patch('tap_hubspot.Context.get_catalog_from_id', return_value={"metadata":""})
@@ -42,6 +42,6 @@ class TestDealsToSync(unittest.TestCase):
 
         sync_deals({}, mocked_catalog_from_id)
 
-        expected_param = {'count': 250, 'includeAssociations': True, 'properties': []}
+        expected_param = {'includeAssociations': True, 'properties': [], 'limit': 100}
 
-        mocked_gen_request.assert_called_once_with(ANY, ANY, ANY, expected_param, ANY, ANY, ANY, ANY)
+        mocked_gen_request.assert_called_once_with(ANY, ANY, ANY, expected_param, ANY, ANY, ANY, ANY, v3_fields=None)

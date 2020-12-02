@@ -44,6 +44,8 @@ CONTACTS_BY_COMPANY = "contacts_by_company"
 
 DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
 
+V3_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+
 CONFIG = {
     "access_token": None,
     "token_expires": None,
@@ -76,6 +78,9 @@ ENDPOINTS = {
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
+
+    "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
+    "deals_v3_properties":  "/crm/v3/properties/deals",
 
     "deal_pipelines":       "/deals/v1/pipelines",
 
@@ -161,8 +166,7 @@ def get_field_schema(field_type, extras=False):
 
 def parse_custom_schema(entity_name, data):
     return {
-        field['name']: get_field_schema(
-            field['type'], entity_name != "contacts")
+        field['name']: get_field_schema(field['type'], entity_name != 'contacts')
         for field in data
     }
 
@@ -170,6 +174,9 @@ def parse_custom_schema(entity_name, data):
 def get_custom_schema(entity_name):
     return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
 
+def get_v3_schema(entity_name):
+    url = get_url("deals_v3_properties")
+    return parse_custom_schema(entity_name, request(url).json()['results'])
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
@@ -190,6 +197,12 @@ def load_schema(entity_name):
             "type": "object",
             "properties": custom_schema,
         }
+
+        if entity_name in ["deals"]:
+            v3_schema = get_v3_schema(entity_name)
+            for key, value in v3_schema.items():
+                if any(prefix in key for prefix in V3_PREFIXES):
+                    custom_schema[key] = value
 
         # Move properties to top level
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
@@ -252,17 +265,13 @@ def parse_source_from_url(url):
         return match.group(1)
     return None
 
-
-@backoff.on_exception(backoff.constant,
-                      (requests.exceptions.RequestException,
-                       requests.exceptions.HTTPError),
-                      max_tries=5,
-                      jitter=None,
-                      giveup=giveup,
-                      on_giveup=on_giveup,
-                      interval=10)
-def request(url, params=None):
-
+def get_params_and_headers(params):
+    """
+    This function makes a params object and headers object based on the
+    authentication values available. If there is an `hapikey` in the config, we
+    need that in `params` and not in the `headers`. Otherwise, we need to get an
+    `access_token` to put in the `headers` and not in the `params`
+    """
     params = params or {}
     hapikey = CONFIG['hapikey']
     if hapikey is None:
@@ -275,6 +284,21 @@ def request(url, params=None):
 
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
+
+    return params, headers
+
+
+@backoff.on_exception(backoff.constant,
+                      (requests.exceptions.RequestException,
+                       requests.exceptions.HTTPError),
+                      max_tries=5,
+                      jitter=None,
+                      giveup=giveup,
+                      on_giveup=on_giveup,
+                      interval=10)
+def request(url, params=None):
+
+    params, headers = get_params_and_headers(params)
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     LOGGER.info("GET %s", req.url)
@@ -307,8 +331,59 @@ def lift_properties_and_versions(record):
             record['properties_versions'] += versions
     return record
 
+def post_search_endpoint(url, data, params=None):
+
+    params, headers = get_params_and_headers(params)
+    headers['content-type'] = "application/json"
+
+    with metrics.http_request_timer(url) as timer:
+        resp = requests.post(
+            url=url,
+            json=data,
+            params=params,
+            headers=headers
+        )
+
+        resp.raise_for_status()
+
+    return resp
+
+def merge_responses(v1_data, v3_data):
+    for v1_record in v1_data:
+        v1_id = v1_record.get('dealId')
+        for v3_record in v3_data:
+            v3_id = v3_record.get('id')
+            if str(v1_id) == v3_id:
+                v1_record['properties'] = {**v1_record['properties'],
+                                           **v3_record['properties']}
+
+def process_v3_deals_records(v3_data):
+    """
+    This function:
+    1. filters out fields that don't contain 'hs_date_entered_*' and
+       'hs_date_exited_*'
+    2. changes a key value pair in `properties` to a key paired to an
+       object with a key 'value' and the original value
+    """
+    transformed_v3_data = []
+    for record in v3_data:
+        new_properties = {field_name : {'value': field_value}
+                          for field_name, field_value in record['properties'].items()
+                          if any(prefix in field_name for prefix in V3_PREFIXES)}
+        transformed_v3_data.append({**record, 'properties' : new_properties})
+    return transformed_v3_data
+
+def get_v3_deals(v3_fields, v1_data):
+    v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
+
+    v3_body = {'inputs': v1_ids,
+               'properties': v3_fields,}
+    v3_url = get_url('deals_v3_batch_read')
+    v3_resp = post_search_endpoint(v3_url, v3_body)
+    return v3_resp.json()['results']
+
 #pylint: disable=line-too-long
-def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
+def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, v3_fields=None):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -318,6 +393,17 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
+
+            if data.get(path) is None:
+                raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
+
+            if v3_fields:
+                v3_data = get_v3_deals(v3_fields, data[path])
+
+                # The shape of v3_data is different than the V1 response,
+                # so we transform v3 to look like v1
+                transformed_v3_data = process_v3_deals_records(v3_data)
+                merge_responses(data[path], transformed_v3_data)
 
             for row in data[path]:
                 counter.increment()
@@ -415,6 +501,10 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
             data = request(url, default_contacts_by_company_params).json()
+
+            if data.get(path) is None:
+                raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
+
             for row in data[path]:
                 counter.increment()
                 record = {'company-id' : company_id,
@@ -499,7 +589,7 @@ def sync_deals(STATE, ctx):
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
-    params = {'count': 250,
+    params = {'limit': 100,
               'includeAssociations': False,
               'properties' : []}
 
@@ -513,7 +603,9 @@ def sync_deals(STATE, ctx):
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
 
-    if mdata.get(('properties', 'properties'), {}).get('selected') or has_selected_custom_field(mdata):
+    v3_fields = None
+    has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
+    if has_selected_properties or has_selected_custom_field(mdata):
         # On 2/12/20, hubspot added a lot of additional properties for
         # deals, and appending all of them to requests ended up leading to
         # 414 (url-too-long) errors. Hubspot recommended we use the
@@ -522,9 +614,16 @@ def sync_deals(STATE, ctx):
         params['includeAllProperties'] = True
         params['allPropertiesFetchMode'] = 'latest_version'
 
+        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
+        v3_fields = [breadcrumb[1].replace('property_', '')
+                     for breadcrumb, mdata_map in mdata.items()
+                     if breadcrumb
+                     and (mdata_map.get('selected') == True or has_selected_properties)
+                     and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
+
     url = get_url('deals_all')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"]):
+        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
             if bookmark_key in row_properties:
@@ -603,6 +702,9 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
 
                     data = request(url, params).json()
                     time_extracted = utils.now()
+
+                    if data.get(path) is None:
+                        raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
 
                     for row in data[path]:
                         counter.increment()
@@ -941,6 +1043,7 @@ def load_discovered_schema(stream):
     # The engagements stream has nested data that we synthesize; The engagement field needs to be automatic
     if stream.tap_stream_id == "engagements":
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
+        mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
 
     return schema, metadata.to_list(mdata)
 

@@ -49,6 +49,22 @@ class HubspotBaseTest(unittest.TestCase):
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
+    def expected_check_streams(self):
+        return {
+            "subscription_changes",
+            "email_events",
+            "forms",
+            "workflows",
+            "owners",
+            "campaigns",
+            "contact_lists",
+            "contacts",
+            "companies",
+            "deals",
+            "engagements",
+            "deal_pipelines",
+            "contacts_by_company"
+        }
 
     def expected_metadata(self):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""
@@ -213,8 +229,8 @@ class HubspotBaseTest(unittest.TestCase):
         self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-        diff = self.expected_streams().symmetric_difference(found_catalog_names)
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertSetEqual(self.expected_check_streams(), found_catalog_names,
+                            msg="discovered schemas do not match")
         print("discovered schemas are OK")
 
         return found_catalogs
@@ -233,13 +249,14 @@ class HubspotBaseTest(unittest.TestCase):
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         # Verify actual rows were synced
-        sync_record_count = runner.examine_target_output_file(
-            self, conn_id, self.expected_streams(), self.expected_primary_keys())
-        self.assertGreater(
-            sum(sync_record_count.values()), 0,
-            msg="failed to replicate any data: {}".format(sync_record_count)
-        )
-        print("total replicated row count: {}".format(sum(sync_record_count.values())))
+        sync_record_count = runner.examine_target_output_file(self,
+                                                              conn_id,
+                                                              self.expected_streams(),
+                                                              self.expected_primary_keys())
+        total_row_count = sum(sync_record_count.values())
+        self.assertGreater(total_row_count, 0,
+                           msg="failed to replicate any data: {}".format(sync_record_count))
+        print("total replicated row count: {}".format(total_row_count))
 
         return sync_record_count
 
@@ -293,10 +310,8 @@ class HubspotBaseTest(unittest.TestCase):
         selected_fields = set()
         for field in metadata:
             is_field_metadata = len(field['breadcrumb']) > 1
-            inclusion_automatic_or_selected = (
-                field['metadata']['selected'] is True or \
-                field['metadata']['inclusion'] == 'automatic'
-            )
+            inclusion_automatic_or_selected = (field['metadata'].get('inclusion') == 'automatic'
+                                               or field['metadata'].get('selected') is True)
             if is_field_metadata and inclusion_automatic_or_selected:
                 selected_fields.add(field['breadcrumb'][1])
         return selected_fields
@@ -316,6 +331,14 @@ class HubspotBaseTest(unittest.TestCase):
             connections.select_catalog_and_fields_via_metadata(
                 conn_id, catalog, schema, [], non_selected_properties)
 
+    def perform_field_selection(self, conn_id, catalog):
+        schema = menagerie.select_catalog(conn_id, catalog)
+
+        return {'key_properties' :     catalog.get('key_properties'),
+                'schema' :             schema,
+                'tap_stream_id':       catalog.get('tap_stream_id'),
+                'replication_method' : catalog.get('replication_method'),
+                'replication_key'    : catalog.get('replication_key')}
 
     ################################
     #  Tap Specific Test Actions   #

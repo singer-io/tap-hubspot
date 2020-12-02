@@ -5,69 +5,17 @@ import tap_tester.runner      as runner
 import os
 import unittest
 
-class HubSpotBookmarks2(unittest.TestCase):
-    # TODO Go through test and update to use base.py
-    def setUp(self):
-        missing_envs = [x for x in [os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
-                                    os.getenv('TAP_HUBSPOT_CLIENT_ID'),
-                                    os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
-                                    os.getenv('TAP_HUBSPOT_REFRESH_TOKEN')] if x == None]
-        if len(missing_envs) != 0:
-            #pylint: disable=line-too-long
-            raise Exception("set TAP_HUBSPOT_REDIRECT_URI, TAP_HUBSPOT_CLIENT_ID, TAP_HUBSPOT_CLIENT_SECRET, TAP_HUBSPOT_REFRESH_TOKEN")
+from base import HubspotBaseTest
+
+class HubSpotBookmarks2(HubspotBaseTest):
 
     def name(self):
         return "tap_tester_hub_bookmarks_2"
 
-    def tap_name(self):
-        return "tap-hubspot"
-
-    def get_type(self):
-        return "platform.hubspot"
-
-    def get_credentials(self):
-        return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),
-                'client_secret': os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
-                'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
-                'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
-
-    def expected_pks(self):
-        return {
-            "subscription_changes" : {"timestamp", "portalId", "recipient"},
-            "email_events" :         {'id'},
-            "forms" :                {"guid"},
-            "workflows" :            {"id"},
-            "owners" :               {"ownerId"},
-            "campaigns" :            {"id"},
-            "contact_lists":         {"listId"},
-            "contacts" :             {'vid'},
-            "companies":             {"companyId"},
-            "deals":                 {"dealId"},
-            "engagements":           {"engagement_id"},
-            "contacts_by_company" : {"company-id", "contact-id"},
-            "deal_pipelines" : {"pipelineId"},
-        }
-
-    def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"}
-
     def expected_sync_streams(self):
         return {
-            "subscription_changes",
-            "email_events",
+            # "subscription_changes",
+            # "email_events",
             "forms",
             "workflows",
             "owners",
@@ -107,33 +55,10 @@ class HubSpotBookmarks2(unittest.TestCase):
     def get_properties(self):
         return {'start_date' : '2017-05-01T00:00:00Z'}
 
-    def perform_field_selection(self, conn_id, catalog):
-        schema = menagerie.select_catalog(conn_id, catalog)
-
-        return {'key_properties' :     catalog.get('key_properties'),
-                'schema' :             schema,
-                'tap_stream_id':       catalog.get('tap_stream_id'),
-                'replication_method' : catalog.get('replication_method'),
-                'replication_key'    : catalog.get('replication_key')}
-
     def test_run(self):
         conn_id = connections.ensure_connection(self)
 
-        #run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        #verify check  exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
-
-        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-
-        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-        print("discovered schemas are kosher")
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         #select all catalogs
         for catalog in found_catalogs:
@@ -164,13 +89,7 @@ class HubSpotBookmarks2(unittest.TestCase):
 
         menagerie.set_state(conn_id, future_bookmarks)
 
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        #verify tap and target exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        record_count_by_stream = runner.examine_target_output_file(self, conn_id, self.expected_sync_streams(), self.expected_pks())
+        record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         #because the bookmarks were set into the future, we should NOT actually replicate any data.
         #minus campaigns, and deal_pipelines because those endpoints do NOT suppport bookmarks
