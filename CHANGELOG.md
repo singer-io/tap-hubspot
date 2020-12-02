@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.9.0
+  * Add fields to Deals stream - `hs_date_entered_*` and `hs_date_exited_*` [#133](https://github.com/singer-io/tap-hubspot/pull/133)
+
 ## 2.8.1
   * Reverts `v2.8.0` back to `v.2.7.0`
 
