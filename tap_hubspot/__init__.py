@@ -331,6 +331,14 @@ def lift_properties_and_versions(record):
             record['properties_versions'] += versions
     return record
 
+@backoff.on_exception(backoff.constant,
+                      (requests.exceptions.RequestException,
+                       requests.exceptions.HTTPError),
+                      max_tries=5,
+                      jitter=None,
+                      giveup=giveup,
+                      on_giveup=on_giveup,
+                      interval=10)
 def post_search_endpoint(url, data, params=None):
 
     params, headers = get_params_and_headers(params)
