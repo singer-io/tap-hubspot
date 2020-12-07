@@ -39,6 +39,7 @@ MANDATORY_PROPERTIES = {
         "total_revenue",
         "type",
         "hs_merged_object_ids",
+        "lifecyclestage",
     ],
     "contacts": [
         "email",
