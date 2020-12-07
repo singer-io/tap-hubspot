@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.9.1
+  * Add retry logic to V3 calls [#136](https://github.com/singer-io/tap-hubspot/pull/136)
+
 ## 2.9.0
   * Add fields to Deals stream - `hs_date_entered_*` and `hs_date_exited_*` [#133](https://github.com/singer-io/tap-hubspot/pull/133)
 
