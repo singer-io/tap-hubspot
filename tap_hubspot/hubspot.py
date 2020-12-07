@@ -114,6 +114,7 @@ MANDATORY_PROPERTIES = {
         "engagements_last_meeting_booked_source",
         "closed_lost_reason",
         "closed_won_reason",
+        "lifecyclestage",
     ],
 }
 
