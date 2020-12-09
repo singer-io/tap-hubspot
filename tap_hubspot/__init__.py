@@ -8,16 +8,18 @@ from collections import defaultdict
 from typing import DefaultDict, Set
 
 STREAMS = {
+    "companies": {"bookmark_key": "updatedAt"},
     "owners": {"bookmark_key": "updatedAt"},
     "forms": {"bookmark_key": "updatedAt"},
-    "contacts": {"bookmark_key": "updatedAt",},
+    "contacts": {
+        "bookmark_key": "updatedAt",
+    },
     "contacts_events": {"bookmark_key": "lastSynced"},
     "deal_pipelines": {"bookmark_key": "updatedAt"},
     "engagements": {"bookmark_key": "lastUpdated"},
     "submissions": {},
     "email_events": {"bookmark_key": "created"},
     "deals": {"bookmark_key": "updatedAt"},
-    "companies": {"bookmark_key": "updatedAt"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
@@ -39,7 +41,9 @@ def sync(config, state=None):
                 config=config, tap_stream_id=tap_stream_id, stream_config=stream_config
             )
             state, event_state = stream.do_sync(state, event_state)
-        except:
+
+        except Exception:
+            LOGGER.exception(f"{tap_stream_id} failed")
             continue
 
 
