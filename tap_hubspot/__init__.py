@@ -39,7 +39,9 @@ def sync(config, state=None):
                 config=config, tap_stream_id=tap_stream_id, stream_config=stream_config
             )
             state, event_state = stream.do_sync(state, event_state)
-        except:
+
+        except Exception as err:
+            LOGGER.error(err, stack_info=True)
             continue
 
 
