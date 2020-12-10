@@ -385,7 +385,7 @@ def get_v3_deals(v3_fields, v1_data):
     v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
 
     v3_body = {'inputs': v1_ids,
-               'properties': v3_fields,}
+               'properties': list(v3_fields[0]),}
     v3_url = get_url('deals_v3_batch_read')
     v3_resp = post_search_endpoint(v3_url, v3_body)
     return v3_resp.json()['results']
