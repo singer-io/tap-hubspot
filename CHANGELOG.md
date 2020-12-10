@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.2
+  * Change `POST` to V3 Deals to use one non-standard field instead of all fields we want [#139](https://github.com/singer-io/tap-hubspot/pull/139)
+    * See the pull request for a more detailed explaination
+
 ## 2.9.1
   * Add retry logic to V3 calls [#136](https://github.com/singer-io/tap-hubspot/pull/136)
 
