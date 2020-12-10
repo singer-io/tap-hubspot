@@ -23,7 +23,29 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_merged_object_ids',
         'property_hs_predicted_amount',
         'property_hs_predicted_amount_in_home_currency',
-        'property_hs_sales_email_last_replied'
+        'property_hs_sales_email_last_replied',
+        # These we have no data for
+        'property_hs_date_entered_appointmentscheduled',
+        'property_hs_date_entered_decisionmakerboughtin',
+        'property_hs_date_exited_qualifiedtobuy',
+        'property_hs_time_in_closedwon',
+        'property_hs_date_exited_appointmentscheduled',
+        'property_hs_time_in_decisionmakerboughtin',
+        'property_hs_date_exited_closedlost',
+        'property_hs_time_in_closedlost',
+        'property_hs_date_entered_closedlost',
+        'property_hs_date_entered_closedwon',
+        'property_hs_date_exited_contractsent',
+        'property_hs_time_in_presentationscheduled',
+        'property_hs_date_exited_presentationscheduled',
+        'property_hs_time_in_qualifiedtobuy',
+        'property_hs_date_exited_decisionmakerboughtin',
+        'property_hs_time_in_contractsent',
+        'property_hs_time_in_appointmentscheduled',
+        'property_hs_date_entered_presentationscheduled',
+        'property_hs_date_entered_qualifiedtobuy',
+        'property_hs_date_entered_contractsent',
+        'property_hs_date_exited_closedwon',
     },
 }
 
@@ -69,6 +91,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                 print('Number of expected keys ', len(expected_fields))
                 actual_fields = set(runner.examine_target_output_for_fields()[stream])
                 print('Number of actual keys ', len(actual_fields))
+                print('Number of known missing keys ', len(KNOWN_MISSING_FIELDS[stream]))
 
                 unexpected_fields = actual_fields & KNOWN_MISSING_FIELDS[stream]
                 if unexpected_fields:
