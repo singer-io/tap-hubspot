@@ -495,6 +495,7 @@ class Hubspot:
         (
             requests.exceptions.RequestException,
             requests.exceptions.ReadTimeout,
+            requests.exceptions.Timeout,
             requests.exceptions.HTTPError,
             ratelimit.exception.RateLimitException,
             RetryAfterReauth,
