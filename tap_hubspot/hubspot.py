@@ -418,7 +418,7 @@ class Hubspot:
             self.event_state["contacts_events_ids"].add(contact_id)
 
     def get_records(
-        self, path, replication_path=None, params={}, data_field=None, offset_key=None
+        self, path, replication_path=None, params=None, data_field=None, offset_key=None
     ):
         for record in self.paginate(
             path,
@@ -461,6 +461,7 @@ class Hubspot:
     def paginate(
         self, path: str, params: Dict = None, data_field: str = None, offset_key=None
     ):
+        params = params or {}
         offset_value = None
         while True:
             if offset_value:
@@ -499,7 +500,8 @@ class Hubspot:
         max_tries=10,
     )
     @limits(calls=100, period=10)
-    def call_api(self, url, params={}):
+    def call_api(self, url, params=None):
+        params = params or {}
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
