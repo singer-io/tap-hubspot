@@ -133,6 +133,7 @@ class Hubspot:
         tap_stream_id: str,
         event_state: DefaultDict[Set, str],
         limit=250,
+        api_call_timeout=5,  # seconds before first byte should have been received
     ):
         self.SESSION = requests.Session()
         self.limit = limit
@@ -140,6 +141,7 @@ class Hubspot:
         self.config = config
         self.tap_stream_id = tap_stream_id
         self.event_state = event_state
+        self.api_call_timeout = api_call_timeout
 
     def streams(
         self,
@@ -506,7 +508,9 @@ class Hubspot:
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
-            response = self.SESSION.get(url, headers=headers, params=params)
+            response = self.SESSION.get(
+                url, headers=headers, params=params, timeout=self.api_call_timeout
+            )
         except requests.exceptions.HTTPError as err:
             if err.response.status_code == 401:
                 # attempt to refresh access token
