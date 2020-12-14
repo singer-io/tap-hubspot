@@ -9,6 +9,11 @@ from typing import Dict, List, Optional, DefaultDict, Set
 from dateutil import parser
 import urllib
 
+
+class RetryAfterReauth(Exception):
+    pass
+
+
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 MANDATORY_PROPERTIES = {
@@ -128,6 +133,7 @@ class Hubspot:
         tap_stream_id: str,
         event_state: DefaultDict[Set, str],
         limit=250,
+        timeout=10,  # seconds before first byte should have been received
     ):
         self.SESSION = requests.Session()
         self.limit = limit
@@ -135,6 +141,7 @@ class Hubspot:
         self.config = config
         self.tap_stream_id = tap_stream_id
         self.event_state = event_state
+        self.timeout = timeout
 
     def streams(
         self,
@@ -413,7 +420,7 @@ class Hubspot:
             self.event_state["contacts_events_ids"].add(contact_id)
 
     def get_records(
-        self, path, replication_path=None, params={}, data_field=None, offset_key=None
+        self, path, replication_path=None, params=None, data_field=None, offset_key=None
     ):
         for record in self.paginate(
             path,
@@ -456,6 +463,7 @@ class Hubspot:
     def paginate(
         self, path: str, params: Dict = None, data_field: str = None, offset_key=None
     ):
+        params = params or {}
         offset_value = None
         while True:
             if offset_value:
@@ -487,26 +495,30 @@ class Hubspot:
         (
             requests.exceptions.RequestException,
             requests.exceptions.ReadTimeout,
+            requests.exceptions.Timeout,
             requests.exceptions.HTTPError,
             ratelimit.exception.RateLimitException,
+            RetryAfterReauth,
         ),
         max_tries=10,
     )
     @limits(calls=100, period=10)
-    def call_api(self, url, params={}):
+    def call_api(self, url, params=None):
+        params = params or {}
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
-            response = self.SESSION.get(url, headers=headers, params=params)
+            response = self.SESSION.get(
+                url, headers=headers, params=params, timeout=self.timeout
+            )
         except requests.exceptions.HTTPError as err:
-            if not err.response.status_code == 401:
+            if err.response.status_code == 401:
+                # attempt to refresh access token
+                self.refresh_access_token()
+                raise RetryAfterReauth
+            else:
                 raise
-
-            # attempt to refresh access token
-            self.refresh_access_token()
-            headers = {"Authorization": f"Bearer {self.access_token}"}
-            response = self.SESSION.get(url, headers=headers, params=params)
 
         LOGGER.debug(response.url)
         response.raise_for_status()
