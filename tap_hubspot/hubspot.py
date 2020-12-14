@@ -9,6 +9,11 @@ from typing import Dict, List, Optional, DefaultDict, Set
 from dateutil import parser
 import urllib
 
+
+class RetryAfterReauth(Exception):
+    pass
+
+
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 MANDATORY_PROPERTIES = {
@@ -489,6 +494,7 @@ class Hubspot:
             requests.exceptions.ReadTimeout,
             requests.exceptions.HTTPError,
             ratelimit.exception.RateLimitException,
+            RetryAfterReauth,
         ),
         max_tries=10,
     )
@@ -500,13 +506,12 @@ class Hubspot:
         try:
             response = self.SESSION.get(url, headers=headers, params=params)
         except requests.exceptions.HTTPError as err:
-            if not err.response.status_code == 401:
+            if err.response.status_code == 401:
+                # attempt to refresh access token
+                self.refresh_access_token()
+                raise RetryAfterReauth
+            else:
                 raise
-
-            # attempt to refresh access token
-            self.refresh_access_token()
-            headers = {"Authorization": f"Bearer {self.access_token}"}
-            response = self.SESSION.get(url, headers=headers, params=params)
 
         LOGGER.debug(response.url)
         response.raise_for_status()
