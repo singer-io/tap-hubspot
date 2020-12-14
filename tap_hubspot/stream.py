@@ -19,6 +19,7 @@ class Stream:
         self.tap_stream_id = tap_stream_id
         self.bookmark_key = stream_config.get("bookmark_key")
         self.config = config
+
     def do_sync(self, state: Dict, event_state: DefaultDict[Set, str]):
 
         prev_bookmark = None
@@ -32,7 +33,10 @@ class Stream:
         with singer.metrics.record_counter(self.tap_stream_id) as counter:
 
             try:
-                data = hubspot.streams(start_date=start_date, end_date=end_date,)
+                data = hubspot.streams(
+                    start_date=start_date,
+                    end_date=end_date,
+                )
                 for record, replication_value in data:
                     if replication_value and (
                         start_date >= replication_value or end_date < replication_value
