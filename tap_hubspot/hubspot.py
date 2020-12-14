@@ -133,7 +133,7 @@ class Hubspot:
         tap_stream_id: str,
         event_state: DefaultDict[Set, str],
         limit=250,
-        api_call_timeout=5,  # seconds before first byte should have been received
+        api_call_timeout=10,  # seconds before first byte should have been received
     ):
         self.SESSION = requests.Session()
         self.limit = limit
