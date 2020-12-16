@@ -401,9 +401,6 @@ class Hubspot:
             forms_times = hs_calculated_form_submissions.split(";")
             for form_time in forms_times:
                 guid = form_time.split(":", 1)[0]
-                raise Exception(
-                    f"{guid} extracted from {hs_calculated_form_submissions}"
-                )
                 self.event_state["hs_calculated_form_submissions_guids"][guid] = None
 
         # get contacts ids to sync events_contacts data
