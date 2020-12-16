@@ -284,21 +284,6 @@ class Hubspot:
         replication_path = ["updatedAt"]
         yield from self.get_records(path, replication_path)
 
-    def get_guids_from_contacts(self) -> set:
-        forms = set()
-        hs_calculated_form_submissions = self.event_state[
-            "hs_calculated_form_submissions"
-        ]
-        if not hs_calculated_form_submissions:
-            return forms
-        for submission in hs_calculated_form_submissions:
-            forms_times = submission.split(";")
-
-            for form_time in forms_times:
-                guid = form_time[: form_time.index(":")]
-                forms.add(guid)
-        return forms
-
     def get_guids_from_endpoint(self) -> set:
         forms = set()
         forms_from_endpoint = self.get_forms()
@@ -315,10 +300,19 @@ class Hubspot:
         data_field = "results"
         offset_key = "after"
         params = {"limit": 50}  # maxmimum limit is 50
-        guids_from_contacts = self.get_guids_from_contacts()
+        guids_from_contacts = self.event_state["hs_calculated_form_submissions_guids"]
         guids_from_endpoint = self.get_guids_from_endpoint()
-        guids = guids_from_contacts.union(guids_from_endpoint)
-        for guid in guids:
+
+        def merge_guids():
+            for guid in guids_from_contacts:
+                guids_from_endpoint.discard(
+                    guid
+                )  # does not raise keyerror if not exists
+                yield guid
+            for guid in guids_from_endpoint:
+                yield guid
+
+        for guid in merge_guids():
             path = f"/form-integrations/v1/submissions/forms/{guid}"
             try:
                 # some of the guids don't work
@@ -397,14 +391,17 @@ class Hubspot:
     def store_ids_submissions(self, record: Dict):
 
         # get form guids from contacts to sync submissions data
-        form_guids = self.get_value(
+        hs_calculated_form_submissions = self.get_value(
             record, ["properties", "hs_calculated_form_submissions"]
         )
-        for form_guid in form_guids or []:
+        if hs_calculated_form_submissions:
             # contacts_events_ids is a persistent dictionary (shelve) backed by a file
             # we use it to deduplicate and later to iterate
             # we dont care about the value only the key
-            self.event_state["hs_calculated_form_submissions"][form_guid] = None
+            forms_times = hs_calculated_form_submissions.split(";")
+            for form_time in forms_times:
+                guid = form_time.split(":", 1)[0]
+                self.event_state["hs_calculated_form_submissions_guids"][guid] = None
 
         # get contacts ids to sync events_contacts data
         # check if certain contact_id needs to be synced according to hs_analytics_last_timestamp and recent_conversion_date fields in contact record

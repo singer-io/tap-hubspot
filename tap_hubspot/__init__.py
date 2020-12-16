@@ -43,8 +43,8 @@ def sync(config, state=None):
         event_state["contacts_events_ids"] = shelve.open(
             f"{temp_dirname}/contacts_events_ids"
         )
-        event_state["hs_calculated_form_submissions"] = shelve.open(
-            f"{temp_dirname}/hs_calculated_form_submissions"
+        event_state["hs_calculated_form_submissions_guids"] = shelve.open(
+            f"{temp_dirname}/hs_calculated_form_submissions_guids"
         )
 
         for tap_stream_id, stream_config in STREAMS.items():
