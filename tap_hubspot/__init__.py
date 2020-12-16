@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import json
+import shelve
+import os
+import tempfile
 import singer
 from singer import utils, metadata, Catalog, CatalogEntry, Schema
 from tap_hubspot.stream import Stream
@@ -32,19 +35,31 @@ LOGGER = singer.get_logger()
 
 
 def sync(config, state=None):
-    event_state: DefaultDict[Set, str] = defaultdict(set)
+    with tempfile.TemporaryDirectory(
+        prefix=f"{os.getcwd()}/temp_event_state_"
+    ) as temp_dirname:
+        event_state: DefaultDict[Set, str] = defaultdict(set)
 
-    for tap_stream_id, stream_config in STREAMS.items():
-        try:
-            LOGGER.info(f"syncing {tap_stream_id}")
-            stream = Stream(
-                config=config, tap_stream_id=tap_stream_id, stream_config=stream_config
-            )
-            state, event_state = stream.do_sync(state, event_state)
+        event_state["contacts_events_ids"] = shelve.open(
+            f"{temp_dirname}/contacts_events_ids"
+        )
+        event_state["hs_calculated_form_submissions"] = shelve.open(
+            f"{temp_dirname}/hs_calculated_form_submissions"
+        )
 
-        except Exception:
-            LOGGER.exception(f"{tap_stream_id} failed")
-            continue
+        for tap_stream_id, stream_config in STREAMS.items():
+            try:
+                LOGGER.info(f"syncing {tap_stream_id}")
+                stream = Stream(
+                    config=config,
+                    tap_stream_id=tap_stream_id,
+                    stream_config=stream_config,
+                )
+                state, event_state = stream.do_sync(state, event_state)
+
+            except Exception:
+                LOGGER.exception(f"{tap_stream_id} failed")
+                continue
 
 
 @utils.handle_top_exception(LOGGER)

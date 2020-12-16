@@ -397,11 +397,14 @@ class Hubspot:
     def store_ids_submissions(self, record: Dict):
 
         # get form guids from contacts to sync submissions data
-        form_summissions = self.get_value(
+        form_guids = self.get_value(
             record, ["properties", "hs_calculated_form_submissions"]
         )
-        if form_summissions:
-            self.event_state["hs_calculated_form_submissions"].add(form_summissions)
+        for form_guid in form_guids or []:
+            # contacts_events_ids is a persistent dictionary (shelve) backed by a file
+            # we use it to deduplicate and later to iterate
+            # we dont care about the value only the key
+            self.event_state["hs_calculated_form_submissions"][form_guid] = None
 
         # get contacts ids to sync events_contacts data
         # check if certain contact_id needs to be synced according to hs_analytics_last_timestamp and recent_conversion_date fields in contact record
@@ -417,7 +420,10 @@ class Hubspot:
             submitted_form_date=submitted_form_date,
         )
         if contact_id:
-            self.event_state["contacts_events_ids"].add(contact_id)
+            # contacts_events_ids is a persistent dictionary (shelve) backed by a file
+            # we use it to deduplicate and later to iterate
+            # we dont care about the value only the key
+            self.event_state["contacts_events_ids"][contact_id] = None
 
     def get_records(
         self, path, replication_path=None, params=None, data_field=None, offset_key=None
