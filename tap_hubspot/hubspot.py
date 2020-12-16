@@ -508,27 +508,24 @@ class Hubspot:
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
-        try:
-            response = self.SESSION.get(
-                url, headers=headers, params=params, timeout=self.timeout
-            )
-        except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 401:
+        with self.SESSION.get(
+            url, headers=headers, params=params, timeout=self.timeout
+        ) as response:
+            if response.status_code == 401:
                 # attempt to refresh access token
                 self.refresh_access_token()
                 raise RetryAfterReauth
-            else:
-                raise
-
-        LOGGER.debug(response.url)
-        response.raise_for_status()
-        return response.json()
+            LOGGER.debug(response.url)
+            response.raise_for_status()
+            return response.json()
 
     def test_endpoint(self, url, params={}):
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
-        response = self.SESSION.get(url, headers=headers, params=params)
-        response.raise_for_status()
+        with self.SESSION.get(
+            url, headers=headers, params=params, timeout=self.timeout
+        ) as response:
+            response.raise_for_status()
 
     def refresh_access_token(self):
         payload = {
