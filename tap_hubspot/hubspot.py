@@ -402,7 +402,7 @@ class Hubspot:
             for form_time in forms_times:
                 guid = form_time.split(":", 1)[0]
                 self.event_state["hs_calculated_form_submissions_guids"][guid] = None
-                self.event_state["hs_calculated_form_submissions_guids"].sync()
+            self.event_state["hs_calculated_form_submissions_guids"].sync()
 
         # get contacts ids to sync events_contacts data
         # check if certain contact_id needs to be synced according to hs_analytics_last_timestamp and recent_conversion_date fields in contact record
