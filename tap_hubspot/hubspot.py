@@ -402,6 +402,7 @@ class Hubspot:
             for form_time in forms_times:
                 guid = form_time.split(":", 1)[0]
                 self.event_state["hs_calculated_form_submissions_guids"][guid] = None
+            self.event_state["hs_calculated_form_submissions_guids"].sync()
 
         # get contacts ids to sync events_contacts data
         # check if certain contact_id needs to be synced according to hs_analytics_last_timestamp and recent_conversion_date fields in contact record
@@ -421,6 +422,7 @@ class Hubspot:
             # we use it to deduplicate and later to iterate
             # we dont care about the value only the key
             self.event_state["contacts_events_ids"][contact_id] = None
+            self.event_state["contacts_events_ids"].sync()
 
     def get_records(
         self, path, replication_path=None, params=None, data_field=None, offset_key=None
