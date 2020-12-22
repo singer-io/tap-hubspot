@@ -66,6 +66,7 @@ MANDATORY_PROPERTIES = {
         "hs_analytics_num_event_completions",
         "hs_analytics_first_touch_converting_campaign",
         "hs_analytics_last_touch_converting_campaign",
+        "hs_additional_emails",
         "associatedcompanyid",
         "hs_analytics_last_timestamp",
         "recent_conversion_date",
