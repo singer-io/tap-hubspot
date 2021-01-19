@@ -10,7 +10,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-hubspot/
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            pip install -U 'pip<19.2' setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'pylint'
