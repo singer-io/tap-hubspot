@@ -100,6 +100,8 @@ MANDATORY_PROPERTIES = {
         "hs_lifecyclestage_evangelist_date",
         "hs_lifecyclestage_opportunity_date",
         "hs_lifecyclestage_other_date",
+        "went_mql",
+        "went_mql_date"
     ],
     "deals": [
         "amount_in_home_currency",
