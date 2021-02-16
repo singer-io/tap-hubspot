@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.9.3
+  * Add support for property_versions [#142](https://github.com/singer-io/tap-hubspot/pull/142)
+
 ## 2.9.2
   * Change `POST` to V3 Deals to use one non-standard field instead of all fields we want [#139](https://github.com/singer-io/tap-hubspot/pull/139)
     * See the pull request for a more detailed explaination
