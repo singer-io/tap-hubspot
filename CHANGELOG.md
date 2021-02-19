@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.9.4
+  * Reverts 142 [#144](https://github.com/singer-io/tap-hubspot/pull/144)
+
 ## 2.9.3
   * Add support for property_versions [#142](https://github.com/singer-io/tap-hubspot/pull/142)
 
