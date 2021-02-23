@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.9.5
+  * Fixes a bug in sending the fields to the v3 Deals endpoint [#145](https://github.com/singer-io/tap-hubspot/pull/145)
+
 ## 2.9.4
   * Reverts 142 [#144](https://github.com/singer-io/tap-hubspot/pull/144)
 
