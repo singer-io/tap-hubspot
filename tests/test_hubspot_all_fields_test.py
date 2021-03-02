@@ -46,6 +46,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_date_entered_qualifiedtobuy',
         'property_hs_date_entered_contractsent',
         'property_hs_date_exited_closedwon',
+        'property_hs_all_assigned_business_unit_ids',  # BUG https://stitchdata.atlassian.net/browse/SRCE-5063
     },
 }
 
