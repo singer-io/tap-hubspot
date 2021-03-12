@@ -101,7 +101,7 @@ MANDATORY_PROPERTIES = {
         "hs_lifecyclestage_opportunity_date",
         "hs_lifecyclestage_other_date",
         "went_mql",
-        "went_mql_date"
+        "went_mql_date",
     ],
     "deals": [
         "amount_in_home_currency",
@@ -123,6 +123,8 @@ MANDATORY_PROPERTIES = {
         "closed_lost_reason",
         "closed_won_reason",
         "lifecyclestage",
+        "sql_in_date",
+        "quote_sent_timestamp",
     ],
 }
 
