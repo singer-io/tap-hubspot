@@ -939,6 +939,22 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def sync_deal_pipeline_stages(STATE, ctx):
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    schema = load_schema('deal_pipeline_stages')
+    singer.write_schema('deal_pipeline_stages', schema, ['pipelineId','stageId'], catalog.get('stream_alias'))
+    LOGGER.info('sync_deal_pipeline_stages')
+    data = request(get_url('deal_pipelines')).json()
+    data=[item for sublist in [[{**record, **{'pipelineId':pipeline['pipelineId']}} for record in pipeline['stages']] for pipeline in data] for item in sublist]
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in data:
+            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+            singer.write_record("deal_pipeline_stages", record, catalog.get('stream_alias'), time_extracted=utils.now())
+    singer.write_state(STATE)
+    return STATE
+
+
 @attr.s
 class Stream(object):
     tap_stream_id = attr.ib()
@@ -962,6 +978,7 @@ STREAMS = [
     Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
+    Stream('deal_pipeline_stages', sync_deal_pipeline_stages, ['pipelineId','stageId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
