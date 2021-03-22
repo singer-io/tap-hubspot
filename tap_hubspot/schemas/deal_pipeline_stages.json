@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "pipelineId": {
+      "type": ["null", "string"]
+    },
+    "stageId": {
+      "type": ["null", "string"]
+    },
+    "label": {
+      "type": ["null", "string"]
+    },
+    "probability": {
+      "type": ["null", "number"]
+    },
+    "active": {
+      "type": ["null", "boolean"]
+    },
+    "displayOrder": {
+      "type": ["null", "integer"]
+    },
+    "closedWon": {
+      "type": ["null", "boolean"]
+    }
+  }
+}
