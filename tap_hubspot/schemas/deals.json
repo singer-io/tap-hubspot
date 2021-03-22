@@ -10,27 +10,28 @@
     "isDeleted": {
       "type": ["null", "boolean"]
     },
-    "associations": {
-      "type": ["null", "object"],
-      "properties": {
-        "associatedVids": {
-          "type": ["null", "array"],
-          "items": {
-            "type": ["null", "integer"]
-          }
-        },
-        "associatedCompanyIds": {
-          "type": ["null", "array"],
-          "items": {
-            "type": ["null", "integer"]
-          }
-        },
-        "associatedDealIds": {
-          "type": ["null", "array"],
-          "items": {
-            "type": ["null", "integer"]
-          }
-        }
+    "associatedVids": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    },
+    "associatedCompanyIds": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    },
+    "associatedDealIds": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
+      }
+    },
+    "associatedTicketIds": {
+      "type": ["null", "array"],
+      "items": {
+        "type": ["null", "integer"]
       }
     }
   }

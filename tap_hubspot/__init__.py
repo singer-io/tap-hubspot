@@ -617,7 +617,7 @@ def sync_deals(STATE, ctx):
 
     # Check if we should  include associations
     for key in mdata.keys():
-        if 'associations' in key:
+        if any(association in key for association in ['associatedVids','associatedCompanyIds','associatedDealIds','associatedTicketIds']):
             assoc_mdata = mdata.get(key)
             if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
                 params['includeAssociations'] = True
@@ -644,6 +644,8 @@ def sync_deals(STATE, ctx):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
+            if 'associations' in row:
+                row={**{key:value for key,value in row.items() if key!='associations'},**row['associations']}
             modified_time = None
             if bookmark_key in row_properties:
                 # Hubspot returns timestamps in millis
@@ -655,7 +657,6 @@ def sync_deals(STATE, ctx):
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
-
             if not modified_time or modified_time >= start:
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
