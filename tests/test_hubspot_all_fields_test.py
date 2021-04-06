@@ -50,6 +50,7 @@ KNOWN_MISSING_FIELDS = {
         #     The following streams have been added since tests were written
         'property_hs_all_assigned_business_unit_ids',
         'property_hs_unique_creation_key',
+        'property_hs_num_target_accounts',
     },
 }
 
