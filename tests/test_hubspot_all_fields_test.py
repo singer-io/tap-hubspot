@@ -51,6 +51,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_all_assigned_business_unit_ids',
         'property_hs_unique_creation_key',
         'property_hs_num_target_accounts',
+        'property_hs_priority',
     },
 }
 
