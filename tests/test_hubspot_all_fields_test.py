@@ -52,6 +52,9 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_unique_creation_key',
         'property_hs_num_target_accounts',
         'property_hs_priority',
+        'property_hs_user_ids_of_all_notification_unfollowers',
+        'property_hs_deal_stage_probability_shadow',
+        'property_hs_user_ids_of_all_notification_followers',
     },
 }
 
