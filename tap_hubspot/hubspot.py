@@ -125,6 +125,7 @@ MANDATORY_PROPERTIES = {
         "lifecyclestage",
         "sql_in_date",
         "quote_sent_timestamp",
+        "qualified_opportunity",
     ],
 }
 
@@ -148,11 +149,7 @@ class Hubspot:
         self.event_state = event_state
         self.timeout = timeout
 
-    def streams(
-        self,
-        start_date: datetime,
-        end_date: datetime,
-    ):
+    def streams(self, start_date: datetime, end_date: datetime):
         self.refresh_access_token()
         if self.tap_stream_id == "owners":
             yield from self.get_owners()
@@ -241,10 +238,7 @@ class Hubspot:
         offset_key = "after"
         replication_path = ["updatedAt"]
         yield from self.get_records(
-            path,
-            replication_path,
-            data_field=data_field,
-            offset_key=offset_key,
+            path, replication_path, data_field=data_field, offset_key=offset_key
         )
 
     def get_deals(self):
@@ -257,17 +251,10 @@ class Hubspot:
         }
         offset_key = "after"
         yield from self.get_records(
-            path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
+            path, params=params, data_field=data_field, offset_key=offset_key
         )
 
-    def get_email_events(
-        self,
-        start_date: datetime,
-        end_date: datetime,
-    ):
+    def get_email_events(self, start_date: datetime, end_date: datetime):
         start_date: int = self.datetime_to_milliseconds(start_date)
         end_date: int = self.datetime_to_milliseconds(end_date)
         path = "/email/public/v1/events"
@@ -325,10 +312,7 @@ class Hubspot:
             except:
                 continue
             yield from self.get_records(
-                path,
-                params=params,
-                data_field=data_field,
-                offset_key=offset_key,
+                path, params=params, data_field=data_field, offset_key=offset_key
             )
 
     def is_enterprise(self):
@@ -362,10 +346,7 @@ class Hubspot:
                 "occurredAfter": start_date,
             }
             yield from self.get_records(
-                path,
-                params=params,
-                data_field=data_field,
-                offset_key=offset_key,
+                path, params=params, data_field=data_field, offset_key=offset_key
             )
 
     def check_contact_id(
@@ -433,10 +414,7 @@ class Hubspot:
         self, path, replication_path=None, params=None, data_field=None, offset_key=None
     ):
         for record in self.paginate(
-            path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
+            path, params=params, data_field=data_field, offset_key=offset_key
         ):
             if self.tap_stream_id in [
                 "owners",
