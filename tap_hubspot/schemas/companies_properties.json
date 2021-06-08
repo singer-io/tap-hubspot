@@ -1,0 +1,40 @@
+{
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": ["null", "string"]
+        },
+        "label": {
+            "type": ["null", "string"]
+        },
+        "description": {
+            "type": ["null", "string"]
+        },
+        "groupName": {
+            "type": ["null", "string"]
+        },
+        "type": {
+            "type": ["null", "string"]
+        },
+        "fieldType": {
+            "type": ["null", "string"]
+        },
+        "hidden": {
+            "type": ["null", "boolean"]
+        },
+        "hubspotDefined": {
+            "type": ["null", "boolean"]
+        },
+        "createdAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
+        "options": {
+            "type": ["null", "string"]
+        }
+    }
+}

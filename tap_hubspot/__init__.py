@@ -403,6 +403,10 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
         while True:
             data = request(url, params).json()
 
+            if path is None:
+                path = 'data'
+                data = {'data': data}
+
             if data.get(path) is None:
                 raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
 
@@ -526,6 +530,31 @@ def _sync_contacts_by_company(STATE, ctx, company_id):
 default_company_params = {
     'limit': 250, 'properties': ["createdate", "hs_lastmodifieddate"]
 }
+
+def sync_companies_properties(STATE, ctx):
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    schema = load_schema("companies_properties")
+    bookmark_key = 'updatedAt'
+    singer.write_schema("companies_properties", schema, ["name"], [bookmark_key], catalog.get('stream_alias'))
+
+    start = get_start(STATE, "companies_properties", bookmark_key)
+    max_bk_value = start
+
+    LOGGER.info("sync_companies_properties from %s", start)
+
+    url = get_url("companies_properties")
+    params = {'count': 250}
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, v3_fields=None):
+        for row in gen_request(STATE, 'companies_properties', url, params, None, "has-more", ["offset"], ["offset"]):
+            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+            singer.write_record("companies_properties", record, catalog.get('stream_alias'), time_extracted=utils.now())
+
+    STATE = singer.write_bookmark(STATE, 'companies_properties', bookmark_key, max_bk_value)
+    singer.write_state(STATE)
+
+    return STATE
 
 def sync_companies(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
@@ -949,6 +978,7 @@ STREAMS = [
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'FULL_TABLE'),
+    Stream('companies_properties', sync_companies_properties, ["name"], 'updatedAt', 'FULL_TABLE'),
     Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
