@@ -100,7 +100,7 @@ MANDATORY_PROPERTIES = {
         "hs_lifecyclestage_other_date",
         "went_mql",
         "went_mql_date",
-        "original_mql_date_before_reset"
+        "original_mql_date_before_reset",
     ],
     "deals": [
         "amount_in_home_currency",
