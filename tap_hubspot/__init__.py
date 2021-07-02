@@ -4,6 +4,7 @@ import shelve
 import os
 import tempfile
 import singer
+import sys
 from singer import utils, metadata, Catalog, CatalogEntry, Schema
 from tap_hubspot.stream import Stream
 from pathlib import Path
@@ -59,7 +60,7 @@ def sync(config, state=None):
 
             except Exception:
                 LOGGER.exception(f"{tap_stream_id} failed")
-                continue
+                sys.exit(1)
 
 
 @utils.handle_top_exception(LOGGER)
