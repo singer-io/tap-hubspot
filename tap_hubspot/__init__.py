@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-import json
 import shelve
 import os
 import tempfile
 import singer
 import sys
-from singer import utils, metadata, Catalog, CatalogEntry, Schema
+from singer import utils
 from tap_hubspot.stream import Stream
-from pathlib import Path
 from collections import defaultdict
 from typing import DefaultDict, Set
 

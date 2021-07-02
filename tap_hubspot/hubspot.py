@@ -1,13 +1,11 @@
-import sys
 import requests
 from ratelimit import limits
 import ratelimit
 import singer
 import backoff
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, DefaultDict, Set
+from typing import Dict, Optional, DefaultDict, Set
 from dateutil import parser
-import urllib
 
 
 class RetryAfterReauth(Exception):

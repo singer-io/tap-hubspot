@@ -1,10 +1,4 @@
 import singer
-from singer import (
-    metadata,
-    CatalogEntry,
-    Transformer,
-    UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
-)
 from typing import DefaultDict, Set, Union, Dict
 from datetime import timedelta, datetime
 from dateutil import parser
