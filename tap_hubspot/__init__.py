@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-import json
 import shelve
 import os
 import tempfile
 import singer
-from singer import utils, metadata, Catalog, CatalogEntry, Schema
+import sys
+from singer import utils
 from tap_hubspot.stream import Stream
-from pathlib import Path
 from collections import defaultdict
 from typing import DefaultDict, Set
 
@@ -59,7 +58,7 @@ def sync(config, state=None):
 
             except Exception:
                 LOGGER.exception(f"{tap_stream_id} failed")
-                continue
+                sys.exit(1)
 
 
 @utils.handle_top_exception(LOGGER)

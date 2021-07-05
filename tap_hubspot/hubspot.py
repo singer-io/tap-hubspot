@@ -1,13 +1,11 @@
-import sys
 import requests
 from ratelimit import limits
 import ratelimit
 import singer
 import backoff
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, DefaultDict, Set
+from typing import Dict, Optional, DefaultDict, Set
 from dateutil import parser
-import urllib
 
 
 class RetryAfterReauth(Exception):
@@ -102,7 +100,7 @@ MANDATORY_PROPERTIES = {
         "hs_lifecyclestage_other_date",
         "went_mql",
         "went_mql_date",
-        "original_mql_date_before_reset"
+        "original_mql_date_before_reset",
     ],
     "deals": [
         "amount_in_home_currency",
