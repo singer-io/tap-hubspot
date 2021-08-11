@@ -101,6 +101,7 @@ MANDATORY_PROPERTIES = {
         "went_mql",
         "went_mql_date",
         "original_mql_date_before_reset",
+        "converting_touch",
     ],
     "deals": [
         "amount_in_home_currency",
