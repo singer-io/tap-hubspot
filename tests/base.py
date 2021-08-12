@@ -198,7 +198,7 @@ class HubspotBaseTest(unittest.TestCase):
     #  Common Test Actions   #
     ##########################
 
-    def create_connection(self, original_properties: bool = True):
+    def create_connection_and_run_check(self, original_properties: bool = True):
         """Create a new connection with the test name"""
         # Create the connection
         conn_id = connections.ensure_connection(self, original_properties)
