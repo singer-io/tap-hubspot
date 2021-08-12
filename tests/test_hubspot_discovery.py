@@ -104,9 +104,8 @@ class DiscoveryTest(HubspotBaseTest):
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
 
-                # verify that primary, ication and foreign keys
-                # are given the inclusion of automatic in metadata.
-                # BUG_2 https://jira.talendforge.org/browse/TDL-9772
+                # verify that primary, replication and foreign keys are given the inclusion of automatic in metadata.
+                # BUG_2 https://jira.talendforge.org/browse/TDL-9772 'inclusion' is not present for replication keys
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
