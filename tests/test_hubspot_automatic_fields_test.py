@@ -69,10 +69,12 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                 record_count = sync_record_count.get(stream, 0)
                 self.assertLessEqual(1, record_count)
 
+
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 expected_keys = self.expected_automatic_fields().get(stream)
 
+                # TODO this could be more clear
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
                     self.assertSetEqual(actual_keys, expected_keys,
@@ -83,3 +85,4 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                 pk = self.expected_primary_keys()[stream]
                 pks_values = [(message['data'][p] for p in pk) for message in data['messages']]
                 self.assertEqual(len(pks_values), len(set(pks_values)))
+
