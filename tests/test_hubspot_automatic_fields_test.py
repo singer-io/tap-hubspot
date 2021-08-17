@@ -7,7 +7,7 @@ from base import HubspotBaseTest
 
 class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
-        return "tap_tester_hubspot_combined_test"
+        return "tap_tester_hubspot_automatic_fields_test"
 
     def get_properties(self):
         return {
