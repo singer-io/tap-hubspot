@@ -32,7 +32,7 @@ class DiscoveryTest(HubspotBaseTest):
         """
         streams_to_test = self.expected_streams()
 
-        conn_id = self.create_connection()
+        conn_id = self.create_connection_and_run_check()
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
@@ -47,39 +47,36 @@ class DiscoveryTest(HubspotBaseTest):
                 catalog = next(iter([catalog for catalog in found_catalogs
                                      if catalog["stream_name"] == stream]))
                 assert catalog  # based on previous tests this should always be found
-
                 schema_and_metadata = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
                 metadata = schema_and_metadata["metadata"]
-                schema = schema_and_metadata["annotated-schema"]
 
                 # verify there is only 1 top level breadcrumb
                 stream_properties = [item for item in metadata if item.get("breadcrumb") == []]
                 self.assertTrue(len(stream_properties) == 1,
-                                msg="There is NOT only one top level breadcrumb for {}".format(stream) + \
-                                "\nstream_properties | {}".format(stream_properties))
+                                msg=f"There is NOT only one top level breadcrumb for {stream}" + \
+                                "\nstream_properties | {stream_properties}")
 
                 # verify replication key(s)
+                actual_rep_keys = set(stream_properties[0].get(
+                            "metadata", {self.REPLICATION_KEYS: None}).get(
+                                self.REPLICATION_KEYS, []))
                 self.assertEqual(
                     set(stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, [])),
                     self.expected_replication_keys()[stream],
-                    msg="expected replication key {} but actual is {}".format(
-                        self.expected_replication_keys()[stream],
-                        set(stream_properties[0].get(
-                            "metadata", {self.REPLICATION_KEYS: None}).get(
-                                self.REPLICATION_KEYS, []))))
+                    msg=f"expected replication key {self.expected_replication_keys()[stream]} but actual is {actual_rep_keys}"
+                        )
+
 
                 # verify primary key(s)
-                self.assertEqual(
-                    set(stream_properties[0].get(
-                        "metadata", {self.PRIMARY_KEYS: []}).get(self.PRIMARY_KEYS, [])),
-                    self.expected_primary_keys()[stream],
-                    msg="expected primary key {} but actual is {}".format(
-                        self.expected_primary_keys()[stream],
-                        set(stream_properties[0].get(
-                            "metadata", {self.PRIMARY_KEYS: None}).get(self.PRIMARY_KEYS, []))))
+                actual_primary_keys = set(stream_properties[0].get( "metadata", {self.PRIMARY_KEYS: []}).get(self.PRIMARY_KEYS, []))
+                self.assertSetEqual(self.expected_primary_keys()[stream], actual_primary_keys,
+                                    msg=f"expected primary key {self.expected_primary_keys()[stream]} but actual is {actual_primary_keys}"
+                                    #set(stream_properties[0].get('metadata', {self.PRIMARY_KEYS: None}).get(self.PRIMARY_KEYS, [])))}"
 
-                # BUG_1 (https://stitchdata.atlassian.net/browse/SRCE-4490)
+                        )
+                 # actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
+                # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
                 # # verify the actual replication matches our expected replication method
                 # self.assertEqual(
                 #     self.expected_replication_method().get(stream, None),
@@ -93,7 +90,7 @@ class DiscoveryTest(HubspotBaseTest):
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-                    # BUG_1 (https://stitchdata.atlassian.net/browse/SRCE-4490)
+                    # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full table
                     pass  # TODO Remove me when bug is addressed
                     # self.assertTrue(actual_replication_method == self.INCREMENTAL,
                     #                 msg="Expected INCREMENTAL replication "
@@ -107,33 +104,15 @@ class DiscoveryTest(HubspotBaseTest):
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
 
-                # verify that primary, replication and foreign keys
-                # are given the inclusion of automatic in annotated schema.
-                # BUG_2 (https://stitchdata.atlassian.net/browse/SRCE-4495)
-                actual_automatic_fields = {key for key, value in schema["properties"].items()
-                                           if value.get("inclusion") == "automatic"}
-                # self.assertEqual(expected_automatic_fields, actual_automatic_fields)
-
-
-                # verify that all other fields have inclusion of available
-                # This assumes there are no unsupported fields for SaaS sources
-                self.assertTrue(
-                    all({value.get("inclusion") == "available" for key, value
-                         in schema["properties"].items()
-                         if key not in actual_automatic_fields}),
-                    msg="Not all non key properties are set to available in annotated schema")
-
-                # verify that primary, replication and foreign keys
-                # are given the inclusion of automatic in metadata.
-                # BUG_2 (https://stitchdata.atlassian.net/browse/SRCE-4495)
+                # verify that primary, replication and foreign keys are given the inclusion of automatic in metadata.
+                # BUG_2 https://jira.talendforge.org/browse/TDL-9772 'inclusion' is not present for replication keys
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
                 # self.assertEqual(expected_automatic_fields,
                 #                  actual_automatic_fields,
-                #                  msg="expected {} automatic fields but got {}".format(
-                #                      expected_automatic_fields,
-                #                      actual_automatic_fields))
+                #                  msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields}"
+                #                  )
 
                 # verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources

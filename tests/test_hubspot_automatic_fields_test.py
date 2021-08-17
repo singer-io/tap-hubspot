@@ -63,6 +63,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
 
+                # TODO Remove this, it could cover up streams that are not actually tested 
                 if not data:
                     print('WARNING: Add data for {}'.format(stream))
                     continue
@@ -70,12 +71,16 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 expected_keys = self.expected_automatic_fields().get(stream)
 
+                # TODO this could be more clear
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
                     self.assertEqual(
                         actual_keys.symmetric_difference(expected_keys), set(),
                         msg="Expected automatic fields and nothing else.")
 
+                # TODO this is not necessary
                 # Verify the sync meets or exceeds the default record count
                 record_count = sync_record_count.get(stream, 0)
                 self.assertLessEqual(1, record_count)
+
+                # TODO add assertion to ensure records are not duplicates
