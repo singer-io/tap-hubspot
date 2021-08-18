@@ -3,9 +3,16 @@ import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import HubspotBaseTest
-
+from client import TestClient
 
 KNOWN_MISSING_FIELDS = {
+    'campaigns': {
+        # TODO need to write up the following discrepancy
+        'lastProcessingStateChangeAt',
+        'lastProcessingFinishedAt',
+        'processingState',
+        'lastProcessingStartedAt',
+    },
     'deals': {
         # This field requires attaching conferencing software to
         # Hubspot and booking a meeting as part of a deal
@@ -66,10 +73,15 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def testable_streams(self):
         return {
-            'deals',
+            #'deals',
+            'campaigns',
         }
 
     def test_run(self):
+        test_client = TestClient()
+        expected_records = dict()
+        expected_records['campaigns'] = test_client.get_campaigns()
+        
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
@@ -96,13 +108,34 @@ class TestHubspotAllFields(HubspotBaseTest):
         for stream in self.testable_streams():
             with self.subTest(stream=stream):
 
-                expected_fields = set(synced_records.get(stream)['schema']['properties'].keys())
-                print('Number of expected keys ', len(expected_fields))
-                actual_fields = set(runner.examine_target_output_for_fields()[stream])
-                print('Number of actual keys ', len(actual_fields))
-                print('Number of known missing keys ', len(KNOWN_MISSING_FIELDS[stream]))
+                replication_method = self.expected_replication_method()[stream]
+                primary_keys = self.expected_primary_keys()[stream]
+                expected_primary_key_values = [[record[primary_key] for primary_key in primary_keys]
+                                               for record in expected_records[stream]]
+                actual_records = [message['data']
+                                  for message in synced_records[stream]['messages']
+                                  if message['action'] == 'upsert']
+ 
 
-                unexpected_fields = actual_fields & KNOWN_MISSING_FIELDS[stream]
-                if unexpected_fields:
-                    print('WARNING: Found new fields: {}'.format(unexpected_fields))
-                #TODO remove this after workaround | self.assertSetEqual(expected_fields, actual_fields | KNOWN_MISSING_FIELDS[stream]) 
+                # Verify by primary key values that only the expected records were replicated
+                actual_records_primary_key_values = [[record[primary_key]
+                                                      for primary_key in primary_keys]
+                                                     for record in actual_records]
+                self.assertEqual(expected_primary_key_values, actual_records_primary_key_values)
+
+                for expected_record in expected_records[stream]:
+                    with self.subTest(expected_record=expected_record):
+ 
+                        # grab the replicated record that corresponds to expected_record by checking primary keys
+                        primary_key_values = [expected_record[primary_key] for primary_key in primary_keys]
+                        matching_actual_records_by_pk = [record for record in actual_records
+                                                         if primary_key_values == [record[primary_key]
+                                                                                   for primary_key in primary_keys]]
+                        self.assertEqual(1, len(matching_actual_records_by_pk))
+                        actual_record = matching_actual_records_by_pk[0]
+
+
+                        # Verify the fields in our expected record match the fields in the corresponding replicated record
+                        self.assertSetEqual(
+                            set(expected_record.keys()), set(actual_record.keys()).union(KNOWN_MISSING_FIELDS[stream])
+                        )
