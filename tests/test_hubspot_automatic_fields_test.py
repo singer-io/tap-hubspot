@@ -17,8 +17,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
     def expected_streams(self):
         """streams to test, excluding the list below"""
         return self.expected_check_streams().difference({
-            'subscription_changes',  # TODO no data
-            'email_events',  # TODO no data
+            # 'subscription_changes',  # TODO no data
+            # 'email_events',  # TODO no data
         })
 
 
@@ -58,6 +58,19 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         #         # remove replication keys
         #         self.assertEqual(expected_automatic_fields, selected_fields)
 
+        # setting state for companies stream in order to decrease row count and run time
+        state = {
+            'bookmarks': {
+                'companies': {
+                    'current_sync_start': None,
+                    'hs_lastmodifieddate': '2021-08-01T00:00:00.000000Z',
+                    'offset': {}
+                },
+            },
+            'currently_syncing': None
+        }
+
+        menagerie.set_state(conn_id, state)
 
         # Run a sync job using orchestrator
         sync_record_count = self.run_and_verify_sync(conn_id)
@@ -75,8 +88,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 expected_keys = self.expected_automatic_fields().get(stream)
 
-                # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939
-                if stream in {'companies', 'deals', 'contacts'}:
+                # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 Replication keys are not included as an automatic field for these streams
+                if stream in {'companies', 'deals', 'contacts', 'subscription_changes', 'email_events'}:
                     # replication keys not in the expected_keys
                     remove_keys = self.expected_metadata()[stream].get(self.REPLICATION_KEYS)
                     expected_keys = expected_keys.difference(remove_keys)
@@ -89,7 +102,12 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                                         msg=f"Expected automatic fields: {expected_keys} and nothing else."
                     )
 
-                # make sure there are no duplicate records by using the pks
-                pk = self.expected_primary_keys()[stream]
-                pks_values = [(message['data'][p] for p in pk) for message in data['messages']]
-                self.assertEqual(len(pks_values), len(set(pks_values)))
+
+                # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+                #               The subscription_changes stream does not have a valid pk to ensure no dupes are sent
+                if stream != 'subscription_changes':
+
+                    # make sure there are no duplicate records by using the pks
+                    pk = self.expected_primary_keys()[stream]
+                    pks_values = [tuple([message['data'][p] for p in pk]) for message in data['messages']]
+                    self.assertEqual(len(pks_values), len(set(pks_values)))
