@@ -15,11 +15,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         }
 
     def expected_streams(self):
-        """streams to test, excluding the list below"""
-        return self.expected_check_streams().difference({
-            # 'subscription_changes',  # TODO no data
-            # 'email_events',  # TODO no data
-        })
+        """streams to test"""
+        return self.expected_check_streams()
 
 
     def test_run(self):
