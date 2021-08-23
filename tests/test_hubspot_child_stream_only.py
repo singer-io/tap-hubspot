@@ -1,4 +1,4 @@
-"""Test tap discovery mode and metadata/annotated-schema."""
+"""Test tap field selection of child streams without its parent."""
 import re
 
 from tap_tester import connections
@@ -46,10 +46,10 @@ class FieldSelectionChildTest(HubspotBaseTest):
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         
         # Verify that the tap error message shows you need to select the parent stream
+        self.assertRaises(AssertionError, menagerie.verify_sync_exit_status, self, exit_status, sync_job_name)
         self.assertEqual(exit_status['tap_error_message'],
                          ('Unable to extract contacts_by_company data. '
                           'To receive contacts_by_company data, you also need to select companies.'))
-        self.assertRaises(AssertionError, menagerie.verify_sync_exit_status, self, exit_status, sync_job_name)
 
         # Verify there is no discovery or target error
         self.assertEqual(exit_status['target_exit_status'], 0)
