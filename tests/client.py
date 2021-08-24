@@ -37,13 +37,21 @@ class TestClient():
 
         return json_response
 
+
+    @backoff.on_exception(backoff.constant,
+                          (requests.exceptions.RequestException,
+                           requests.exceptions.HTTPError),
+                          max_tries=5,
+                          jitter=None,
+                          giveup=giveup,
+                          interval=10)
     def post(self, url, data, params=dict()):
         """Perfroma a POST using the standard requests method and log the action"""
         headers = self.HEADERS
         headers['content-type'] = "application/json"
 
         response = requests.post(url, json=data, params=params, headers=self.HEADERS)
-        print(f"TEST CLIENT | POST {url} params={params}  STATUS: {response.status_code}")
+        print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
         response.raise_for_status()
         json_response = response.json()
 
@@ -230,6 +238,7 @@ class TestClient():
         records = self.denest_properties('deal_pipelines', records)
         return records
 
+    # TODO cleanup this method!
     def get_deals(self):
         """
         Get all deals by paginating using 'hasMore' and 'offset'.
@@ -239,8 +248,7 @@ class TestClient():
         params = {'includeAllProperties': True,
                   'allPropertiesFetchMode': 'latest_version',
                   'properties' : []}
-        # 'includeAssociations': False, TODO do we want this?
-        v3_prefixes = {'hs_time_in_closedlost'}
+        v3_prefixes = {'hs_date_entered_appointmentscheduled'}
         # 'hs_date_entered_', 'hs_date_exited', 'hs_time_in',
         replication_key = list(self.replication_keys['deals'])[0]
         records = []
@@ -262,14 +270,21 @@ class TestClient():
         v1_ids = [{'id': str(record['dealId'])} for record in records]
         data = {'inputs': v1_ids,
                 'properties': list(v3_prefixes)}
-        v3_response = self.post(v3_url, data, params)
-
+        v3_response = self.post(v3_url, data)
         v3_records = v3_response['results']
         for v3_record in v3_records:
             for record in records:
-                if v3_record['id'] == record['dealId']:
-                    record['properteis'].update(v3_record['properties'])
+                if v3_record['id'] == str(record['dealId']):
+                    V3_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+                    trimmed_v3_properties = {v3_property: {'value': v3_value}
+                                             for v3_property, v3_value in v3_record['properties'].items()
+                                             if any([v3_property.startswith(prefix) for prefix in V3_PREFIXES])
+                                             and v3_value is not None}
+                    record['properties'].update(trimmed_v3_properties)
 
+                    # {"properties": {"createdate": {}}}
+                    # {"properties": {"createdate": "2020"}}
+                    
         records = self.denest_properties('deals', records)
         return records
 

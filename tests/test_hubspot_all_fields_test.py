@@ -5,6 +5,14 @@ import tap_tester.runner      as runner
 from base import HubspotBaseTest
 from client import TestClient
 
+KNOWN_EXTRA_FIELDS = {
+    'deals': {
+        # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
+        #                 Has an value of object with key 'value' and value 'Null'
+        'property_hs_date_entered_1258834',
+    },
+}
+
 KNOWN_MISSING_FIELDS = { # TODO need to write up the following discrepancy
     'contact_lists': {
         'authorId',
@@ -68,6 +76,11 @@ KNOWN_MISSING_FIELDS = { # TODO need to write up the following discrepancy
         'processingState',
         'lastProcessingStartedAt',
     },
+    'deals': {
+        'imports',
+        'property_hs_num_associated_deal_splits',
+        'stateChanges',
+    },
     # 'deals': {
     #     # This field requires attaching conferencing software to
     #     # Hubspot and booking a meeting as part of a deal
@@ -128,7 +141,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def testable_streams(self):
         return {
-            # 'deals',
+            'deals',
             'deal_pipelines',
             'contacts',  # pass
             'companies', # pass
@@ -140,7 +153,7 @@ class TestHubspotAllFields(HubspotBaseTest):
             'forms', # pass
             'owners', # pass
             'workflows', # pass
-            # 'subscription_changes', # TODO cannot be tested easily without a valid pk
+            # 'subscription_changes', # BUG https://jira.talendforge.org/browse/TDL-14938
         }
 
     @classmethod
@@ -165,11 +178,11 @@ class TestHubspotAllFields(HubspotBaseTest):
         company_ids = [company['companyId'] for company in cls.expected_records['companies']]
         cls.expected_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
         cls.expected_records['deal_pipelines'] = test_client.get_deal_pipelines()
+        cls.expected_records['deals'] = test_client.get_deals()
         # fail
         # cls.expected_records['subscription_changes'] = test_client.get_subscription_changes()
 
-        # TODO
-        # cls.expected_records['deals'] = test_client.get_deals() # TODO work with dev to get passing
+
 
         for stream, records in cls.expected_records.items():
             print(f"The test client found {len(records)} {stream} records.")
@@ -240,10 +253,18 @@ class TestHubspotAllFields(HubspotBaseTest):
                             if missing_key in expected_record.keys():
                                 known_missing_keys.add(missing_key)
 
+                        # NB : KNOWN_EXTRA_FIELDS is a dictionary of streams to fields that should not
+                        #      be replicated but are. See the variable declaration at top of file for linked BUGs.
+                        known_extra_keys = set()
+                        for extra_key in KNOWN_EXTRA_FIELDS.get(stream, set()):
+                            known_extra_keys.add(extra_key)
+                            
+
                         # Verify the fields in our expected record match the fields in the corresponding replicated record
-                        self.assertSetEqual(
-                            set(expected_record.keys()), set(actual_record.keys()).union(known_missing_keys)
-                        )
+                        expected_keys_adjusted = set(expected_record.keys()).union(known_extra_keys)
+                        actual_keys_adjusted = set(actual_record.keys()).union(known_missing_keys)
+
+                        self.assertSetEqual(expected_keys_adjusted, actual_keys_adjusted)
 
                 # TODO PUT BACK
 
