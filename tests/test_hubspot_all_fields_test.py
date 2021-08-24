@@ -13,12 +13,12 @@ KNOWN_EXTRA_FIELDS = {
     },
 }
 
-KNOWN_MISSING_FIELDS = { # TODO need to write up the following discrepancy
-    'contact_lists': {
+KNOWN_MISSING_FIELDS = {
+    'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
         'authorId',
         'teamIds'
     },
-    'email_events': {
+    'email_events': {  # BUG https://jira.talendforge.org/browse/TDL-14997
         'portalSubscriptionStatus',
         'attempt',
         'source',
@@ -30,7 +30,7 @@ KNOWN_MISSING_FIELDS = { # TODO need to write up the following discrepancy
         'suppressedReason',
         'cc',
      },
-    'workflows': {
+    'workflows': {  # BUG https://jira.talendforge.org/browse/TDL-14998
         'migrationStatus',
         'updateSource',
         'description',
@@ -40,10 +40,10 @@ KNOWN_MISSING_FIELDS = { # TODO need to write up the following discrepancy
         'portalId',
         'contactCounts',
     },
-    'owners': {
+    'owners': {  # BUG https://jira.talendforge.org/browse/TDL-15000
         'activeSalesforceId'
     },
-    'forms': {
+    'forms': {  # BUG https://jira.talendforge.org/browse/TDL-15001
         'alwaysCreateNewCompany',
         'themeColor',
         'publishAt',
@@ -64,73 +64,23 @@ KNOWN_MISSING_FIELDS = { # TODO need to write up the following discrepancy
         'customUid',
         'isPublished',
     },
-    'companies': {
+    'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',
         'stateChanges',
         'isDeleted',
         'additionalDomains',
     },
-    'campaigns': {
+    'campaigns': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'lastProcessingStateChangeAt',
         'lastProcessingFinishedAt',
         'processingState',
         'lastProcessingStartedAt',
     },
-    'deals': {
+    'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
         'imports',
         'property_hs_num_associated_deal_splits',
         'stateChanges',
     },
-    # 'deals': {
-    #     # This field requires attaching conferencing software to
-    #     # Hubspot and booking a meeting as part of a deal
-    #     'property_engagements_last_meeting_booked',
-    #     # These 3 fields are derived from UTM codes attached to the above
-    #     # meetings
-    #     'property_engagements_last_meeting_booked_campaign',
-    #     'property_engagements_last_meeting_booked_medium',
-    #     'property_engagements_last_meeting_booked_source',
-    #     # There's a way to associate a deal with a marketing campaign
-    #     'property_hs_campaign',
-    #     'property_hs_deal_amount_calculation_preference',
-    #     # These are calculated properties
-    #     'property_hs_likelihood_to_close',
-    #     'property_hs_merged_object_ids',
-    #     'property_hs_predicted_amount',
-    #     'property_hs_predicted_amount_in_home_currency',
-    #     'property_hs_sales_email_last_replied',
-    #     # These we have no data for
-    #     'property_hs_date_entered_appointmentscheduled',
-    #     'property_hs_date_entered_decisionmakerboughtin',
-    #     'property_hs_date_exited_qualifiedtobuy',
-    #     'property_hs_time_in_closedwon',
-    #     'property_hs_date_exited_appointmentscheduled',
-    #     'property_hs_time_in_decisionmakerboughtin',
-    #     'property_hs_date_exited_closedlost',
-    #     'property_hs_time_in_closedlost',
-    #     'property_hs_date_entered_closedlost',
-    #     'property_hs_date_entered_closedwon',
-    #     'property_hs_date_exited_contractsent',
-    #     'property_hs_time_in_presentationscheduled',
-    #     'property_hs_date_exited_presentationscheduled',
-    #     'property_hs_time_in_qualifiedtobuy',
-    #     'property_hs_date_exited_decisionmakerboughtin',
-    #     'property_hs_time_in_contractsent',
-    #     'property_hs_time_in_appointmentscheduled',
-    #     'property_hs_date_entered_presentationscheduled',
-    #     'property_hs_date_entered_qualifiedtobuy',
-    #     'property_hs_date_entered_contractsent',
-    #     'property_hs_date_exited_closedwon',
-    #     # BUG https://jira.talendforge.org/browse/TDL-9886
-    #     #     The following streams have been added since tests were written
-    #     'property_hs_all_assigned_business_unit_ids',
-    #     'property_hs_unique_creation_key',
-    #     'property_hs_num_target_accounts',
-    #     'property_hs_priority',
-    #     'property_hs_user_ids_of_all_notification_unfollowers',
-    #     'property_hs_deal_stage_probability_shadow',
-    #     'property_hs_user_ids_of_all_notification_followers',
-    # },
 }
 
 class TestHubspotAllFields(HubspotBaseTest):
@@ -140,21 +90,11 @@ class TestHubspotAllFields(HubspotBaseTest):
         return "tap_tester_all_fields_all_fields_test"
 
     def testable_streams(self):
-        return {
-            'deals',
-            'deal_pipelines',
-            'contacts',  # pass
-            'companies', # pass
-            'campaigns', # pass
-            'contact_lists', # pass
-            'contacts_by_company', # 
-            'email_events', # pass
-            'engagements', # pass
-            'forms', # pass
-            'owners', # pass
-            'workflows', # pass
-            # 'subscription_changes', # BUG https://jira.talendforge.org/browse/TDL-14938
-        }
+        """expected streams minus the streams not under test"""
+        return self.expected_streams().difference({
+            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+        })
+
 
     @classmethod
     def setUpClass(cls):
@@ -165,7 +105,6 @@ class TestHubspotAllFields(HubspotBaseTest):
         test_client = TestClient()
         cls.expected_records = dict()
 
-        # pass
         cls.expected_records['campaigns'] = test_client.get_campaigns()
         cls.expected_records['forms'] = test_client.get_forms()
         cls.expected_records['owners'] = test_client.get_owners()
@@ -179,10 +118,9 @@ class TestHubspotAllFields(HubspotBaseTest):
         cls.expected_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
         cls.expected_records['deal_pipelines'] = test_client.get_deal_pipelines()
         cls.expected_records['deals'] = test_client.get_deals()
-        # fail
-        # cls.expected_records['subscription_changes'] = test_client.get_subscription_changes()
+        # cls.expected_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
 
-
+        # cls.expected_records = get_expected_records_from_test_client() # TODO?
 
         for stream, records in cls.expected_records.items():
             print(f"The test client found {len(records)} {stream} records.")
@@ -221,8 +159,6 @@ class TestHubspotAllFields(HubspotBaseTest):
                 # gather expected values
                 replication_method = self.expected_replication_method()[stream]
                 primary_keys = self.expected_primary_keys()[stream]
-                expected_primary_key_values = [[record[primary_key] for primary_key in primary_keys]
-                                               for record in self.expected_records[stream]]
 
                 # gather replicated records
                 actual_records = [message['data']
@@ -244,10 +180,9 @@ class TestHubspotAllFields(HubspotBaseTest):
                         actual_record = matching_actual_records_by_pk[0]
 
 
-                        # TODO BUG
-                        #      KNOWN_MISSING_FIELDS is a dictionary of streams to aggregated missing fields.
-                        #      We will check each expected_record to see which of the known keys is present in expectations
-                        #      and then will add them to the known_missing_keys set.
+                        # NB: KNOWN_MISSING_FIELDS is a dictionary of streams to aggregated missing fields.
+                        #     We will check each expected_record to see which of the known keys is present in expectations
+                        #     and then will add them to the known_missing_keys set.
                         known_missing_keys = set()
                         for missing_key in KNOWN_MISSING_FIELDS.get(stream, set()):
                             if missing_key in expected_record.keys():
@@ -258,7 +193,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                         known_extra_keys = set()
                         for extra_key in KNOWN_EXTRA_FIELDS.get(stream, set()):
                             known_extra_keys.add(extra_key)
-                            
+
 
                         # Verify the fields in our expected record match the fields in the corresponding replicated record
                         expected_keys_adjusted = set(expected_record.keys()).union(known_extra_keys)
@@ -266,12 +201,11 @@ class TestHubspotAllFields(HubspotBaseTest):
 
                         self.assertSetEqual(expected_keys_adjusted, actual_keys_adjusted)
 
-                # TODO PUT BACK
-
-                # BUG ? TEST ISSUE ? TODO
-                # if stream not in {'companies'}:
-                #     # Verify by primary key values that only the expected records were replicated
-                #     actual_records_primary_key_values = [[record[primary_key]
-                #                                           for primary_key in primary_keys]
-                #                                          for record in actual_records]
-                #     self.assertEqual(expected_primary_key_values, actual_records_primary_key_values)
+                # Verify by primary key values that only the expected records were replicated
+                expected_primary_key_values = {tuple([record[primary_key]
+                                                      for primary_key in primary_keys])
+                                               for record in self.expected_records[stream]}
+                actual_records_primary_key_values = {tuple([record[primary_key]
+                                                            for primary_key in primary_keys])
+                                                     for record in actual_records}
+                self.assertSetEqual(expected_primary_key_values, actual_records_primary_key_values)

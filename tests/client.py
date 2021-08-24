@@ -11,6 +11,8 @@ BASE_URL = "https://api.hubapi.com"
 
 class TestClient():
 
+    V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+
     ##########################################################################
     ### CORE METHODS
     ##########################################################################
@@ -36,7 +38,6 @@ class TestClient():
         json_response = response.json()
 
         return json_response
-
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -238,53 +239,64 @@ class TestClient():
         records = self.denest_properties('deal_pipelines', records)
         return records
 
-    # TODO cleanup this method!
     def get_deals(self):
         """
-        Get all deals by paginating using 'hasMore' and 'offset'.
+        Get all deals from the v1 endpoiint by paginating using 'hasMore' and 'offset'.
+        For each deals record denest 'properties' so that they are prefxed with 'property_'
+        and located at the top level.
         """
         v1_url = f"{BASE_URL}/deals/v1/deal/paged"
 
-        params = {'includeAllProperties': True,
+        v1_params = {'includeAllProperties': True,
                   'allPropertiesFetchMode': 'latest_version',
                   'properties' : []}
-        v3_prefixes = {'hs_date_entered_appointmentscheduled'}
-        # 'hs_date_entered_', 'hs_date_exited', 'hs_time_in',
         replication_key = list(self.replication_keys['deals'])[0]
         records = []
+
         # hit the v1 endpoint to get the record
         has_more = True
         while has_more:
 
-            response = self.get(v1_url, params=params)
+            response = self.get(v1_url, params=v1_params)
             records.extend([record for record in response['deals']
                             if record['properties'][replication_key]['timestamp'] >= self.start_date])
 
             has_more = response['hasMore']
-            params['offset'] = response['offset']
-
-        # TODO this should be done for every page
-        # hit the v3 endpoint to get the special hs_<whatever> fields from  v3 'properties'
-        v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
+            v1_params['offset'] = response['offset']
 
         v1_ids = [{'id': str(record['dealId'])} for record in records]
+
+        # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
+        v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
+        v3_property = {'hs_date_entered_appointmentscheduled'}
         data = {'inputs': v1_ids,
-                'properties': list(v3_prefixes)}
+                'properties': list(v3_property)}
         v3_response = self.post(v3_url, data)
         v3_records = v3_response['results']
+
+        # pull the desired properties from the v3 records and add them to correspond  v1 records
         for v3_record in v3_records:
             for record in records:
                 if v3_record['id'] == str(record['dealId']):
-                    V3_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
-                    trimmed_v3_properties = {v3_property: {'value': v3_value}
-                                             for v3_property, v3_value in v3_record['properties'].items()
-                                             if any([v3_property.startswith(prefix) for prefix in V3_PREFIXES])
-                                             and v3_value is not None}
-                    record['properties'].update(trimmed_v3_properties)
 
-                    # {"properties": {"createdate": {}}}
-                    # {"properties": {"createdate": "2020"}}
-                    
+                    # don't inclue the v3 property if the value is None
+                    non_null_v3_properties = {v3_property_key: v3_property_value
+                                              for v3_property_key, v3_property_value in v3_record['properties'].items()
+                                              if v3_property_value is not None}
+
+                    # only grab v3 properties with a specific prefix
+                    trimmed_v3_properties = {v3_property_key: v3_property_value
+                                             for v3_property_key, v3_property_value in non_null_v3_properties.items()
+                                             if any([v3_property_key.startswith(prefix)
+                                                     for prefix in self.V3_DEALS_PROPERTY_PREFIXES])}
+
+                    # the v3 properties must be restructured into objects to match v1
+                    v3_properties = {v3_property_key: {'value': v3_property_value}
+                                     for v3_property_key, v3_property_value in trimmed_v3_properties.items()}
+
+                    # add the v3 record properties to the v1 record
+                    record['properties'].update(v3_properties)
+
         records = self.denest_properties('deals', records)
         return records
 
