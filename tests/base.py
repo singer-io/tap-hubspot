@@ -50,21 +50,7 @@ class HubspotBaseTest(unittest.TestCase):
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
     def expected_check_streams(self):
-        return {
-            "subscription_changes",
-            "email_events",
-            "forms",
-            "workflows",
-            "owners",
-            "campaigns",
-            "contact_lists",
-            "contacts",
-            "companies",
-            "deals",
-            "engagements",
-            "deal_pipelines",
-            "contacts_by_company"
-        }
+        return set(self.expected_metadata().keys())
 
     def expected_metadata(self):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""
