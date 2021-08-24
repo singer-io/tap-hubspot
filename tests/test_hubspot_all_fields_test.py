@@ -130,16 +130,16 @@ class TestHubspotAllFields(HubspotBaseTest):
         return {
             # 'deals',
             'deal_pipelines',
-            # 'contacts',  # pass
-            # 'companies', # pass
-            # 'campaigns', # pass
-            # 'contact_lists', # pass
-            # 'contacts_by_company', # fail TODO BUG? Only 1 record replicated
-            # 'email_events', # pass
-            # 'engagements', # pass
-            # 'forms', # pass
-            # 'owners', # pass
-            # 'workflows', # pass
+            'contacts',  # pass
+            'companies', # pass
+            'campaigns', # pass
+            'contact_lists', # pass
+            'contacts_by_company', # 
+            'email_events', # pass
+            'engagements', # pass
+            'forms', # pass
+            'owners', # pass
+            'workflows', # pass
             # 'subscription_changes', # TODO cannot be tested easily without a valid pk
         }
 
@@ -153,27 +153,23 @@ class TestHubspotAllFields(HubspotBaseTest):
         cls.expected_records = dict()
 
         # pass
-        # cls.expected_records['campaigns'] = test_client.get_campaigns()
-        # cls.expected_records['forms'] = test_client.get_forms()
-        # cls.expected_records['owners'] = test_client.get_owners()
-        # cls.expected_records['engagements'] = test_client.get_engagements()
-        # cls.expected_records['workflows'] = test_client.get_workflows()
-        # cls.expected_records['email_events'] = test_client.get_email_events()
-        # cls.expected_records['contact_lists'] = test_client.get_contact_lists()
-        #cls.expected_records['contacts'] = test_client.get_contacts()
-        # cls.expected_records['companies'] = test_client.get_companies(since=cls.my_timestamp)
-        # company_ids = [company['companyId'] for company in cls.expected_records['companies']]
-        # cls.expected_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
+        cls.expected_records['campaigns'] = test_client.get_campaigns()
+        cls.expected_records['forms'] = test_client.get_forms()
+        cls.expected_records['owners'] = test_client.get_owners()
+        cls.expected_records['engagements'] = test_client.get_engagements()
+        cls.expected_records['workflows'] = test_client.get_workflows()
+        cls.expected_records['email_events'] = test_client.get_email_events()
+        cls.expected_records['contact_lists'] = test_client.get_contact_lists()
+        cls.expected_records['contacts'] = test_client.get_contacts()
+        cls.expected_records['companies'] = test_client.get_companies(since=cls.my_timestamp)
+        company_ids = [company['companyId'] for company in cls.expected_records['companies']]
+        cls.expected_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
+        cls.expected_records['deal_pipelines'] = test_client.get_deal_pipelines()
         # fail
         # cls.expected_records['subscription_changes'] = test_client.get_subscription_changes()
 
-
-        # cls.expected_records['deals'] = test_client.get_deals() # TODO work with dev to get passing
-
-
-
         # TODO
-        cls.expected_records['deal_pipelines'] = test_client.get_deal_pipelines()
+        # cls.expected_records['deals'] = test_client.get_deals() # TODO work with dev to get passing
 
         for stream, records in cls.expected_records.items():
             print(f"The test client found {len(records)} {stream} records.")
