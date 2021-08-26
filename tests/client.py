@@ -108,7 +108,7 @@ class TestClient():
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
         url = f"{BASE_URL}/companies/v2/companies/recent/modified"
-        since = str(datetime.datetime.strptime(since, "%Y-%m-%dT00:00:00.000000Z").timestamp() * 1000)[:-2]
+        since = str(datetime.datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() * 1000).split(".")[0]
         params = {'since': since}
         records = []
 
@@ -147,7 +147,7 @@ class TestClient():
 
             response = self.get(url, params=params)
             for record in response['lists']:
-                if self.start_date < record[replication_key]:
+                if self.start_date <= record[replication_key]:
                     records.append(record)
 
             has_more = response['has-more']
@@ -203,12 +203,12 @@ class TestClient():
             data from this endpoint, it requires getting all 'companies' data and then
             pulling the 'companyId' from each record to perform the corresponding get here.
         """
-        url = f"{BASE_URL}/companies/v2/companies/<company_id>/vids"
+        url = f"{BASE_URL}/companies/v2/companies/{{}}/vids"
         params = dict()
         records = []
 
         for parent_id in parent_ids:
-            child_url = url.replace('<company_id>', str(parent_id))
+            child_url = url.format(parent_id)
             response = self.get(child_url, params=params)
 
             has_more = True
@@ -248,8 +248,8 @@ class TestClient():
         v1_url = f"{BASE_URL}/deals/v1/deal/paged"
 
         v1_params = {'includeAllProperties': True,
-                  'allPropertiesFetchMode': 'latest_version',
-                  'properties' : []}
+                     'allPropertiesFetchMode': 'latest_version',
+                     'properties' : []}
         replication_key = list(self.replication_keys['deals'])[0]
         records = []
 
@@ -268,9 +268,9 @@ class TestClient():
 
         # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
         v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
-        v3_property = {'hs_date_entered_appointmentscheduled'}
+        v3_property = ['hs_date_entered_appointmentscheduled']
         data = {'inputs': v1_ids,
-                'properties': list(v3_property)}
+                'properties': v3_property}
         v3_response = self.post(v3_url, data)
         v3_records = v3_response['results']
 
@@ -336,12 +336,10 @@ class TestClient():
             response = self.get(url, params=params)
             for result in response['results']:
                 if result['engagement'][replication_key] >= self.start_date:
-                    result_dict = result
-                    result_dict['engagement'] = result['engagement']
-                    result_dict['engagement_id'] = result['engagement']['id']
-                    result_dict['lastUpdated'] = result['engagement']['lastUpdated']
+                    result['engagement_id'] = result['engagement']['id']
+                    result['lastUpdated'] = result['engagement']['lastUpdated']
 
-                    records.append(result_dict)
+                    records.append(result)
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
@@ -367,10 +365,7 @@ class TestClient():
         Get all owners.
         """
         url = f"{BASE_URL}/owners/v2/owners"
-        records = []
-
-        response = self.get(url)
-        records.extend(response)
+        records = self.get(url)
 
         return records
 
