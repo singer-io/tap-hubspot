@@ -3,7 +3,7 @@ import requests
 import backoff
 import json
 import uuid
-
+import random
 from  tap_tester import menagerie
 from base import HubspotBaseTest
 
@@ -50,12 +50,12 @@ class TestClient():
                           interval=10)
     def post(self, url, data, params=dict()):
         """Perfroma a POST using the standard requests method and log the action"""
+
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
-        import ipdb; ipdb.set_trace()
-        1+1
         response = requests.post(url, json=data, params=params, headers=headers)
         print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code} {response.text}")
+
         response.raise_for_status()
         json_response = response.json()
 
@@ -75,7 +75,6 @@ class TestClient():
         response = requests.put(url, json=data, params=params, headers=headers)
         print(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
         response.raise_for_status()
-
 
     def denest_properties(self, stream, records):
         """
@@ -128,7 +127,7 @@ class TestClient():
         """
         url = f"{BASE_URL}/companies/v2/companies/recent/modified"
         if not isinstance(since, datetime.datetime):
-            since = datetime.datetime.strptime(since, "%Y-%m-%dT00:00:00.000000Z")
+            since = datetime.datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
         since = str(since.timestamp() * 1000).split(".")[0]
         params = {'since': since}
         records = []
@@ -168,7 +167,7 @@ class TestClient():
 
             response = self.get(url, params=params)
             for record in response['lists']:
-                if self.start_date < record[replication_key]:
+                if self.start_date <= record[replication_key]:
                     records.append(record)
 
             has_more = response['has-more']
@@ -224,12 +223,13 @@ class TestClient():
             data from this endpoint, it requires getting all 'companies' data and then
             pulling the 'companyId' from each record to perform the corresponding get here.
         """
-        url = f"{BASE_URL}/companies/v2/companies/<company_id>/vids"
+
+        url = f"{BASE_URL}/companies/v2/companies/{{}}/vids"
         params = dict()
         records = []
 
         for parent_id in parent_ids:
-            child_url = url.replace('<company_id>', str(parent_id))
+            child_url = url.format(parent_id)
             response = self.get(child_url, params=params)
 
             has_more = True
@@ -269,8 +269,8 @@ class TestClient():
         v1_url = f"{BASE_URL}/deals/v1/deal/paged"
 
         v1_params = {'includeAllProperties': True,
-                  'allPropertiesFetchMode': 'latest_version',
-                  'properties' : []}
+                     'allPropertiesFetchMode': 'latest_version',
+                     'properties' : []}
         replication_key = list(self.replication_keys['deals'])[0]
         records = []
 
@@ -289,9 +289,9 @@ class TestClient():
 
         # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
         v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
-        v3_property = {'hs_date_entered_appointmentscheduled'}
+        v3_property = ['hs_date_entered_appointmentscheduled']
         data = {'inputs': v1_ids,
-                'properties': list(v3_property)}
+                'properties': v3_property}
         v3_response = self.post(v3_url, data)
         v3_records = v3_response['results']
 
@@ -357,12 +357,10 @@ class TestClient():
             response = self.get(url, params=params)
             for result in response['results']:
                 if result['engagement'][replication_key] >= self.start_date:
-                    result_dict = result
-                    result_dict['engagement'] = result['engagement']
-                    result_dict['engagement_id'] = result['engagement']['id']
-                    result_dict['lastUpdated'] = result['engagement']['lastUpdated']
+                    result['engagement_id'] = result['engagement']['id']
+                    result['lastUpdated'] = result['engagement']['lastUpdated']
+                    records.append(result)
 
-                    records.append(result_dict)
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
@@ -388,10 +386,7 @@ class TestClient():
         Get all owners.
         """
         url = f"{BASE_URL}/owners/v2/owners"
-        records = []
-
-        response = self.get(url)
-        records.extend(response)
+        records = self.get(url)
 
         return records
 
@@ -676,17 +671,11 @@ class TestClient():
 
     def create_email_events(self):
         """
-        HubSpot API 
+        HubSpot API  https://legacydocs.hubspot.com/docs/methods/email/email_events_overview
+        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required          
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
-
-        url = f"{BASE_URL}"
-        data = {}
         
-        # generate a record
-        response = self.post(url, data)
-        records = [response]
-        return records
+        raise NotImplementedError("Use create_subscription_changes instead to create records for email_events stream")
 
     def create_engagements(self):
         """
@@ -730,17 +719,33 @@ class TestClient():
         records = [response]
         return records
 
-    def create_subscription_changes(self):
+    def create_subscription_changes(self, subscription_id=''):
         """
-        HubSpot API <TODO LINK>
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
+        This will update email_events as well.
+        TODO For updating sub_changes, utilize sub_id as an arg and make a passthrough method
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
-
-        url = f"{BASE_URL}"
-        data = {}
+        subscriptions = self.get_subscription_changes()
+        subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
+        
+        a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
+        
+        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}"
+        data = {
+            "subscriptionStatuses": [
+                {
+                    "id": a_sub_id,
+                    "subscribed": True,
+                    "optState": "OPT_IN",
+                    "legalBasis": "PERFORMANCE_OF_CONTRACT",
+                    "legalBasisExplanation": "We need to send them these emails as part of our agreement with them."
+                }
+            ]
+        }
         
         # generate a record
-        response = self.post(url, data)
+        response = self.put(url.format(record_uuid+"@stitchdata.com"), data)
         records = [response]
         return records
 
@@ -758,6 +763,13 @@ class TestClient():
         records = [response]
         return records
 
+    ##########################################################################
+    ### Updates
+    ##########################################################################
+
+    def updated_subscription_changes(self, subscription_id):
+        return self.create_subscription_changes(subscription_id)
+    
     ##########################################################################
     ### OAUTH
     ##########################################################################
