@@ -48,14 +48,15 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def post(self, url, data, params=dict()):
+    def post(self, url, data, params=dict(), debug=False):
         """Perfroma a POST using the standard requests method and log the action"""
 
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.post(url, json=data, params=params, headers=headers)
-        print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code} {response.text}")
-
+        print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
         response.raise_for_status()
         json_response = response.json()
 
@@ -679,12 +680,35 @@ class TestClient():
 
     def create_engagements(self):
         """
-        HubSpot API <TODO LINK>
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/engagements/create_engagement
+        TODO - dependent on valid (currently hardcoded) contactId, companyId, and ownerId
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}"
-        data = {}
+        url = f"{BASE_URL}/engagements/v1/engagements"
+        data = {
+            "engagement": {
+                "active": True,
+                "ownerId": 98621200,
+                "type": "NOTE",
+                "timestamp": 1409172644778
+            },
+            "associations": {
+                "contactIds": [2304],
+                "companyIds": [6804176293],
+                "dealIds": [ ],
+                "ownerIds": [ ],
+		"ticketIds":[ ]
+            },
+            "attachments": [
+                {
+                    "id": 4241968539
+                }
+            ],
+            "metadata": {
+                "body": "note body"
+            }
+        }
         
         # generate a record
         response = self.post(url, data)
@@ -693,12 +717,121 @@ class TestClient():
 
     def create_forms(self):
         """
-        HubSpot API <TODO LINK>
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/forms/v2/create_form
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}"
-        data = {}
+        url = f"{BASE_URL}/forms/v2/forms"
+        data = {
+            "name": f"DemoForm{record_uuid}",
+            "action": "",
+            "method": "",
+            "cssClass": "",
+            "redirect": "",
+            "submitText": "Submit",
+            "followUpId": "",
+            "notifyRecipients": "",
+            "leadNurturingCampaignId": "",
+            "formFieldGroups": [
+                {
+                    "fields": [
+                        {
+                            "name": "firstname",
+                            "label": "First Name",
+                            "type": "string",
+                            "fieldType": "text",
+                            "description": "",
+                            "groupName": "",
+                            "displayOrder": 0,
+                            "required": False,
+                            "selectedOptions": [],
+                            "options": [],
+                            "validation": {
+                                "name": "",
+                                "message": "",
+                                "data": "",
+                                "useDefaultBlockList": False
+                            },
+                            "enabled": True,
+                            "hidden": False,
+                            "defaultValue": "",
+                            "isSmartField": False,
+                            "unselectedLabel": "",
+                            "placeholder": ""
+                        }
+                    ],
+                    "default": True,
+                    "isSmartGroup": False
+                },
+                {
+                    "fields": [
+                        {
+                            "name": "lastname",
+                            "label": "Last Name",
+                            "type": "string",
+                            "fieldType": "text",
+                            "description": "",
+                            "groupName": "",
+                            "displayOrder": 1,
+                            "required": False,
+                            "selectedOptions": [],
+                            "options": [],
+                            "validation": {
+                                "name": "",
+                                "message": "",
+                                "data": "",
+                                "useDefaultBlockList": False
+                            },
+                            "enabled": True,
+                            "hidden": False,
+                            "defaultValue": "",
+                            "isSmartField": False,
+                            "unselectedLabel": "",
+                            "placeholder": ""
+                        }
+                    ],
+                    "default": True,
+                    "isSmartGroup": False
+                },
+                {
+                    "fields": [
+                        {
+                            "name": "adress_1",
+                            "label": "Adress 1",
+                            "type": "string",
+                            "fieldType": "text",
+                            "description": "",
+                            "groupName": "",
+                            "displayOrder": 2,
+                            "required": False,
+                            "selectedOptions": [],
+                            "options": [],
+                            "validation": {
+                                "name": "",
+                                "message": "",
+                                "data": "",
+                                "useDefaultBlockList": False
+                            },
+                            "enabled": True,
+                            "hidden": False,
+                            "defaultValue": "",
+                            "isSmartField": False,
+                            "unselectedLabel": "",
+                            "placeholder": ""
+                        }
+                    ],
+                    "default": True,
+                    "isSmartGroup": False
+                }
+            ],
+            "createdAt": 1318534279910,
+            "updatedAt": 1413919291011,
+            "performableHtml": "",
+            "migratedFrom": "ld",
+            "ignoreCurrentValues": False,
+            "metaData": [],
+            "deletable": True
+        }
         
         # generate a record
         response = self.post(url, data)
@@ -707,18 +840,11 @@ class TestClient():
 
     def create_owners(self):
         """
-        HubSpot API <TODO LINK>
+        HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
+        TODO - use selenium
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
-
-        url = f"{BASE_URL}"
-        data = {}
+        raise NotImplementedError("Only able to create owners from web app")        
         
-        # generate a record
-        response = self.post(url, data)
-        records = [response]
-        return records
-
     def create_subscription_changes(self, subscription_id=''):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
@@ -751,12 +877,36 @@ class TestClient():
 
     def create_workflows(self):
         """
-        HubSpot API <TODO LINK>
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/workflows/v3/create_workflow
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}"
-        data = {}
+        url = f"{BASE_URL}/automation/v3/workflows"
+        data = {
+            "name": "Test Workflow",
+            "type": "DRIP_DELAY",
+            "onlyEnrollsManually": True,
+            "actions": [
+                {
+                    "type": "DELAY",
+                    "delayMillis": 3600000
+                },
+                {
+                    "newValue": "HubSpot",
+                    "propertyName": "company",
+                    "type": "SET_CONTACT_PROPERTY"
+                },
+                {
+                    "type": "WEBHOOK",
+                    "url": "https://www.myintegration.com/webhook.php",
+                    "method": "POST",
+                    "authCreds": {
+                        "user": "user",
+                        "password": "password"
+                    }
+                }
+            ]
+        }
         
         # generate a record
         response = self.post(url, data)
