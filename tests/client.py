@@ -61,7 +61,7 @@ class TestClient():
         json_response = response.json()
 
         return json_response
-    
+
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
                            requests.exceptions.HTTPError),
@@ -481,7 +481,7 @@ class TestClient():
                  }
                ]
              }
-        
+
         # generate a contacts record
         response = self.post(url, data)
         records = [response]
@@ -491,15 +491,15 @@ class TestClient():
         """
         TODO couldn't find endpoint...
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
+        # record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}"
-        data = {}
-        
+        # url = f"{BASE_URL}"
+        # data = {}
+        raise NotImplementedError("TODO SPIKE needed on create campaign since there was no endpoint")
         # generate a record
-        response = self.post(url, data)
-        records = [response]
-        return records
+        # response = self.post(url, data)
+        # records = [response]
+        # return records
 
     def create_companies(self):
         """
@@ -509,11 +509,11 @@ class TestClient():
         HubSpot API https://legacydocs.hubspot.com/docs/methods/companies/create_company
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
-        
+
         url = f"{BASE_URL}/companies/v2/companies/"
         data = {"properties": [{"name": "name", "value": f"Company Name {record_uuid}"},
                                {"name": "description", "value": "company description"}]}
-                
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -539,7 +539,7 @@ class TestClient():
                 }]
             ]
         }
-        #TODO generate different filters 
+        #TODO generate different filters
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -547,16 +547,16 @@ class TestClient():
 
     def create_contacts_by_company(self):
         """
-        TODO https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
+        https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
         """
         url = f"{BASE_URL}/crm-associations/v1/associations"
-        #TODO only use contacts-company combinations that do not exist yet
+        # only use contacts-company combinations that do not exist yet
         contact_records = self.get_contacts()
         since = datetime.datetime.today()-datetime.timedelta(days=7)
         company_records = self.get_companies(since)
         contacts_by_company_records = self.get_contacts_by_company([company_records[0]["companyId"]])
-                
+
         for company in company_records:
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
@@ -569,8 +569,8 @@ class TestClient():
                         "toObjectId": contact_id,
                         "category": "HUBSPOT_DEFINED",
                         "definitionId": 2
-                    
-                    }                    
+
+                    }
                     # generate a record
                     self.put(url, data)
                     records = [{'company-id': company_id, 'contact-id': contact_id}]
@@ -579,7 +579,7 @@ class TestClient():
 
     def create_deal_pipelines(self):
         """
-        HubSpot API 
+        HubSpot API
         https://legacydocs.hubspot.com/docs/methods/pipelines/create_new_pipeline
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
@@ -610,7 +610,7 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -623,7 +623,7 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         url = f"{BASE_URL}/deals/v1/deal/"
-        #TODO need to use various pipelines and stages 
+        #TODO need to use various pipelines and stages
         data = {
             "associations": {
                 "associatedCompanyIds": [
@@ -664,7 +664,7 @@ class TestClient():
             }
             ]
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -673,9 +673,9 @@ class TestClient():
     def create_email_events(self):
         """
         HubSpot API  https://legacydocs.hubspot.com/docs/methods/email/email_events_overview
-        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required          
+        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required
         """
-        
+
         raise NotImplementedError("Use create_subscription_changes instead to create records for email_events stream")
 
     def create_engagements(self):
@@ -709,7 +709,7 @@ class TestClient():
                 "body": "note body"
             }
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -832,7 +832,7 @@ class TestClient():
             "metaData": [],
             "deletable": True
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -843,8 +843,8 @@ class TestClient():
         HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
         TODO - use selenium
         """
-        raise NotImplementedError("Only able to create owners from web app")        
-        
+        raise NotImplementedError("Only able to create owners from web app")
+
     def create_subscription_changes(self, subscription_id=''):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
@@ -854,10 +854,10 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
         subscriptions = self.get_subscription_changes()
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
-        
+
         a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
-        
-        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}"
+
+        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
         data = {
             "subscriptionStatuses": [
                 {
@@ -869,9 +869,9 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
-        response = self.put(url.format(record_uuid+"@stitchdata.com"), data)
+        response = self.put(url, data)
         records = [response]
         return records
 
@@ -907,7 +907,7 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -919,7 +919,7 @@ class TestClient():
 
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)
-    
+
     ##########################################################################
     ### OAUTH
     ##########################################################################
