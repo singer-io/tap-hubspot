@@ -14,7 +14,7 @@ BASE_URL = "https://api.hubapi.com"
 class TestClient():
 
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
-
+    BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     ##########################################################################
     ### CORE METHODS
     ##########################################################################
@@ -200,15 +200,22 @@ class TestClient():
 
             # get a page worth of contacts and pull the vids
             response_1 = self.get(url_1, params=params_1)
-            vids = [record['vid'] for record in response_1['contacts']]
-
+            response_1_pks_rks= {record['vid']: record['versionTimestamp']
+                                 for record in response_1['contacts']}
             has_more = response_1['has-more']
             params_1['vidOffset'] = response_1['vid-offset']
 
             # get the detailed contacts records by vids
-            params_2['vid'] = vids
+            params_2['vid'] = list(response_1_pks_rks.keys())
             response_2 = self.get(url_2, params=params_2)
-            records.extend([record for record in response_2.values()])
+
+            for vid, record in response_2.items():
+                converted_rk = self.BaseTest.datetime_from_timestamp(
+                    response_1_pks_rks[int(vid)]/1000, self.BOOKMARK_DATE_FORMAT
+                )
+                record['versionTimestamp'] = converted_rk 
+                
+                records.append(record)
 
         records = self.denest_properties('contacts', records)
         return records
@@ -485,6 +492,16 @@ class TestClient():
         # generate a contacts record
         response = self.post(url, data)
         records = [response]
+
+        get_url = f"{BASE_URL}/contacts/v1/contact/vid/{response['vid']}/profile"
+        params = {'includeVersion': True}
+        get_resp = self.get(get_url, params=params)
+
+        converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
+            get_resp['versionTimestamp']/1000, self.BOOKMARK_DATE_FORMAT
+        )
+        get_resp['versionTimestamp'] = converted_versionTimestamp
+        records = self.denest_properties('contacts', [get_resp])
         return records
 
     def create_campaigns(self):

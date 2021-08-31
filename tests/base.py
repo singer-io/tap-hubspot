@@ -329,3 +329,19 @@ class HubspotBaseTest(unittest.TestCase):
     ################################
     #  Tap Specific Test Actions   #
     ################################
+
+    def datetime_from_timestamp(self, value, str_format="%Y-%m-%dT00:00:00Z"):
+        """
+        Takes in a unix timestamp in milliseconds.
+        Returns a string formatted python datetime 
+        """
+        try:
+            datetime_value = dt.fromtimestamp(value)
+            datetime_str = dt.strftime(datetime_value, str_format) 
+        except ValueError as err: 
+            raise NotImplementedError(
+                f"Invalid argument 'value':  {value}  "
+                "This method was designed to accept unix timestamps in milliseconds."
+            )
+        return datetime_str
+
