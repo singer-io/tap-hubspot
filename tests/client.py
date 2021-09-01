@@ -1,7 +1,9 @@
 import datetime
 import requests
 import backoff
-
+import json
+import uuid
+import random
 from  tap_tester import menagerie
 from base import HubspotBaseTest
 
@@ -46,17 +48,34 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def post(self, url, data, params=dict()):
+    def post(self, url, data, params=dict(), debug=False):
         """Perfroma a POST using the standard requests method and log the action"""
-        headers = self.HEADERS
-        headers['content-type'] = "application/json"
 
-        response = requests.post(url, json=data, params=params, headers=self.HEADERS)
+        headers = dict(self.HEADERS)
+        headers['content-type'] = "application/json"
+        response = requests.post(url, json=data, params=params, headers=headers)
         print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
         response.raise_for_status()
         json_response = response.json()
 
         return json_response
+
+    @backoff.on_exception(backoff.constant,
+                          (requests.exceptions.RequestException,
+                           requests.exceptions.HTTPError),
+                          max_tries=5,
+                          jitter=None,
+                          giveup=giveup,
+                          interval=10)
+    def put(self, url, data, params=dict()):
+        """Perfroma a PUT using the standard requests method and log the action"""
+        headers = dict(self.HEADERS)
+        headers['content-type'] = "application/json"
+        response = requests.put(url, json=data, params=params, headers=headers)
+        print(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
+        response.raise_for_status()
 
     def denest_properties(self, stream, records):
         """
@@ -108,7 +127,9 @@ class TestClient():
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
         url = f"{BASE_URL}/companies/v2/companies/recent/modified"
-        since = str(datetime.datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() * 1000).split(".")[0]
+        if not isinstance(since, datetime.datetime):
+            since = datetime.datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
+        since = str(since.timestamp() * 1000).split(".")[0]
         params = {'since': since}
         records = []
 
@@ -203,6 +224,7 @@ class TestClient():
             data from this endpoint, it requires getting all 'companies' data and then
             pulling the 'companyId' from each record to perform the corresponding get here.
         """
+
         url = f"{BASE_URL}/companies/v2/companies/{{}}/vids"
         params = dict()
         records = []
@@ -338,8 +360,8 @@ class TestClient():
                 if result['engagement'][replication_key] >= self.start_date:
                     result['engagement_id'] = result['engagement']['id']
                     result['lastUpdated'] = result['engagement']['lastUpdated']
-
                     records.append(result)
+
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
@@ -402,6 +424,501 @@ class TestClient():
                         if record[replication_key] >= self.start_date])
 
         return records
+
+    ##########################################################################
+    ### CREATE
+    ##########################################################################
+
+    def create_contacts(self):
+        """
+        Generate a single contacts record.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/create_contact
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/contacts/v1/contact"
+        data = {
+            "properties": [
+                {
+                   "property": "email",
+                   "value": f"{record_uuid}@stitchdata.com"
+                 },
+                 {
+                   "property": "firstname",
+                   "value": "Yusaku"
+                 },
+                 {
+                   "property": "lastname",
+                   "value": "Kasahara"
+                 },
+                 {
+                   "property": "website",
+                   "value": "http://app.stitchdata.com"
+                 },
+                 {
+                   "property": "company",
+                   "value": "Talend"
+                 },
+                 {
+                   "property": "phone",
+                   "value": "555-122-2323"
+                 },
+                 {
+                   "property": "address",
+                   "value": "25 First Street"
+                 },
+                 {
+                   "property": "city",
+                   "value": "Cambridge"
+                 },
+                 {
+                   "property": "state",
+                   "value": "MA"
+                 },
+                 {
+                   "property": "zip",
+                   "value": "02139"
+                 }
+               ]
+             }
+
+        # generate a contacts record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_campaigns(self):
+        """
+        TODO couldn't find endpoint...
+        """
+        # record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        # url = f"{BASE_URL}"
+        # data = {}
+        raise NotImplementedError("TODO SPIKE needed on create campaign since there was no endpoint")
+        # generate a record
+        # response = self.post(url, data)
+        # records = [response]
+        # return records
+
+    def create_companies(self):
+        """
+        It takes about 6 seconds after the POST for the created record to be caught by the next GET.
+        This is intended for generating one record for companies.
+
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/companies/create_company
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/companies/v2/companies/"
+        data = {"properties": [{"name": "name", "value": f"Company Name {record_uuid}"},
+                               {"name": "description", "value": "company description"}]}
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_contact_lists(self):
+        """
+
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/contacts/v1/lists/"
+        data = {
+            "name": f"tweeters{record_uuid}",
+            "dynamic": True,
+            "filters":[
+                [{
+                    "operator": "EQ",
+                    "value": f"@hubspot{record_uuid}",
+                    "property": "twitterhandle",
+                    "type": "string"
+                }]
+            ]
+        }
+        #TODO generate different filters
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_contacts_by_company(self):
+        """
+        https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
+        https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
+        """
+        url = f"{BASE_URL}/crm-associations/v1/associations"
+        # only use contacts-company combinations that do not exist yet
+        contact_records = self.get_contacts()
+        since = datetime.datetime.today()-datetime.timedelta(days=7)
+        company_records = self.get_companies(since)
+        contacts_by_company_records = self.get_contacts_by_company([company_records[0]["companyId"]])
+
+        for company in company_records:
+            for contact in contact_records:
+                # look for a contact that is not already in the contacts_by_company list
+                if contact['vid'] not in [contacts['contact-id'] for contacts in contacts_by_company_records]:
+                    contact_id = contact['vid']
+                    company_id = company['companyId']
+
+                    data = {
+                        "fromObjectId": company_id,
+                        "toObjectId": contact_id,
+                        "category": "HUBSPOT_DEFINED",
+                        "definitionId": 2
+
+                    }
+                    # generate a record
+                    self.put(url, data)
+                    records = [{'company-id': company_id, 'contact-id': contact_id}]
+                    return records
+        raise NotImplementedError("All contacts already have an associated company")
+
+    def create_deal_pipelines(self):
+        """
+        HubSpot API
+        https://legacydocs.hubspot.com/docs/methods/pipelines/create_new_pipeline
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        record_uuid2 = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals"
+        data = {
+            "pipelineId": record_uuid,
+            "label": f"API test ticket pipeline {record_uuid}",
+            "displayOrder": 2,
+            "active": True,
+            "stages": [
+                {
+                    "stageId": f"example_stage {record_uuid}",
+                    "label": f"Example stage{record_uuid}",
+                    "displayOrder": 1,
+                    "metadata": {
+                        "probability": 0.5
+                    }
+                },
+                {
+                    "stageId": f"another_example_stage{record_uuid2}",
+                    "label": f"Another example stage{record_uuid2}",
+                    "displayOrder": 2,
+                    "metadata": {
+                        "probability": 1.0
+                    }
+                }
+            ]
+        }
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_deals(self):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/deals/create_deal
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/deals/v1/deal/"
+        #TODO need to use various pipelines and stages
+        data = {
+            "associations": {
+                "associatedCompanyIds": [
+                    6804176293
+                ],
+                "associatedVids": [
+                    2304
+                ]
+            },
+            "properties": [
+                {
+                    "value": "Tim's Newer Deal",
+                    "name": "dealname"
+                },
+                {
+                    "value": "appointmentscheduled",
+                    "name": "dealstage"
+                },
+                {
+                    "value": "default",
+                    "name": "pipeline"
+                },
+                {
+                    "value": "98621200",
+                    "name": "hubspot_owner_id"
+                },
+                {
+                    "value": 1409443200000,
+                    "name": "closedate"
+                },
+                {
+                    "value": "60000",
+                    "name": "amount"
+                },
+            {
+                "value": "newbusiness",
+                "name": "dealtype"
+            }
+            ]
+        }
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_email_events(self):
+        """
+        HubSpot API  https://legacydocs.hubspot.com/docs/methods/email/email_events_overview
+        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required
+        """
+
+        raise NotImplementedError("Use create_subscription_changes instead to create records for email_events stream")
+
+    def create_engagements(self):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/engagements/create_engagement
+        TODO - dependent on valid (currently hardcoded) contactId, companyId, and ownerId
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/engagements/v1/engagements"
+        data = {
+            "engagement": {
+                "active": True,
+                "ownerId": 98621200,
+                "type": "NOTE",
+                "timestamp": 1409172644778
+            },
+            "associations": {
+                "contactIds": [2304],
+                "companyIds": [6804176293],
+                "dealIds": [ ],
+                "ownerIds": [ ],
+		"ticketIds":[ ]
+            },
+            "attachments": [
+                {
+                    "id": 4241968539
+                }
+            ],
+            "metadata": {
+                "body": "note body"
+            }
+        }
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_forms(self):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/forms/v2/create_form
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/forms/v2/forms"
+        data = {
+            "name": f"DemoForm{record_uuid}",
+            "action": "",
+            "method": "",
+            "cssClass": "",
+            "redirect": "",
+            "submitText": "Submit",
+            "followUpId": "",
+            "notifyRecipients": "",
+            "leadNurturingCampaignId": "",
+            "formFieldGroups": [
+                {
+                    "fields": [
+                        {
+                            "name": "firstname",
+                            "label": "First Name",
+                            "type": "string",
+                            "fieldType": "text",
+                            "description": "",
+                            "groupName": "",
+                            "displayOrder": 0,
+                            "required": False,
+                            "selectedOptions": [],
+                            "options": [],
+                            "validation": {
+                                "name": "",
+                                "message": "",
+                                "data": "",
+                                "useDefaultBlockList": False
+                            },
+                            "enabled": True,
+                            "hidden": False,
+                            "defaultValue": "",
+                            "isSmartField": False,
+                            "unselectedLabel": "",
+                            "placeholder": ""
+                        }
+                    ],
+                    "default": True,
+                    "isSmartGroup": False
+                },
+                {
+                    "fields": [
+                        {
+                            "name": "lastname",
+                            "label": "Last Name",
+                            "type": "string",
+                            "fieldType": "text",
+                            "description": "",
+                            "groupName": "",
+                            "displayOrder": 1,
+                            "required": False,
+                            "selectedOptions": [],
+                            "options": [],
+                            "validation": {
+                                "name": "",
+                                "message": "",
+                                "data": "",
+                                "useDefaultBlockList": False
+                            },
+                            "enabled": True,
+                            "hidden": False,
+                            "defaultValue": "",
+                            "isSmartField": False,
+                            "unselectedLabel": "",
+                            "placeholder": ""
+                        }
+                    ],
+                    "default": True,
+                    "isSmartGroup": False
+                },
+                {
+                    "fields": [
+                        {
+                            "name": "adress_1",
+                            "label": "Adress 1",
+                            "type": "string",
+                            "fieldType": "text",
+                            "description": "",
+                            "groupName": "",
+                            "displayOrder": 2,
+                            "required": False,
+                            "selectedOptions": [],
+                            "options": [],
+                            "validation": {
+                                "name": "",
+                                "message": "",
+                                "data": "",
+                                "useDefaultBlockList": False
+                            },
+                            "enabled": True,
+                            "hidden": False,
+                            "defaultValue": "",
+                            "isSmartField": False,
+                            "unselectedLabel": "",
+                            "placeholder": ""
+                        }
+                    ],
+                    "default": True,
+                    "isSmartGroup": False
+                }
+            ],
+            "createdAt": 1318534279910,
+            "updatedAt": 1413919291011,
+            "performableHtml": "",
+            "migratedFrom": "ld",
+            "ignoreCurrentValues": False,
+            "metaData": [],
+            "deletable": True
+        }
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_owners(self):
+        """
+        HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
+        TODO - use selenium
+        """
+        raise NotImplementedError("Only able to create owners from web app")
+
+    def create_subscription_changes(self, subscription_id=''):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
+        This will update email_events as well.
+        TODO For updating sub_changes, utilize sub_id as an arg and make a passthrough method
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        subscriptions = self.get_subscription_changes()
+        subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
+
+        a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
+
+        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
+        data = {
+            "subscriptionStatuses": [
+                {
+                    "id": a_sub_id,
+                    "subscribed": True,
+                    "optState": "OPT_IN",
+                    "legalBasis": "PERFORMANCE_OF_CONTRACT",
+                    "legalBasisExplanation": "We need to send them these emails as part of our agreement with them."
+                }
+            ]
+        }
+
+        # generate a record
+        response = self.put(url, data)
+        records = [response]
+        return records
+
+    def create_workflows(self):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/workflows/v3/create_workflow
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        url = f"{BASE_URL}/automation/v3/workflows"
+        data = {
+            "name": "Test Workflow",
+            "type": "DRIP_DELAY",
+            "onlyEnrollsManually": True,
+            "actions": [
+                {
+                    "type": "DELAY",
+                    "delayMillis": 3600000
+                },
+                {
+                    "newValue": "HubSpot",
+                    "propertyName": "company",
+                    "type": "SET_CONTACT_PROPERTY"
+                },
+                {
+                    "type": "WEBHOOK",
+                    "url": "https://www.myintegration.com/webhook.php",
+                    "method": "POST",
+                    "authCreds": {
+                        "user": "user",
+                        "password": "password"
+                    }
+                }
+            ]
+        }
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    ##########################################################################
+    ### Updates
+    ##########################################################################
+
+    def updated_subscription_changes(self, subscription_id):
+        return self.create_subscription_changes(subscription_id)
 
     ##########################################################################
     ### OAUTH
