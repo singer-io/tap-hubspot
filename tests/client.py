@@ -77,6 +77,24 @@ class TestClient():
         print(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
         response.raise_for_status()
 
+    @backoff.on_exception(backoff.constant,
+                          (requests.exceptions.RequestException,
+                           requests.exceptions.HTTPError),
+                          max_tries=5,
+                          jitter=None,
+                          giveup=giveup,
+                          interval=10)
+    def delete(self, url, params=dict(), debug=True):
+        """Perfroma a POST using the standard requests method and log the action"""
+
+        headers = dict(self.HEADERS)
+        headers['content-type'] = "application/json"
+        response = requests.delete(url, params=params, headers=headers)
+        print(f"TEST CLIENT | DELETE {url} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
+        response.raise_for_status()
+
     def denest_properties(self, stream, records):
         """
         Takes a list of records and checks each for a 'properties' key to denest.
@@ -174,6 +192,32 @@ class TestClient():
             has_more = response['has-more']
             params['offset'] = response['offset']
 
+        return records
+
+    def get_contacts_by_pks(self, pks):  # TODO figure out if this implementation is cool
+        """
+        Get all contact vids by paginating using 'has-more' and 'vid-offset/vidOffset'.
+        Then use the vids to grab the detailed contacts records.
+        """
+        url_2 = f"{BASE_URL}/contacts/v1/contact/vids/batch/"
+        params_2 = {
+            'showListMemberships': True,
+            'formSubmissionMode': "all",
+        }
+        records = []
+        # get the detailed contacts records by vids
+        params_2['vid'] = pks
+        response_2 = self.get(url_2, params=params_2)
+        for vid, record in response_2.items():
+            ts_ms = int(record['properties']['lastmodifieddate']['value'])/1000
+            converted_ts = self.BaseTest.datetime_from_timestamp(
+                ts_ms, self.BOOKMARK_DATE_FORMAT
+            )
+            record['versionTimestamp'] = converted_ts
+
+            records.append(record)
+
+        records = self.denest_properties('contacts', records)
         return records
 
     def get_contacts(self):
@@ -435,6 +479,15 @@ class TestClient():
     ##########################################################################
     ### CREATE
     ##########################################################################
+
+    def create(self, stream):
+        """Dispatch create to make tests clean."""
+        if stream == 'contacts':
+            return self.create_contacts()
+        elif stream == 'deal_pipelines':
+            return self.create_deal_pipelines()
+        else:
+            raise NotImplementedError(f"There is no create_{stream} method!")
 
     def create_contacts(self):
         """
@@ -936,6 +989,23 @@ class TestClient():
 
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)
+
+    ##########################################################################
+    ### Deletes
+    ##########################################################################
+
+    def delete_deal_pipelines(self, count=10):
+        """
+        Delete one deal_piplelines record based on the primary_key value
+        Hubspot API 
+        https://legacydocs.hubspot.com/docs/methods/pipelines/delete_pipeline
+        """
+        records = self.get_deal_pipelines()
+        record_ids_to_delete = [records[i]['pipelineId'] for i in range(count)]
+
+        for record_id in record_ids_to_delete:
+            url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
+            self.delete(url)
     
     ##########################################################################
     ### OAUTH
