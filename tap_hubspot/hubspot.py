@@ -248,7 +248,7 @@ class Hubspot:
         data_field = "results"
         params = {
             "limit": 100,
-            "associations": "company",
+            "associations": ["contacts", "companies", "engagements"],
             "properties": MANDATORY_PROPERTIES["deals"],
         }
         offset_key = "after"
