@@ -73,7 +73,7 @@ class TestHubspotStartDate(HubspotBaseTest):
 
     def expected_streams(self):
         """returns the streams that are under test"""
-        temporarliy_skipping_for_one_day = {'deal_pipelines','contacts_by_company'}
+        temporarliy_skipping_for_one_day = {'contacts_by_company'}
 
         # TODO If any streams cannot have data generated programmatically,
         #      hardcode start_dates for these streams and run the test twice.
