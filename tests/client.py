@@ -48,7 +48,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def post(self, url, data, params=dict(), debug=True):
+    def post(self, url, data, params=dict(), debug=False):
         """Perfroma a POST using the standard requests method and log the action"""
 
         headers = dict(self.HEADERS)
@@ -575,21 +575,22 @@ class TestClient():
         )
         get_resp['versionTimestamp'] = converted_versionTimestamp
         records = self.denest_properties('contacts', [get_resp])
+
         return records
 
     def create_campaigns(self):
         """
         TODO couldn't find endpoint...
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
+        # record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}"
-        data = {}
-
+        # url = f"{BASE_URL}"
+        # data = {}
         # generate a record
-        response = self.post(url, data)
-        records = [response]
-        return records
+        # response = self.post(url, data)
+        # records = [response]
+        # return records
+        raise NotImplementedError("TODO SPIKE needed on create campaign since there was no endpoint")
 
     def create_companies(self):
         """
@@ -946,7 +947,7 @@ class TestClient():
 
         a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
 
-        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}"
+        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
         data = {
             "subscriptionStatuses": [
                 {
@@ -960,7 +961,7 @@ class TestClient():
         }
 
         # generate a record
-        response = self.put(url.format(record_uuid+"@stitchdata.com"), data)
+        response = self.put(url, data)
         records = [response]
         return records
 

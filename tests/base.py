@@ -326,6 +326,17 @@ class HubspotBaseTest(unittest.TestCase):
                 'replication_method' : catalog.get('replication_method'),
                 'replication_key'    : catalog.get('replication_key')}
 
+    def timedelta_formatted(self, dtime, days=0):
+        try:
+            date_stripped = dt.strptime(dtime, self.START_DATE_FORMAT)
+            return_date = date_stripped + timedelta(days=days)
+
+            return dt.strftime(return_date, self.START_DATE_FORMAT)
+
+        except ValueError:
+            valid_formats = [self.START_DATE_FORMAT]
+            return Exception(f"Datetime object is not in an expected format: {valid_formats}")
+
     ################################
     #  Tap Specific Test Actions   #
     ################################

@@ -8,7 +8,6 @@ class TestHubspotTestClient(HubspotBaseTest):
 
     test_client = TestClient()
 
-
     # def test_contacts_create(self):
     #     # Testing contacts Post
     #     old_records = self.test_client.get_contacts()
