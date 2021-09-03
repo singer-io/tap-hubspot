@@ -286,15 +286,24 @@ class TestClient():
             has_more = response['hasMore']
             v1_params['offset'] = response['offset']
 
+        # TODO clean this up, so confusig
         v1_ids = [{'id': str(record['dealId'])} for record in records]
-
+        remainder = len(v1_ids)%100
+        slices = dict()
+        if len(v1_ids)//100:
+            for i in range(len(v1_ids)//100):
+                slices[i] = v1_ids[i*100:(i+1)*100]
+        if remainder:
+            slices[i+1] = v1_ids[-remainder:]
         # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
         v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
         v3_property = ['hs_date_entered_appointmentscheduled']
-        data = {'inputs': v1_ids,
-                'properties': v3_property}
-        v3_response = self.post(v3_url, data)
-        v3_records = v3_response['results']
+        v3_records = []
+        for i, batch in slices.items():
+            data = {'inputs': batch,
+                    'properties': v3_property}
+            v3_response = self.post(v3_url, data)
+            v3_records += v3_response['results']
 
         # pull the desired properties from the v3 records and add them to correspond  v1 records
         for v3_record in v3_records:
