@@ -1,4 +1,5 @@
 import datetime
+import time
 import requests
 import backoff
 import json
@@ -505,7 +506,12 @@ class TestClient():
         elif stream == 'deal_pipelines':
             return self.create_deal_pipelines()
         elif stream == 'email_events':
-            return self.create_email_events()
+            print(
+                f"TEST CLIENT | WARNING Calling the create_subscription_changes method to generate {stream} records"
+            )
+            return self.create_subscription_changes()
+        elif stream == 'subscription_changes':
+            return self.create_subscription_changes()
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
@@ -802,6 +808,8 @@ class TestClient():
 
         # generate a record
         response = self.post(url, data)
+        response['engagement_id'] = response['engagement']['id']
+
         records = [response]
         return records
 
@@ -945,9 +953,9 @@ class TestClient():
         subscriptions = self.get_subscription_changes()
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
 
-        a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
-
-        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
+        a_sub_id = random.choice([item[0] for item in subscription_id_list if item[0]])
+        an_email = record_uuid+"@stitchdata.com"
+        url = f"{BASE_URL}/email/public/v1/subscriptions/{an_email}"
         data = {
             "subscriptionStatuses": [
                 {
@@ -959,10 +967,29 @@ class TestClient():
                 }
             ]
         }
-
+        
         # generate a record
-        response = self.put(url, data)
-        records = [response]
+        self.put(url, data)
+        time.sleep(10)  # TODO This is not a good implementation
+        emails = self.get_email_events()
+        subscriptions = self.get_subscription_changes()
+
+        email_event =  [email
+                        for email in emails
+                        for sub in email.get('subscriptions', [])
+                        if sub['id'] == a_sub_id and
+                        email['recipient'] == an_email]
+        subscription_change = [sub
+                               for sub in subscriptions
+                               for change in sub['changes']
+                               if change.get('subscriptionId') == a_sub_id and
+                               sub['recipient'] == an_email]
+        if len(email_event) > 1 or len(subscription_change) > 1:
+            raise RuntimeError(
+                "Expected this change to generate 1 email_event and 1 subscription_change only. "
+                "Generate {len(email_event)} email_events and {len(subscription_changes)} subscription_changes."
+            )
+        records = [email_event, subscription_change]
         return records
 
     def create_workflows(self):

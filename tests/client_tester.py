@@ -78,16 +78,16 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     assert len(old_records) < len(new_records), \
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
-    def test_deal_pipelines_deletes(self):
-        # Testing deal_pipelines DELETE
-        import ipdb; ipdb.set_trace()
-        1+1
-        our_record = self.test_client.create_deal_pipelines()
-        old_records = self.test_client.get_deal_pipelines()
-        delete_records = self.test_client.delete_deal_pipelines(1)
-        new_records = self.test_client.get_deal_pipelines()
-        assert len(old_records) > len(new_records), \
-            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
+    # def test_deal_pipelines_deletes(self):
+    #     # Testing deal_pipelines DELETE
+    #     import ipdb; ipdb.set_trace()
+    #     1+1
+    #     our_record = self.test_client.create_deal_pipelines()
+    #     old_records = self.test_client.get_deal_pipelines()
+    #     delete_records = self.test_client.delete_deal_pipelines(1)
+    #     new_records = self.test_client.get_deal_pipelines()
+    #     assert len(old_records) > len(new_records), \
+    #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
     # def test_deals_create(self):
     #     # Testing deals POST
@@ -99,23 +99,22 @@ class TestHubspotTestClient(HubspotBaseTest):
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
 
-    # def test_subscription_changes_and_email_events_create(self):
-    #     # Testing subscription_changes  and email_events POST
+    def test_subscription_changes_and_email_events_create(self):
+        # Testing subscription_changes  and email_events POST
 
-    #     old_emails = self.test_client.get_email_events()
-    #     old_subs = self.test_client.get_subscription_changes()
-    #     our_record = self.test_client.create_subscription_changes()
-    #     time.sleep(10)
-    #     new_subs = self.test_client.get_subscription_changes()
-    #     new_emails = self.test_client.get_email_events()
+        old_emails = self.test_client.get_email_events()
+        old_subs = self.test_client.get_subscription_changes()
+        our_record = self.test_client.create_subscription_changes()
+        time.sleep(10)
+        new_subs = self.test_client.get_subscription_changes()
+        new_emails = self.test_client.get_email_events()
 
-    #     assert len(old_subs) < len(new_subs), \
-    #         f"Before post found {len(old_subs)} subs. After post found {len(new_subs)} subs"
-    #     assert len(old_emails) < len(new_emails), \
-    #         f"Before post found {len(old_emails)} emails. After post found {len(new_emails)} emails"
-    #     print(f"Before {len(old_subs)} subs. After found {len(new_subs)} subs")
-    #     print(f"Before {len(old_emails)} emails. After found {len(new_emails)} emails")
-
+        assert len(old_subs) < len(new_subs), \
+            f"Before post found {len(old_subs)} subs. After post found {len(new_subs)} subs"
+        assert len(old_emails) < len(new_emails), \
+            f"Before post found {len(old_emails)} emails. After post found {len(new_emails)} emails"
+        print(f"Before {len(old_subs)} subs. After found {len(new_subs)} subs")
+        print(f"Before {len(old_emails)} emails. After found {len(new_emails)} emails")
 
     # def test_engagements_create(self):
     #     # Testing create_engagements POST
