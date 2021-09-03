@@ -9,26 +9,30 @@ class TestHubspotTestClient(HubspotBaseTest):
     test_client = TestClient()
 
 
-    def test_contacts_create(self):
-        # Testing contacts Post
-        old_records = self.test_client.get_contacts()
-        our_record = self.test_client.create_contacts()
+    # def test_contacts_create(self):
+    #     # Testing contacts Post
+    #     old_records = self.test_client.get_contacts()
+    #     our_record = self.test_client.create_contacts()
+    #     new_records = self.test_client.get_contacts()
+    #     assert len(old_records) < len(new_records), \
+    #         f"Before contacts post found {len(old_records)} records. After post found {len(new_records)} records"
 
-        responses = []
-        for i in range(10):
-            new_records = self.test_client.get_contacts()
-            responses.append(new_records)
-            time.sleep(1)
-        all_versions = [record['versionTimestamp'] for response in responses
-                        for record in response if record['vid'] == our_record[0]['vid']]
-        from pprint import pprint as pp
-        pp(all_versions)
-        # assert len(old_records) < len(new_records), \
-        #     f"Before contacts post found {len(old_records)} records. After post found {len(new_records)} records"
+    # def test_contacts_create_stability(self):
+    #     old_records = self.test_client.get_contacts()
+    #     our_record = self.test_client.create_contacts()
+    #     responses = []
+    #     for i in range(10):
+    #         new_records = self.test_client.get_contacts()
+    #         responses.append(new_records)
+    #         time.sleep(1)
+    #     all_versions = [record['versionTimestamp'] for response in responses
+    #                     for record in response if record['vid'] == our_record[0]['vid']]
+    #     from pprint import pprint as pp
+    #     pp(all_versions)
 
     # def test_companies_create(self):
     #     # Testing companies Post
-        
+
     #     old_records = self.test_client.get_companies('2021-08-25T00:00:00.000000Z')
     #     our_record = self.test_client.create_companies()
     #     now = time.time()
@@ -41,18 +45,18 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     assert len(old_records) < len(new_records), \
     #         f"Before companies post found {len(old_records)} records. After post found {len(new_records)} records"
 
-        
+
     # def test_contact_lists_create(self):
     #     # Testing contact_lists POST
-        
+
     #     old_records = self.test_client.get_contact_lists()
     #     our_record = self.test_client.create_contact_lists()
     #     new_records = self.test_client.get_contact_lists()
-        
+
     #     assert len(old_records) < len(new_records), \
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
-        
+
     # def test_contacts_by_company_create(self):
     #     # Testing contacts_by_company PUT
 
@@ -75,7 +79,16 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     assert len(old_records) < len(new_records), \
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
-
+    def test_deal_pipelines_deletes(self):
+        # Testing deal_pipelines DELETE
+        import ipdb; ipdb.set_trace()
+        1+1
+        our_record = self.test_client.create_deal_pipelines()
+        old_records = self.test_client.get_deal_pipelines()
+        delete_records = self.test_client.delete_deal_pipelines(1)
+        new_records = self.test_client.get_deal_pipelines()
+        assert len(old_records) > len(new_records), \
+            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
     # def test_deals_create(self):
     #     # Testing deals POST

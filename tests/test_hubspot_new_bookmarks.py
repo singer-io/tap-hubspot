@@ -49,12 +49,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
         cls.maxDiff = None  # see all output in failure
 
         cls.my_timestamp = '2021-08-05T00:00:00.000000Z'
-        import ipdb; ipdb.set_trace()
-        1+1
         cls.test_client = TestClient()
-        cls.test_client.delete_deal_pipelines(5)
-        # TODO good job delete works, how do we automate it??
-
 
     def create_test_data(self, expected_streams):
         self.expected_records = dict()
@@ -75,7 +70,15 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
 
     def test_run(self):
-        expected_streams = {'contacts', 'deal_pipelines'} #self.testable_streams()
+        # untestable_streams = {
+        #     'contacts_by_company',  # no create
+        #     'campaigns',  # no create
+        #     'forms',  # no create
+        #     'companies',  # no create
+        #     'deals',  # no create
+        # }
+
+        expected_streams = self.testable_streams()# - untestable_streams
 
         self.create_test_data(expected_streams)
 

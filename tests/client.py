@@ -48,7 +48,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def post(self, url, data, params=dict(), debug=False):
+    def post(self, url, data, params=dict(), debug=True):
         """Perfroma a POST using the standard requests method and log the action"""
 
         headers = dict(self.HEADERS)
@@ -61,7 +61,7 @@ class TestClient():
         json_response = response.json()
 
         return json_response
-    
+
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
                            requests.exceptions.HTTPError),
@@ -257,8 +257,8 @@ class TestClient():
                 converted_rk = self.BaseTest.datetime_from_timestamp(
                     response_1_pks_rks[int(vid)]/1000, self.BOOKMARK_DATE_FORMAT
                 )
-                record['versionTimestamp'] = converted_rk 
-                
+                record['versionTimestamp'] = converted_rk
+
                 records.append(record)
 
         records = self.denest_properties('contacts', records)
@@ -482,12 +482,32 @@ class TestClient():
 
     def create(self, stream):
         """Dispatch create to make tests clean."""
-        if stream == 'contacts':
+        if stream == 'forms':
+            return self.create_forms()
+        elif stream == 'owners':
+            return self.create_owners()
+        elif stream == 'companies':
+            return self.create_companies()
+        elif stream == 'contact_lists':
+            return self.create_contact_lists()
+        elif stream == 'contacts_by_company':
+            return self.create_contacts_by_company()
+        elif stream == 'engagements':
+            return self.create_engagements()
+        elif stream == 'campaigns':
+            return self.create_campaigns()
+        elif stream == 'deals':
+            return self.create_deals()
+        elif stream == 'workflows':
+            return self.create_workflows()
+        elif stream == 'contacts':
             return self.create_contacts()
         elif stream == 'deal_pipelines':
             return self.create_deal_pipelines()
+        elif stream == 'email_events':
+            return self.create_email_events()
         else:
-            raise NotImplementedError(f"There is no create_{stream} method!")
+            raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
     def create_contacts(self):
         """
@@ -541,7 +561,7 @@ class TestClient():
                  }
                ]
              }
-        
+
         # generate a contacts record
         response = self.post(url, data)
         records = [response]
@@ -565,7 +585,7 @@ class TestClient():
 
         url = f"{BASE_URL}"
         data = {}
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -579,11 +599,11 @@ class TestClient():
         HubSpot API https://legacydocs.hubspot.com/docs/methods/companies/create_company
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
-        
+
         url = f"{BASE_URL}/companies/v2/companies/"
         data = {"properties": [{"name": "name", "value": f"Company Name {record_uuid}"},
                                {"name": "description", "value": "company description"}]}
-                
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -609,7 +629,7 @@ class TestClient():
                 }]
             ]
         }
-        #TODO generate different filters 
+        #TODO generate different filters
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -626,7 +646,7 @@ class TestClient():
         since = datetime.datetime.today()-datetime.timedelta(days=7)
         company_records = self.get_companies(since)
         contacts_by_company_records = self.get_contacts_by_company([company_records[0]["companyId"]])
-                
+
         for company in company_records:
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
@@ -639,8 +659,8 @@ class TestClient():
                         "toObjectId": contact_id,
                         "category": "HUBSPOT_DEFINED",
                         "definitionId": 2
-                    
-                    }                    
+
+                    }
                     # generate a record
                     self.put(url, data)
                     records = [{'company-id': company_id, 'contact-id': contact_id}]
@@ -649,30 +669,29 @@ class TestClient():
 
     def create_deal_pipelines(self):
         """
-        HubSpot API 
+        HubSpot API
         https://legacydocs.hubspot.com/docs/methods/pipelines/create_new_pipeline
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
-        record_uuid2 = str(uuid.uuid4()).replace('-', '')
-
+        timestamp1 = str(datetime.datetime.now().timestamp()).replace(".", "")
+        timestamp2 = str(datetime.datetime.now().timestamp()).replace(".", "")
         url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals"
         data = {
-            "pipelineId": record_uuid,
-            "label": f"API test ticket pipeline {record_uuid}",
+            "pipelineId": timestamp1,
+            "label": f"API test ticket pipeline {timestamp1}",
             "displayOrder": 2,
             "active": True,
             "stages": [
                 {
-                    "stageId": f"example_stage {record_uuid}",
-                    "label": f"Example stage{record_uuid}",
+                    "stageId": f"example_stage {timestamp1}",
+                    "label": f"Example stage{timestamp1}",
                     "displayOrder": 1,
                     "metadata": {
                         "probability": 0.5
                     }
                 },
                 {
-                    "stageId": f"another_example_stage{record_uuid2}",
-                    "label": f"Another example stage{record_uuid2}",
+                    "stageId": f"another_example_stage{timestamp2}",
+                    "label": f"Another example stage{timestamp2}",
                     "displayOrder": 2,
                     "metadata": {
                         "probability": 1.0
@@ -680,7 +699,7 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -693,7 +712,7 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         url = f"{BASE_URL}/deals/v1/deal/"
-        #TODO need to use various pipelines and stages 
+        #TODO need to use various pipelines and stages
         data = {
             "associations": {
                 "associatedCompanyIds": [
@@ -734,7 +753,7 @@ class TestClient():
             }
             ]
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -743,9 +762,9 @@ class TestClient():
     def create_email_events(self):
         """
         HubSpot API  https://legacydocs.hubspot.com/docs/methods/email/email_events_overview
-        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required          
+        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required
         """
-        
+
         raise NotImplementedError("Use create_subscription_changes instead to create records for email_events stream")
 
     def create_engagements(self):
@@ -779,7 +798,7 @@ class TestClient():
                 "body": "note body"
             }
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -902,7 +921,7 @@ class TestClient():
             "metaData": [],
             "deletable": True
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -913,8 +932,8 @@ class TestClient():
         HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
         TODO - use selenium
         """
-        raise NotImplementedError("Only able to create owners from web app")        
-        
+        raise NotImplementedError("Only able to create owners from web app")
+
     def create_subscription_changes(self, subscription_id=''):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
@@ -924,9 +943,9 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
         subscriptions = self.get_subscription_changes()
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
-        
+
         a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
-        
+
         url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}"
         data = {
             "subscriptionStatuses": [
@@ -939,7 +958,7 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
         response = self.put(url.format(record_uuid+"@stitchdata.com"), data)
         records = [response]
@@ -977,7 +996,7 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -994,19 +1013,44 @@ class TestClient():
     ### Deletes
     ##########################################################################
 
+    # def delete_deal_pipelines(self, count=10)
+    #     """
+    #     Delete one deal_piplelines record based on the primary_key value
+    #     Hubspot API
+    #     https://legacydocs.hubspot.com/docs/methods/pipelines/delete_pipeline
+    #     """
+    #     records = self.get_deal_pipelines()
+    #     record_ids_to_delete = [records[i]['pipelineId'] for i in range(count)]
+
+    #     for record_id in record_ids_to_delete:
+    #         url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
+    #         self.delete(url)
+
     def delete_deal_pipelines(self, count=10):
         """
-        Delete one deal_piplelines record based on the primary_key value
-        Hubspot API 
+        Delete older records based on timestamp primary key
         https://legacydocs.hubspot.com/docs/methods/pipelines/delete_pipeline
         """
         records = self.get_deal_pipelines()
-        record_ids_to_delete = [records[i]['pipelineId'] for i in range(count)]
-
+        record_ids_to_delete = [record['pipelineId'] for record in records]
+        if len(record_ids_to_delete) == 1 or \
+           len(record_ids_to_delete) <= count:
+            raise RuntimeError(
+                "delete count is greater or equal to the number of existing records for deal_pipelines, "
+                "need to have at least one record remaining"
+            )
         for record_id in record_ids_to_delete:
-            url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
-            self.delete(url)
-    
+            if record_id == 'default':
+                continue # skip
+            yesterday = datetime.datetime.now() + datetime.timedelta(days=-1)
+            record_created = datetime.datetime.fromtimestamp(int(record_id[:10]))
+            if yesterday > record_created:
+                url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
+                self.delete(url)
+                count -= 1
+            if count == 0:
+                return
+
     ##########################################################################
     ### OAUTH
     ##########################################################################
@@ -1045,3 +1089,10 @@ class TestClient():
         self.acquire_access_token_from_refresh_token()
 
         self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
+        stream_limitations = {'deal_pipelines': [100, len(self.get_deal_pipelines())]}
+        for stream, limits in stream_limitations.items():
+            max_record_count, pipeline_count = limits
+            if max_record_count - pipeline_count < 10:
+                delete_count = 10
+                self.delete_deal_pipelines(delete_count)
+                print(f"TEST CLIENT | {delete_count} records deleted from {stream}")
