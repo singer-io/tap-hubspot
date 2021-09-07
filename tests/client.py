@@ -967,7 +967,7 @@ class TestClient():
                 }
             ]
         }
-        
+
         # generate a record
         self.put(url, data)
         time.sleep(10)  # TODO This is not a good implementation
@@ -1036,6 +1036,41 @@ class TestClient():
 
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)
+    def update_contacts(self, vid):
+        #TODO left off here INCOMPLETE
+        """
+
+        Update a single contact record.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/update_contact
+        """
+        # record_uuid = str(uuid.uuid4()).replace('-', '')
+        # records = self.get_contacts()
+        # url = f"{BASE_URL}/contacts/v1/contact/vid/{vid}/profile"
+        # data = {
+        #     "properties": [
+        #         {
+        #             "property": "email",
+        #             "value": "new-email@hubspot.com"
+        #         },
+        #         {
+        #             "property": "firstname",
+        #             "value": "Updated"
+        #         },
+        #         {
+        #             "property": "lastname",
+        #             "value": "Record"
+        #         },
+        #         {
+        #             "property": "website",
+        #             "value": "http://updated.example.com"
+        #         },
+        #         {
+        #             "property": "lifecyclestage",
+        #             "value": "customer"
+        #         }
+        #     ]
+        # }
+
 
     ##########################################################################
     ### Deletes

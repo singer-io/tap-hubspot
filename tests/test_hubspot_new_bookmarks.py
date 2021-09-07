@@ -48,6 +48,8 @@ class TestHubspotBookmarks(HubspotBaseTest):
             'contacts_by_companies',
         })
 
+    def get_properties(self):
+        return {'start_date' : '2021-08-25T00:00:00Z'} # '2017-05-01T00:00:00Z' used by OG tests
 
     @classmethod
     def setUpClass(cls):
