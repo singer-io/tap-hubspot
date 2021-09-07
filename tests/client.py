@@ -12,7 +12,7 @@ BASE_URL = "https://api.hubapi.com"
 
 
 class TestClient():
-
+    START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
 
     ##########################################################################
@@ -128,7 +128,7 @@ class TestClient():
         """
         url = f"{BASE_URL}/companies/v2/companies/paged"
         if not isinstance(since, datetime.datetime):
-            since = datetime.datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
+            since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
         params = {'properties': ["createdate", "hs_lastmodifieddate"]}
         records = []
 

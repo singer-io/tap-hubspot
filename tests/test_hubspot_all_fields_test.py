@@ -1,7 +1,7 @@
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-
+import datetime
 from base import HubspotBaseTest
 from client import TestClient
 
@@ -99,20 +99,13 @@ class TestHubspotAllFields(HubspotBaseTest):
         })
 
     def get_properties(self):
-        return {'start_date' : '2021-08-05T00:00:00Z'}
-
-    # TODO move the overriden start date up as much as possible to minimize the run time
-    #      it can probably be dynamic like today minus 7 days
+        return {'start_date' : '2021-08-05T00:00:00Z'} # TODO make dynamic
 
     @classmethod
     def setUpClass(cls):
         cls.maxDiff = None  # see all output in failure
 
-        # TODO my_timestamp needs to be driven off of start_date
-        # do a strptim on get_prop[start_date]
-        # Then do a strftime using this format with fractional seconds
-        
-        cls.my_timestamp = '2021-08-05T00:00:00.000000Z'
+        cls.my_timestamp = cls.get_properties(cls)['start_date']
 
         test_client = TestClient()
         cls.expected_records = dict()
@@ -141,13 +134,6 @@ class TestHubspotAllFields(HubspotBaseTest):
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
-
-        # # moving the state up so the sync will be shorter and the test takes less time
-        # state = {'bookmarks': {'companies': {'current_sync_start': None,
-        #                                      'hs_lastmodifieddate': self.my_timestamp,
-        #                                      'offset': {}}},
-        #          'currently_syncing': None}
-        # menagerie.set_state(conn_id, state)
 
         # Select only the expected streams tables
         expected_streams = self.testable_streams()
