@@ -126,11 +126,10 @@ class TestClient():
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
-        url = f"{BASE_URL}/companies/v2/companies/recent/modified"
+        url = f"{BASE_URL}/companies/v2/companies/paged"
         if not isinstance(since, datetime.datetime):
             since = datetime.datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
-        since = str(since.timestamp() * 1000).split(".")[0]
-        params = {'since': since}
+        params = {'properties': ["createdate", "hs_lastmodifieddate"]}
         records = []
 
         # paginating through all the companies
@@ -139,9 +138,20 @@ class TestClient():
         while has_more:
 
             response = self.get(url, params=params)
-            companies.extend(response['results'])
+            # TODO refactor this? so that we get start date for free?
+            for company in response['companies']:
+                if company['properties']['hs_lastmodifieddate']:
+                    company_timestamp = datetime.datetime.fromtimestamp(
+                        company['properties']['hs_lastmodifieddate']['timestamp']/1000
+                    )
+                else:
+                    company_timestamp = datetime.datetime.fromtimestamp(
+                        company['properties']['createdate']['timestamp']/1000
+                    )
+                if company_timestamp >= since:       
+                    companies.append(company)
 
-            has_more = response['hasMore']
+            has_more = response['has-more']
             params['offset'] = response['offset']
 
         # get the details of each company
