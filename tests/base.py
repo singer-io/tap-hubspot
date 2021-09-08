@@ -73,6 +73,7 @@ class HubspotBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
+                self.API_LIMIT: 100,
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
@@ -163,6 +164,9 @@ class HubspotBaseTest(unittest.TestCase):
         return {table: properties.get(self.REPLICATION_KEYS, set())
                 for table, properties
                 in self.expected_metadata().items()}
+
+    def expected_api_limits(self):
+        """TODO"""
 
     def expected_primary_keys(self):
 

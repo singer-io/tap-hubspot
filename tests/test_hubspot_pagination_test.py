@@ -10,27 +10,68 @@ class TestHubspotPagination(HubspotBaseTest):
         return "tap_tester_hubspot_pagination_test"
 
     def expected_page_size(self):
+        # TODO verify which  streams paginate and what are the limits
+        # TODO abstract this expectation into base metadata expectations
         return {
-            # "subscription_changes": 10 - 1000,
-            "subscription_changes": 1000,
-            # "email_events": 10 - 1000,
-            "email_events": 1000,
-            # "forms": ??, #infinity
-            # "workflows": ??,
-            # "owners": ??,
-            # "campaigns": ??,
-            # "campaigns": 500, # Can't make test data
-            # "contact_lists": 20 - 250,  #count,
-            # "deal_pipelines": ?? , # deprecated
-            # "contacts_by_company": 100,  #count # deprecated
-            "contact_lists": 250,
-            "contacts": 100, #count
-            "companies": 250,
-            "deals": 100,
-            "engagements": 250,
+            # "subscription_changes": 10 - 1000, # TODO
+            "subscription_changes": 1000, # TODO
+            # "email_events": 10 - 1000, # TODO
+            "email_events": 1000, # TODO
+            # "forms": ??, # TODO #infinity
+            "workflows": ??, # TODO
+            # "owners": ??, # TODO
+            # "campaigns": ??, # TODO
+            # "campaigns": 500, # TODO # Can't make test data
+            # "contact_lists": 20 - 250, # TODO  #count, # TODO
+            # "deal_pipelines": ?? , # TODO # deprecated
+            # "contacts_by_company": 100, # TODO  #count # deprecated
+            "contact_lists": 250, # TODO
+            "contacts": 100, # DONE
+            "companies": 250, # TODO
+            "deals": 100, # TODO
+            "engagements": 250, # TODO
         }
 
-    def expected_streams(self):
+    @classmethod
+    def setUpClass(cls):
+        cls.maxDiff = None  # see all output in failure
+
+        cls.my_timestamp = cls.get_properties(cls)['start_date']
+
+        test_client = TestClient()
+        existing_records = dict()
+
+        # TODO there is no need to get records for streams not under test
+        existing_records['campaigns'] = test_client.get_campaigns()
+        existing_records['forms'] = test_client.get_forms()
+        existing_records['owners'] = test_client.get_owners()
+        existing_records['engagements'] = test_client.get_engagements()
+        existing_records['workflows'] = test_client.get_workflows()
+        existing_records['email_events'] = test_client.get_email_events()
+        existing_records['contact_lists'] = test_client.get_contact_lists()
+        existing_records['contacts'] = test_client.get_contacts()
+        existing_records['companies'] = test_client.get_companies(since=cls.my_timestamp)
+        company_ids = [company['companyId'] for company in existing_records['companies']]
+        existing_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
+        existing_records['deal_pipelines'] = test_client.get_deal_pipelines()
+        existing_records['deals'] = test_client.get_deals()
+        # existing_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
+        #check if additional records are needed and create records if so
+        streams = self.expected_streams()
+        limits = self.expected_page_size() # TODO This should be set off of the base expectations
+        for stream in streams:
+            # Get all records
+            # check if we meet the limit
+            if len(self.expected_records[stream]) < limits[stream]:
+                if stream = "contacts":
+                    # create records to exceed limit
+                    test_client.create(stream)
+                    # TODO get the create dispatch function
+                    # TODO create n records for each stream
+
+
+                
+    def expected_streams(self): # TODO this should run off of base expectations
         """
         All streams are under test
         """
@@ -41,9 +82,11 @@ class TestHubspotPagination(HubspotBaseTest):
 
     def get_properties(self):
         return {
-            'start_date' : '2017-01-01T00:00:00Z',
+            'start_date' : '2017-01-01T00:00:00Z',  # TODO make this 1 week ago
         }
 
+    # TODO card out boundary testing for future tap-tester upgrades
+    #      
 
     def test_run(self):
         conn_id = connections.ensure_connection(self)
