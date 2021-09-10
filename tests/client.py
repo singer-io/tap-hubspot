@@ -236,10 +236,10 @@ class TestClient():
 
         has_more = True
         while has_more:
-
             # get a page worth of contacts and pull the vids
             response_1 = self.get(url_1, params=params_1)
-            vids = [record['vid'] for record in response_1['contacts']]
+            vids = [record['vid'] for record in response_1['contacts']
+                    if record['versionTimestamp'] >= self.start_date]
 
             has_more = response_1['has-more']
             params_1['vidOffset'] = response_1['vid-offset']
@@ -270,8 +270,7 @@ class TestClient():
 
         for parent_id in parent_ids:
             child_url = url.format(parent_id)
-            response = self.get(child_url, params=params)
-
+            #response = self.get(child_url, params=params)
             has_more = True
             while has_more:
 
@@ -637,12 +636,9 @@ class TestClient():
         contact_records = self.get_contacts()
         contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
         for company_id in set(company_ids):
-            current_company_contacts = [contact_by_company
-                                        for contact_by_company in contacts_by_company_records
-                                        if contact_by_company['company-id'] == company_id]
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
-                if contact['vid'] not in [contacts['contact-id'] for contacts in current_company_contacts]:
+                if contact['vid'] not in [record['contact-id'] for record in contacts_by_company_records]:
                     contact_id = contact['vid']
                     data = {
                         "fromObjectId": company_id,
@@ -1025,7 +1021,7 @@ class TestClient():
             datetime.timedelta(seconds=auth['expires_in'] - 600))
         print(f"TEST CLIENT | Token refreshed. Expires at {self.CONFIG['token_expires']}")
 
-    def __init__(self):
+    def __init__(self, start_date=''):
         self.BaseTest = HubspotBaseTest()
         self.replication_keys = self.BaseTest.expected_replication_keys()
 
@@ -1033,8 +1029,12 @@ class TestClient():
         self.CONFIG.update(self.BaseTest.get_properties())
 
         # TODO just pass this into init! This is not a valid approach as-is
-        self.start_date = datetime.datetime.strptime(
-            self.CONFIG['start_date'], self.BaseTest.START_DATE_FORMAT).timestamp() * 1000
+        if start_date:
+            self.start_date = datetime.datetime.strptime(
+            start_date, self.BaseTest.START_DATE_FORMAT).timestamp() * 1000
+        else:
+            self.start_date = datetime.datetime.strptime(
+                self.CONFIG['start_date'], self.BaseTest.START_DATE_FORMAT).timestamp() * 1000
 
         self.acquire_access_token_from_refresh_token()
 

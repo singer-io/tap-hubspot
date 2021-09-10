@@ -32,29 +32,29 @@ class TestHubspotTestClient(HubspotBaseTest):
     #         f"Before companies post found {len(old_records)} records. After post found {len(new_records)} records"
 
         
-    def test_contact_lists_create(self):
-        # Testing contact_lists POST
+    # def test_contact_lists_create(self):
+    #     # Testing contact_lists POST
         
-        old_records = self.test_client.get_contact_lists()
-        our_record = self.test_client.create_contact_lists()
-        new_records = self.test_client.get_contact_lists()
+    #     old_records = self.test_client.get_contact_lists()
+    #     our_record = self.test_client.create_contact_lists()
+    #     new_records = self.test_client.get_contact_lists()
         
-        assert len(old_records) < len(new_records), \
-            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
-
-        
-    # def test_contacts_by_company_create(self):
-    #     # Testing contacts_by_company PUT
-
-
-    #     #old_contact_records = self.test_client.get_contacts()
-    #     old_company_records = self.test_client.get_companies('2021-08-25T00:00:00Z')
-    #     old_records = self.test_client.get_contacts_by_company([old_company_records[0]["companyId"]])
-    #     our_record = self.test_client.create_contacts_by_company([record["company-id"] for record in old_records])
-        
-    #     new_records = self.test_client.get_contacts_by_company([old_company_records[0]["companyId"]])
     #     assert len(old_records) < len(new_records), \
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
+
+        
+    def test_contacts_by_company_create(self):
+        # Testing contacts_by_company PUT
+
+
+        #old_contact_records = self.test_client.get_contacts()
+        old_company_records = self.test_client.get_companies('2021-09-10T00:00:00Z')
+        old_company_ids = [company["companyId"] for company in old_company_records]
+        old_records = self.test_client.get_contacts_by_company(old_company_ids)
+        our_record = self.test_client.create_contacts_by_company([record["company-id"] for record in old_records])
+        new_records = self.test_client.get_contacts_by_company(old_company_ids)
+        assert len(old_records) < len(new_records), \
+            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
 
     # def test_deal_pipelines_create(self):

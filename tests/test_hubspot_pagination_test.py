@@ -41,30 +41,29 @@ class TestHubspotPagination(HubspotBaseTest):
             # "campaigns": 500, # TODO # Can't make test data
             # "contact_lists": 20 - 250, # TODO  #count, # TODO
             # "deal_pipelines": ?? , # TODO # deprecated
-            "contacts_by_company": 103, # TODO Change back to 100 #count # deprecated x
-            "contact_lists": 250, # Done x
-            "contacts": 100, # DONE x
-            "companies": 250, 
-            "deals": 100, 
+            "contacts_by_company": 100,
+            "contact_lists": 250,
+            "contacts": 100,
+            "companies": 250,
+            # "deals": 100 # IN_PROGRESS
             # "engagements": 250, # TODO
         }
-
     @classmethod
     def setUpClass(cls):
         cls.maxDiff = None  # see all output in failure
-        test_client = TestClient()
+        cls.my_timestamp = cls.get_properties(cls)['start_date']
+        test_client = TestClient(cls.my_timestamp)
         existing_records = dict()
         streams = cls.expected_streams(cls)
         limits = cls.expected_page_size() # TODO This should be set off of the base expectations
-        
-        cls.my_timestamp = cls.get_properties(cls)['start_date']
- 
-        # 'contacts_by_company' stream needs to get companyIds first so putting the stream last in the list
-        
-        streams.remove('contacts_by_company')
-        streams = list(streams)
-        streams.append('contacts_by_company')
-        #company_ids=[]
+
+         # 'contacts_by_company' stream needs to get companyIds first so putting the stream last in the list
+        stream_to_run_last = 'contacts_by_company'
+        if stream_to_run_last in streams:
+            streams.remove(stream_to_run_last)
+            streams = list(streams)
+            streams.append(stream_to_run_last)
+
         for stream in streams:
             # Get all records
             if stream == 'contacts_by_company':
@@ -72,7 +71,7 @@ class TestHubspotPagination(HubspotBaseTest):
                 existing_records[stream] = test_client.read(stream, parent_ids=company_ids)
             elif stream == 'companies' or stream == 'contact_lists': #put back contact_lists
                 existing_records[stream] = test_client.read(stream, since=cls.my_timestamp)
-                
+
             else:
                 existing_records[stream] = test_client.read(stream)
                 # existing_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
@@ -81,15 +80,15 @@ class TestHubspotPagination(HubspotBaseTest):
             print(f'under_target = {under_target} for {stream}')
             if under_target >= 0 :
                 print(f"need to make {under_target} records for {stream} stream")
-                for i in range(under_target): 
+                for i in range(under_target):
                     # create records to exceed limit
                     if stream == 'contacts_by_company':
                         # company_ids = [record["company-id"] for record in existing_records[stream]]
                         test_client.create(stream, company_ids)
                     else:
                         test_client.create(stream)
-                    
-                            
+
+
     def expected_streams(self): # TODO this should run off of base expectations
         """
         All streams are under test
@@ -100,7 +99,7 @@ class TestHubspotPagination(HubspotBaseTest):
         })
 
     # TODO card out boundary testing for future tap-tester upgrades
-    #      
+    #
 
     def test_run(self):
         # Select only the expected streams tables
@@ -120,8 +119,8 @@ class TestHubspotPagination(HubspotBaseTest):
 
         sync_record_count = self.run_and_verify_sync(conn_id)
         sync_records = runner.get_records_from_target_output()
- 
-        
+
+
         # Test by stream
         for stream in self.expected_streams():
             with self.subTest(stream=stream):
