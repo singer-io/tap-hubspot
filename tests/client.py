@@ -101,7 +101,31 @@ class TestClient():
     ##########################################################################
     ### GET
     ##########################################################################
-
+    def read(self, stream, parent_ids=[], since=''):
+        if stream == 'forms':
+            return self.get_forms()
+        elif stream == 'owners':
+            return self.get_owners()
+        elif stream == 'companies':
+            return self.get_companies(since)
+        elif stream == 'contact_lists':
+            return self.get_contact_lists(since)
+        elif stream == 'contacts_by_company':
+            return self.get_contacts_by_company(parent_ids)
+        elif stream == 'engagements':
+            return self.get_engagements()
+        elif stream == 'campaigns':
+            return self.get_campaigns()
+        elif stream == 'deals':
+            return self.get_deals()
+        elif stream == 'workflows':
+            return self.get_workflows()
+        elif stream == 'contacts':
+            return self.get_contacts()
+        elif stream == 'deal_pipelines':
+            return self.get_deal_pipelines()
+        elif stream == 'email_events':
+             return self.get_email_events()
     def get_campaigns(self):
         """
         Get all campaigns by id, then grab the details of each campaign.
@@ -163,13 +187,18 @@ class TestClient():
         records = self.denest_properties('companies', records)
 
         return records
-
-    def get_contact_lists(self):
+    
+    def get_contact_lists(self, since):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
         url = f"{BASE_URL}/contacts/v1/lists"
         params = dict()
+        if not isinstance(since, datetime.datetime):
+            since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
+        since = str(since.timestamp() * 1000).split(".")[0]
+        params = {'since': since}
+        
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
         # paginating through all the contact_lists
@@ -178,7 +207,7 @@ class TestClient():
 
             response = self.get(url, params=params)
             for record in response['lists']:
-                if self.start_date <= record[replication_key]:
+                if int(since) <= record[replication_key]:
                     records.append(record)
 
             has_more = response['has-more']
@@ -447,6 +476,40 @@ class TestClient():
     ##########################################################################
     ### CREATE
     ##########################################################################
+    
+    def create(self, stream, company_ids=[]):
+        """Dispatch create to make tests clean."""
+        if stream == 'forms':
+            return self.create_forms()
+        elif stream == 'owners':
+            return self.create_owners()
+        elif stream == 'companies':
+            return self.create_companies()
+        elif stream == 'contact_lists':
+            return self.create_contact_lists()
+        elif stream == 'contacts_by_company':
+            return self.create_contacts_by_company(company_ids)
+        elif stream == 'engagements':
+            return self.create_engagements()
+        elif stream == 'campaigns':
+            return self.create_campaigns()
+        elif stream == 'deals':
+            return self.create_deals()
+        elif stream == 'workflows':
+            return self.create_workflows()
+        elif stream == 'contacts':
+            return self.create_contacts()
+        elif stream == 'deal_pipelines':
+            return self.create_deal_pipelines()
+        elif stream == 'email_events':
+            print(
+                f"TEST CLIENT | WARNING Calling the create_subscription_changes method to generate {stream} records"
+            )
+            return self.create_subscription_changes()
+        elif stream == 'subscription_changes':
+            return self.create_subscription_changes()
+        else:
+            raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
     def create_contacts(self):
         """
@@ -564,7 +627,7 @@ class TestClient():
         records = [response]
         return records
 
-    def create_contacts_by_company(self):
+    def create_contacts_by_company(self, company_ids):
         """
         https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
@@ -572,30 +635,28 @@ class TestClient():
         url = f"{BASE_URL}/crm-associations/v1/associations"
         # only use contacts-company combinations that do not exist yet
         contact_records = self.get_contacts()
-        since = datetime.datetime.today()-datetime.timedelta(days=7)
-        company_records = self.get_companies(since)
-        contacts_by_company_records = self.get_contacts_by_company([company_records[0]["companyId"]])
-
-        for company in company_records:
+        contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
+        for company_id in set(company_ids):
+            current_company_contacts = [contact_by_company
+                                        for contact_by_company in contacts_by_company_records
+                                        if contact_by_company['company-id'] == company_id]
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
-                if contact['vid'] not in [contacts['contact-id'] for contacts in contacts_by_company_records]:
+                if contact['vid'] not in [contacts['contact-id'] for contacts in current_company_contacts]:
                     contact_id = contact['vid']
-                    company_id = company['companyId']
-
                     data = {
                         "fromObjectId": company_id,
                         "toObjectId": contact_id,
                         "category": "HUBSPOT_DEFINED",
                         "definitionId": 2
-
                     }
                     # generate a record
                     self.put(url, data)
                     records = [{'company-id': company_id, 'contact-id': contact_id}]
                     return records
-        raise NotImplementedError("All contacts already have an associated company")
 
+        raise NotImplementedError("All contacts already have an associated company")
+    
     def create_deal_pipelines(self):
         """
         HubSpot API
@@ -971,6 +1032,7 @@ class TestClient():
         self.CONFIG = self.BaseTest.get_credentials()
         self.CONFIG.update(self.BaseTest.get_properties())
 
+        # TODO just pass this into init! This is not a valid approach as-is
         self.start_date = datetime.datetime.strptime(
             self.CONFIG['start_date'], self.BaseTest.START_DATE_FORMAT).timestamp() * 1000
 

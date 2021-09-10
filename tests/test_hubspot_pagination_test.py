@@ -1,76 +1,95 @@
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-
+from datetime import datetime
+from datetime import timedelta
+from client import TestClient
 from base import HubspotBaseTest
 
 
 class TestHubspotPagination(HubspotBaseTest):
-    def name(self):
+
+    # TODO | Optimization is possible by checking only the first page in our test client
+    #        reads for 'has-more/hasMore'. That way if there are 1000 records and page size is 100,
+    #        we only get 100 of those records.
+    #        NOTE: This ^ approach makes assumptions about records returned are actually unique. May
+    #              not be true of events streams.
+
+    @staticmethod
+    def name():
         return "tap_tester_hubspot_pagination_test"
 
-    def expected_page_size(self):
+    def get_properties(self):
+        return {
+            'start_date' : datetime.strftime(datetime.today()-timedelta(days=7), self.START_DATE_FORMAT)  # TODO make this 1 week ago
+        }
+
+
+    @staticmethod
+    def expected_page_size():
         # TODO verify which  streams paginate and what are the limits
         # TODO abstract this expectation into base metadata expectations
         return {
             # "subscription_changes": 10 - 1000, # TODO
-            "subscription_changes": 1000, # TODO
-            # "email_events": 10 - 1000, # TODO
-            "email_events": 1000, # TODO
+            # "subscription_changes": 1000, # TODO
+            # # "email_events": 10 - 1000, # TODO
+            # "email_events": 1000, # TODO
             # "forms": ??, # TODO #infinity
-            "workflows": ??, # TODO
+            # "workflows": ??, # TODO
             # "owners": ??, # TODO
             # "campaigns": ??, # TODO
             # "campaigns": 500, # TODO # Can't make test data
             # "contact_lists": 20 - 250, # TODO  #count, # TODO
             # "deal_pipelines": ?? , # TODO # deprecated
-            # "contacts_by_company": 100, # TODO  #count # deprecated
-            "contact_lists": 250, # TODO
-            "contacts": 100, # DONE
-            "companies": 250, # TODO
-            "deals": 100, # TODO
-            "engagements": 250, # TODO
+            "contacts_by_company": 103, # TODO Change back to 100 #count # deprecated x
+            "contact_lists": 250, # Done x
+            "contacts": 100, # DONE x
+            "companies": 250, 
+            "deals": 100, 
+            # "engagements": 250, # TODO
         }
 
     @classmethod
     def setUpClass(cls):
         cls.maxDiff = None  # see all output in failure
-
-        cls.my_timestamp = cls.get_properties(cls)['start_date']
-
         test_client = TestClient()
         existing_records = dict()
-
-        # TODO there is no need to get records for streams not under test
-        existing_records['campaigns'] = test_client.get_campaigns()
-        existing_records['forms'] = test_client.get_forms()
-        existing_records['owners'] = test_client.get_owners()
-        existing_records['engagements'] = test_client.get_engagements()
-        existing_records['workflows'] = test_client.get_workflows()
-        existing_records['email_events'] = test_client.get_email_events()
-        existing_records['contact_lists'] = test_client.get_contact_lists()
-        existing_records['contacts'] = test_client.get_contacts()
-        existing_records['companies'] = test_client.get_companies(since=cls.my_timestamp)
-        company_ids = [company['companyId'] for company in existing_records['companies']]
-        existing_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
-        existing_records['deal_pipelines'] = test_client.get_deal_pipelines()
-        existing_records['deals'] = test_client.get_deals()
-        # existing_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
-        #check if additional records are needed and create records if so
-        streams = self.expected_streams()
-        limits = self.expected_page_size() # TODO This should be set off of the base expectations
+        streams = cls.expected_streams(cls)
+        limits = cls.expected_page_size() # TODO This should be set off of the base expectations
+        
+        cls.my_timestamp = cls.get_properties(cls)['start_date']
+ 
+        # 'contacts_by_company' stream needs to get companyIds first so putting the stream last in the list
+        
+        streams.remove('contacts_by_company')
+        streams = list(streams)
+        streams.append('contacts_by_company')
+        #company_ids=[]
         for stream in streams:
             # Get all records
-            # check if we meet the limit
-            if len(self.expected_records[stream]) < limits[stream]:
-                if stream = "contacts":
-                    # create records to exceed limit
-                    test_client.create(stream)
-                    # TODO get the create dispatch function
-                    # TODO create n records for each stream
-
-
+            if stream == 'contacts_by_company':
+                company_ids = [company['companyId'] for company in existing_records['companies']]
+                existing_records[stream] = test_client.read(stream, parent_ids=company_ids)
+            elif stream == 'companies' or stream == 'contact_lists': #put back contact_lists
+                existing_records[stream] = test_client.read(stream, since=cls.my_timestamp)
                 
+            else:
+                existing_records[stream] = test_client.read(stream)
+                # existing_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
+            # check if we exceed the limit
+            under_target = limits[stream] + 1 - len(existing_records[stream])
+            print(f'under_target = {under_target} for {stream}')
+            if under_target >= 0 :
+                print(f"need to make {under_target} records for {stream} stream")
+                for i in range(under_target): 
+                    # create records to exceed limit
+                    if stream == 'contacts_by_company':
+                        # company_ids = [record["company-id"] for record in existing_records[stream]]
+                        test_client.create(stream, company_ids)
+                    else:
+                        test_client.create(stream)
+                    
+                            
     def expected_streams(self): # TODO this should run off of base expectations
         """
         All streams are under test
@@ -80,28 +99,29 @@ class TestHubspotPagination(HubspotBaseTest):
             'email_events',
         })
 
-    def get_properties(self):
-        return {
-            'start_date' : '2017-01-01T00:00:00Z',  # TODO make this 1 week ago
-        }
-
     # TODO card out boundary testing for future tap-tester upgrades
     #      
 
     def test_run(self):
-        conn_id = connections.ensure_connection(self)
-
-        found_catalogs = self.run_and_verify_check_mode(conn_id)
-
         # Select only the expected streams tables
         expected_streams = self.expected_streams()
+        conn_id = connections.ensure_connection(self)
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
+
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
-        self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=True)
+        #self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=True)
+        for catalog_entry in catalog_entries:
+            stream_schema = menagerie.get_annotated_schema(conn_id, catalog_entry['stream_id'])
+            connections.select_catalog_and_fields_via_metadata(
+                conn_id,
+                catalog_entry,
+                stream_schema
+            )
 
         sync_record_count = self.run_and_verify_sync(conn_id)
         sync_records = runner.get_records_from_target_output()
-
-
+ 
+        
         # Test by stream
         for stream in self.expected_streams():
             with self.subTest(stream=stream):
@@ -110,14 +130,19 @@ class TestHubspotPagination(HubspotBaseTest):
 
                 sync_messages = sync_records.get(stream, {'messages': []}).get('messages')
 
-                primary_key = self.expected_primary_keys().get(stream).pop()
+                primary_keys = self.expected_primary_keys().get(stream)
 
                 # Verify the sync meets or exceeds the default record count
                 stream_page_size = self.expected_page_size()[stream]
                 self.assertLess(stream_page_size, record_count)
 
                 # Verify we did not duplicate any records across pages
-                records_pks_set = {message.get('data').get(primary_key) for message in sync_messages}
-                records_pks_list = [message.get('data').get(primary_key) for message in sync_messages]
+                records_pks_set = {tuple([message.get('data').get(primary_key)
+                                          for primary_key in primary_keys])
+                                   for message in sync_messages}
+                records_pks_list = [tuple([message.get('data').get(primary_key)
+                                           for primary_key in primary_keys])
+                                    for message in sync_messages]
+                # records_pks_list = [message.get('data').get(primary_key) for message in sync_messages]
                 self.assertCountEqual(records_pks_set, records_pks_list,
-                                      msg="We have duplicate records for {}".format(stream))
+                                      msg=f"We have duplicate records for {stream}")
