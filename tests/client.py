@@ -462,7 +462,7 @@ class TestClient():
             has_more = response['hasMore']
             params['offset'] = response['offset']
             for record in response['timeline']:
-                if int(since) <= record['timestamp']:
+                if int(since) <= record['timestamp']: # TODO bug timestamp is the replication method rather than replication_method which is startTimestamp
                     records.append(record)
 
 
@@ -947,7 +947,7 @@ class TestClient():
         # a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
         for item in subscription_id_list:
             if count < times:
-                #if item[0]:                
+                #if item[0]                
                 record_uuid = str(uuid.uuid4()).replace('-', '')
                 url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
                 data = {

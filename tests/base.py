@@ -13,10 +13,10 @@ class HubspotBaseTest(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
-    API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
+    EXPECTED_PAGE_SIZE = "expected-page-size"
 
     #######################################
     #  Tap Configurable Metadata Methods  #
@@ -63,21 +63,24 @@ class HubspotBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.EXPECTED_PAGE_SIZE: 250,
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 250
             },
             "contacts": {
                 self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
-                self.API_LIMIT: 100,
+                self.EXPECTED_PAGE_SIZE: 100
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.EXPECTED_PAGE_SIZE: 100,
             },
             "deal_pipelines": {
                 self.PRIMARY_KEYS: {"pipelineId"},
@@ -92,6 +95,7 @@ class HubspotBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
+                self.EXPECTED_PAGE_SIZE: 1000
             },
             "engagements": {
                 self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
@@ -112,6 +116,7 @@ class HubspotBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'timestamp'
+                self.EXPECTED_PAGE_SIZE: 1000
             },
             "workflows": {
                 self.PRIMARY_KEYS: {"id"},
@@ -155,7 +160,6 @@ class HubspotBaseTest(unittest.TestCase):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
 
-
     def expected_replication_keys(self):
         """
         return a dictionary with key of table name
@@ -165,8 +169,10 @@ class HubspotBaseTest(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    def expected_api_limits(self):
-        """TODO"""
+    def expected_page_limits(self):
+        return {table: properties.get(self.EXPECTED_PAGE_SIZE, set())
+                for table, properties
+                in self.expected_metadata().items()}
 
     def expected_primary_keys(self):
 
