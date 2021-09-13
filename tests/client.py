@@ -125,7 +125,10 @@ class TestClient():
         elif stream == 'deal_pipelines':
             return self.get_deal_pipelines()
         elif stream == 'email_events':
-             return self.get_email_events()
+            return self.get_email_events()
+        elif stream == 'subscription_changes':
+            return self.get_subscription_changes(since)
+        
     def get_campaigns(self):
         """
         Get all campaigns by id, then grab the details of each campaign.
@@ -172,6 +175,7 @@ class TestClient():
                     company_timestamp = datetime.datetime.fromtimestamp(
                         company['properties']['createdate']['timestamp']/1000
                     )
+                
                 if company_timestamp >= since:       
                     companies.append(company)
 
@@ -320,7 +324,6 @@ class TestClient():
             response = self.get(v1_url, params=v1_params)
             records.extend([record for record in response['deals']
                             if record['properties'][replication_key]['timestamp'] >= self.start_date])
-
             has_more = response['hasMore']
             v1_params['offset'] = response['offset']
 
@@ -438,22 +441,29 @@ class TestClient():
 
         return records
 
-    def get_subscription_changes(self):
+    def get_subscription_changes(self, since):
         """
         Get all subscription_changes by paginating using 'hasMore' and 'offset'.
         """
         url = f"{BASE_URL}/email/public/v1/subscriptions/timeline"
         params = dict()
         records = []
-
+        replication_key = list(self.replication_keys['subscription_changes'])[0]
+        if not isinstance(since, datetime.datetime):
+            since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
+        since = str(since.timestamp() * 1000).split(".")[0]
+        # copied overparams = {'properties': ["createdate", "hs_lastmodifieddate"]}
         has_more = True
         while has_more:
 
             response = self.get(url, params=params)
-            records.extend(response['timeline'])
+            #records.extend(response['timeline'])
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
+            for record in response['timeline']:
+                if int(since) <= record['timestamp']:
+                    records.append(record)
 
 
         return records
@@ -476,7 +486,7 @@ class TestClient():
     ### CREATE
     ##########################################################################
     
-    def create(self, stream, company_ids=[]):
+    def create(self, stream, company_ids=[], subscriptions=[], times=1):
         """Dispatch create to make tests clean."""
         if stream == 'forms':
             return self.create_forms()
@@ -506,7 +516,7 @@ class TestClient():
             )
             return self.create_subscription_changes()
         elif stream == 'subscription_changes':
-            return self.create_subscription_changes()
+            return self.create_subscription_changes(subscriptions, times)
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
@@ -921,34 +931,40 @@ class TestClient():
         """
         raise NotImplementedError("Only able to create owners from web app")
 
-    def create_subscription_changes(self, subscription_id=''):
+    def create_subscription_changes(self, subscriptions=[] , times=1):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
         This will update email_events as well.
         TODO For updating sub_changes, utilize sub_id as an arg and make a passthrough method
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
-        subscriptions = self.get_subscription_changes()
+        if subscriptions == []:
+            subscriptions = self.get_subscription_changes(since='') 
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
-
-        a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
-
-        url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
-        data = {
-            "subscriptionStatuses": [
-                {
-                    "id": a_sub_id,
-                    "subscribed": True,
-                    "optState": "OPT_IN",
-                    "legalBasis": "PERFORMANCE_OF_CONTRACT",
-                    "legalBasisExplanation": "We need to send them these emails as part of our agreement with them."
+        
+        count = 0
+        records = []
+        print(f"creating {times} records")
+        # a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
+        for item in subscription_id_list:
+            if count < times:
+                #if item[0]:                
+                record_uuid = str(uuid.uuid4()).replace('-', '')
+                url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
+                data = {
+                    "subscriptionStatuses": [
+                        {
+                            "id": item[0], #a_sub_id,
+                            "subscribed": True,
+                            "optState": "OPT_IN",
+                            "legalBasis": "PERFORMANCE_OF_CONTRACT",
+                            "legalBasisExplanation": "We need to send them these emails as part of our agreement with them."
+                        }
+                    ]
                 }
-            ]
-        }
-
-        # generate a record
-        response = self.put(url, data)
-        records = [response]
+                # generate a record
+                response = self.put(url, data)
+                records.append([response])
+                count += 1
         return records
 
     def create_workflows(self):

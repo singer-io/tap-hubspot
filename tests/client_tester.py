@@ -43,18 +43,18 @@ class TestHubspotTestClient(HubspotBaseTest):
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
         
-    def test_contacts_by_company_create(self):
-        # Testing contacts_by_company PUT
+    # def test_contacts_by_company_create(self):
+    #     # Testing contacts_by_company PUT
 
 
-        #old_contact_records = self.test_client.get_contacts()
-        old_company_records = self.test_client.get_companies('2021-09-10T00:00:00Z')
-        old_company_ids = [company["companyId"] for company in old_company_records]
-        old_records = self.test_client.get_contacts_by_company(old_company_ids)
-        our_record = self.test_client.create_contacts_by_company([record["company-id"] for record in old_records])
-        new_records = self.test_client.get_contacts_by_company(old_company_ids)
-        assert len(old_records) < len(new_records), \
-            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
+    #     #old_contact_records = self.test_client.get_contacts()
+    #     old_company_records = self.test_client.get_companies('2021-09-10T00:00:00Z')
+    #     old_company_ids = [company["companyId"] for company in old_company_records]
+    #     old_records = self.test_client.get_contacts_by_company(old_company_ids)
+    #     our_record = self.test_client.create_contacts_by_company([record["company-id"] for record in old_records])
+    #     new_records = self.test_client.get_contacts_by_company(old_company_ids)
+    #     assert len(old_records) < len(new_records), \
+    #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
 
     # def test_deal_pipelines_create(self):
@@ -78,22 +78,22 @@ class TestHubspotTestClient(HubspotBaseTest):
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
 
-    # def test_subscription_changes_and_email_events_create(self):
-    #     # Testing subscription_changes  and email_events POST
+    def test_subscription_changes_and_email_events_create(self):
+        # Testing subscription_changes  and email_events POST
 
-    #     old_emails = self.test_client.get_email_events()
-    #     old_subs = self.test_client.get_subscription_changes()
-    #     our_record = self.test_client.create_subscription_changes()
-    #     time.sleep(10)
-    #     new_subs = self.test_client.get_subscription_changes()
-    #     new_emails = self.test_client.get_email_events()
+        old_emails = self.test_client.get_email_events()
+        old_subs = self.test_client.get_subscription_changes()
+        our_record = self.test_client.create_subscription_changes(subscriptions=old_subs, times=5)
+        time.sleep(10)
+        new_subs = self.test_client.get_subscription_changes()
+        new_emails = self.test_client.get_email_events()
 
-    #     assert len(old_subs) < len(new_subs), \
-    #         f"Before post found {len(old_subs)} subs. After post found {len(new_subs)} subs"
-    #     assert len(old_emails) < len(new_emails), \
-    #         f"Before post found {len(old_emails)} emails. After post found {len(new_emails)} emails"
-    #     print(f"Before {len(old_subs)} subs. After found {len(new_subs)} subs")
-    #     print(f"Before {len(old_emails)} emails. After found {len(new_emails)} emails")
+        assert len(old_subs) < len(new_subs), \
+            f"Before post found {len(old_subs)} subs. After post found {len(new_subs)} subs"
+        assert len(old_emails) < len(new_emails), \
+            f"Before post found {len(old_emails)} emails. After post found {len(new_emails)} emails"
+        print(f"Before {len(old_subs)} subs. After found {len(new_subs)} subs")
+        print(f"Before {len(old_emails)} emails. After found {len(new_emails)} emails")
 
 
     # def test_engagements_create(self):

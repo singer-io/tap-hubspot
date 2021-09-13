@@ -30,22 +30,21 @@ class TestHubspotPagination(HubspotBaseTest):
         # TODO verify which  streams paginate and what are the limits
         # TODO abstract this expectation into base metadata expectations
         return {
-            # "subscription_changes": 10 - 1000, # TODO
-            # "subscription_changes": 1000, # TODO
-            # # "email_events": 10 - 1000, # TODO
-            # "email_events": 1000, # TODO
+            #"subscription_changes": 10 - 1000, # TODO
+            "subscription_changes": 1000,
+            #  "email_events": 10 - 1000, # TODO
+            "email_events": 1000, # TODO
             # "forms": ??, # TODO #infinity
             # "workflows": ??, # TODO
             # "owners": ??, # TODO
             # "campaigns": ??, # TODO
             # "campaigns": 500, # TODO # Can't make test data
-            # "contact_lists": 20 - 250, # TODO  #count, # TODO
             # "deal_pipelines": ?? , # TODO # deprecated
-            "contacts_by_company": 100,
+            #"contacts_by_company": 100,
             "contact_lists": 250,
             "contacts": 100,
             "companies": 250,
-            # "deals": 100 # IN_PROGRESS
+            "deals": 100,
             # "engagements": 250, # TODO
         }
     @classmethod
@@ -56,7 +55,6 @@ class TestHubspotPagination(HubspotBaseTest):
         existing_records = dict()
         streams = cls.expected_streams(cls)
         limits = cls.expected_page_size() # TODO This should be set off of the base expectations
-
          # 'contacts_by_company' stream needs to get companyIds first so putting the stream last in the list
         stream_to_run_last = 'contacts_by_company'
         if stream_to_run_last in streams:
@@ -69,7 +67,7 @@ class TestHubspotPagination(HubspotBaseTest):
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in existing_records['companies']]
                 existing_records[stream] = test_client.read(stream, parent_ids=company_ids)
-            elif stream == 'companies' or stream == 'contact_lists': #put back contact_lists
+            elif stream == 'companies' or stream == 'contact_lists' or stream=='subscription_changes':
                 existing_records[stream] = test_client.read(stream, since=cls.my_timestamp)
 
             else:
@@ -78,15 +76,20 @@ class TestHubspotPagination(HubspotBaseTest):
             # check if we exceed the limit
             under_target = limits[stream] + 1 - len(existing_records[stream])
             print(f'under_target = {under_target} for {stream}')
+
             if under_target >= 0 :
                 print(f"need to make {under_target} records for {stream} stream")
-                for i in range(under_target):
-                    # create records to exceed limit
-                    if stream == 'contacts_by_company':
-                        # company_ids = [record["company-id"] for record in existing_records[stream]]
-                        test_client.create(stream, company_ids)
-                    else:
-                        test_client.create(stream)
+
+                if stream == "subscription_changes":
+                    test_client.create(stream, subscriptions=existing_records[stream], times=under_target)
+                else:
+                    for i in range(under_target):
+                        # create records to exceed limit
+                        if stream == 'contacts_by_company':
+                            # company_ids = [record["company-id"] for record in existing_records[stream]]
+                            test_client.create(stream, company_ids)
+                        else:
+                            test_client.create(stream)
 
 
     def expected_streams(self): # TODO this should run off of base expectations
@@ -94,7 +97,7 @@ class TestHubspotPagination(HubspotBaseTest):
         All streams are under test
         """
         return set(self.expected_page_size().keys()).difference({
-            'subscription_changes',
+            #'subscription_changes',
             'email_events',
         })
 
