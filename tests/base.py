@@ -101,6 +101,7 @@ class HubspotBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
+                self.EXPECTED_PAGE_SIZE: 250
             },
             "forms": {
                 self.PRIMARY_KEYS: {"guid"},

@@ -32,21 +32,20 @@ class TestHubspotPagination(HubspotBaseTest):
         # TODO abstract this expectation into base metadata expectations
         return {
             #"subscription_changes": 10 - 1000, # TODO
-            "subscription_changes": 1000,
+            #"subscription_changes": 1000,
             #  "email_events": 10 - 1000, # TODO
-            "email_events": 1000, # TODO
+            #"email_events": 1000, # TODO
             # "forms": ??, # TODO #infinity
-            # "workflows": ??, # TODO
+            # "workflows": ??, # not defined
             # "owners": ??, # TODO
-            # "campaigns": ??, # TODO
             # "campaigns": 500, # TODO # Can't make test data
             # "deal_pipelines": ?? , # TODO # deprecated
             #"contacts_by_company": 100,
-            "contact_lists": 250,
-            "contacts": 100,
-            "companies": 250,
-            "deals": 100,
-            # "engagements": 250, # TODO
+            #"contact_lists": 250,
+            #contacts": 100,
+            #"companies": 250,
+            #"deals": 100,
+            #"engagements": 250, # TODO
         }
 
     def setUp(self):
@@ -70,7 +69,7 @@ class TestHubspotPagination(HubspotBaseTest):
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in existing_records['companies']]
                 existing_records[stream] = test_client.read(stream, parent_ids=company_ids)
-            elif stream in {'companies', 'contact_lists', 'subscription_changes'}:
+            elif stream in {'companies', 'contact_lists', 'subscription_changes', 'engagements'}:
                 existing_records[stream] = test_client.read(stream, since=self.my_timestamp)
             else:
                 existing_records[stream] = test_client.read(stream)
@@ -98,7 +97,7 @@ class TestHubspotPagination(HubspotBaseTest):
 
     def expected_streams(self): # TODO this should run off of base expectations
         """
-        All streams are under test
+        All streams with limits are under test
         """
         streams_to_test =  set(stream for stream, limit in self.expected_page_limits().items() if limit != set())
 
