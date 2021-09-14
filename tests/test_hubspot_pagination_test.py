@@ -25,27 +25,6 @@ class TestHubspotPagination(HubspotBaseTest):
             'start_date' : datetime.strftime(datetime.today()-timedelta(days=7), self.START_DATE_FORMAT)
         }
 
-
-    @staticmethod
-    def expected_page_size():
-        # now defined in base metadata
-        return {
-
-            #"subscription_changes": 1000,
-            #"email_events": 1000, #
-            # "forms": ??,  #infinity
-            # "workflows": ??, # not defined
-            # "owners": ??, # not defined
-            # "campaigns": 500,  # Can't make test data
-            # "deal_pipelines": ?? , # deprecated
-            #"contacts_by_company": 100,
-            #"contact_lists": 250,
-            #contacts": 100,
-            #"companies": 250,
-            #"deals": 100,
-            #"engagements": 250,
-        }
-
     def setUp(self):
         self.maxDiff = None  # see all output in failure
         set_up_start = time.perf_counter()
@@ -102,7 +81,6 @@ class TestHubspotPagination(HubspotBaseTest):
         return streams_to_test
 
     # TODO card out boundary testing for future tap-tester upgrades
-    #
 
     def test_run(self):
         # Select only the expected streams tables
