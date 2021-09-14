@@ -76,7 +76,7 @@ class TestHubspotPagination(HubspotBaseTest):
         """
         All streams with limits are under test
         """
-        streams_to_test =  set(stream for stream, limit in self.expected_page_limits().items() if limit
+        streams_to_test =  set(stream for stream, limit in self.expected_page_limits().items() if limit)
 
         return streams_to_test
 
