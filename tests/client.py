@@ -128,7 +128,8 @@ class TestClient():
             return self.get_email_events()
         elif stream == 'subscription_changes':
             return self.get_subscription_changes(since)
-        
+        else:
+            raise NotImplementedError
     def get_campaigns(self):
         """
         Get all campaigns by id, then grab the details of each campaign.
@@ -262,7 +263,6 @@ class TestClient():
         Get all contacts_by_company iterating over compnayId's and
         paginating using 'hasMore' and 'vidOffset'. This stream is essentially
         a join on contacts and companies.
-
         NB: This stream is a CHILD of 'companies'. If any test needs to pull expected
             data from this endpoint, it requires getting all 'companies' data and then
             pulling the 'companyId' from each record to perform the corresponding get here.
@@ -274,7 +274,6 @@ class TestClient():
 
         for parent_id in parent_ids:
             child_url = url.format(parent_id)
-            #response = self.get(child_url, params=params)
             has_more = True
             while has_more:
 
@@ -455,16 +454,12 @@ class TestClient():
         # copied overparams = {'properties': ["createdate", "hs_lastmodifieddate"]}
         has_more = True
         while has_more:
-
             response = self.get(url, params=params)
-            #records.extend(response['timeline'])
-
             has_more = response['hasMore']
             params['offset'] = response['offset']
             for record in response['timeline']:
                 if int(since) <= record['timestamp']: # TODO bug timestamp is the replication method rather than replication_method which is startTimestamp
                     records.append(record)
-
 
         return records
 
@@ -596,7 +591,6 @@ class TestClient():
         """
         It takes about 6 seconds after the POST for the created record to be caught by the next GET.
         This is intended for generating one record for companies.
-
         HubSpot API https://legacydocs.hubspot.com/docs/methods/companies/create_company
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
@@ -612,7 +606,6 @@ class TestClient():
 
     def create_contact_lists(self):
         """
-
         HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
@@ -944,7 +937,7 @@ class TestClient():
         count = 0
         records = []
         print(f"creating {times} records")
-        # a_sub_id =random.choice([item[0] for item in subscription_id_list if item[0]])
+
         for item in subscription_id_list:
             if count < times:
                 #if item[0]                

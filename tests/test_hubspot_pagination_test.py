@@ -50,12 +50,12 @@ class TestHubspotPagination(HubspotBaseTest):
                 existing_records[stream] = test_client.read(stream, since=self.my_timestamp)
             else:
                 existing_records[stream] = test_client.read(stream)
-                # existing_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
+
             # check if we exceed the limit
             under_target = limits[stream] + 1 - len(existing_records[stream])
             print(f'under_target = {under_target} for {stream}')
 
-            if under_target >= 0 :
+            if under_target > 0 :
                 print(f"need to make {under_target} records for {stream} stream")
                 #subscription changes will pass in records and under_target to get to the large limit quicker
                 if stream == "subscription_changes":
@@ -76,7 +76,7 @@ class TestHubspotPagination(HubspotBaseTest):
         """
         All streams with limits are under test
         """
-        streams_to_test =  set(stream for stream, limit in self.expected_page_limits().items() if limit != set())
+        streams_to_test =  set(stream for stream, limit in self.expected_page_limits().items() if limit
 
         return streams_to_test
 
@@ -89,7 +89,6 @@ class TestHubspotPagination(HubspotBaseTest):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
-        #self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=True)
         for catalog_entry in catalog_entries:
             stream_schema = menagerie.get_annotated_schema(conn_id, catalog_entry['stream_id'])
             connections.select_catalog_and_fields_via_metadata(
