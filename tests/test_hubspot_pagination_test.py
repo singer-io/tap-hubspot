@@ -22,30 +22,28 @@ class TestHubspotPagination(HubspotBaseTest):
 
     def get_properties(self):
         return {
-            'start_date' : datetime.strftime(datetime.today()-timedelta(days=7), self.START_DATE_FORMAT)  # TODO make this 1 week ago
+            'start_date' : datetime.strftime(datetime.today()-timedelta(days=7), self.START_DATE_FORMAT)
         }
 
 
     @staticmethod
     def expected_page_size():
-        # TODO verify which  streams paginate and what are the limits
-        # TODO abstract this expectation into base metadata expectations
+        # now defined in base metadata
         return {
-            #"subscription_changes": 10 - 1000, # TODO
+
             #"subscription_changes": 1000,
-            #  "email_events": 10 - 1000, # TODO
-            #"email_events": 1000, # TODO
-            # "forms": ??, # TODO #infinity
+            #"email_events": 1000, #
+            # "forms": ??,  #infinity
             # "workflows": ??, # not defined
-            # "owners": ??, # TODO
-            # "campaigns": 500, # TODO # Can't make test data
-            # "deal_pipelines": ?? , # TODO # deprecated
+            # "owners": ??, # not defined
+            # "campaigns": 500,  # Can't make test data
+            # "deal_pipelines": ?? , # deprecated
             #"contacts_by_company": 100,
             #"contact_lists": 250,
             #contacts": 100,
             #"companies": 250,
             #"deals": 100,
-            #"engagements": 250, # TODO
+            #"engagements": 250,
         }
 
     def setUp(self):
@@ -56,7 +54,7 @@ class TestHubspotPagination(HubspotBaseTest):
         test_client = TestClient(self.my_timestamp)
         existing_records = dict()
         streams = self.expected_streams() - {'email_events'} # we get this for free with subscription_changes
-        limits = self.expected_page_limits() # TODO This should be set off of the base expectations
+        limits = self.expected_page_limits()
          # 'contacts_by_company' stream needs to get companyIds first so putting the stream last in the list
         stream_to_run_last = 'contacts_by_company'
         if stream_to_run_last in streams:
@@ -95,7 +93,7 @@ class TestHubspotPagination(HubspotBaseTest):
         set_up_end = time.perf_counter()
         print(f"Test Client took about {str(set_up_end-set_up_start).split('.')[0]} seconds")
 
-    def expected_streams(self): # TODO this should run off of base expectations
+    def expected_streams(self):
         """
         All streams with limits are under test
         """
