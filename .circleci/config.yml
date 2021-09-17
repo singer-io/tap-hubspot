@@ -44,9 +44,6 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json tap_hubspot/schemas/*.json
   integration_test:
-    parameters:
-      test_command:
-        type: string
     executor: tap_tester
     steps:
       - checkout
