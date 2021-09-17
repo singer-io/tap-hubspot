@@ -95,7 +95,7 @@ workflows:
           requires:
             - build
       - integration_test:
-          name: "Child Streams List"
+          name: "Child Streams Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
