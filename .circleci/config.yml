@@ -44,6 +44,9 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json tap_hubspot/schemas/*.json
   integration_test:
+    parameters:
+      test_command:
+        type: string
     executor: tap_tester
     steps:
       - checkout
@@ -56,7 +59,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-hubspot tests
+            << parameters.test_command >>
       - slack/notify-on-failure:
           only_for_branches: master
 
@@ -71,9 +74,50 @@ workflows:
           requires:
             - ensure_env
       - integration_test:
+          name: "Discovery Test"
           context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
           requires:
             - build
+      - integration_test:
+          name: "Start Date Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date_test.py
+          requires:
+            - build
+      - integration_test:
+          name: "Automatic Fields Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields_test.py
+          requires:
+            - build
+      - integration_test:
+          name: "Child Streams List"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
+          requires:
+            - build
+      - integration_test:
+          name: "All Fields Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields_test.py
+          requires:
+            - "Discovery Test"
+            - "Start Date Test"
+            - "Automatic Fields Test"
+            - "Child Streams Test"
+      - integration_test:
+          name: "Pagination Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination_test.py
+          requires:
+            - "All Fields Test"
   build_daily:
     <<: *commit_jobs
     triggers:
