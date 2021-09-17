@@ -176,8 +176,8 @@ class TestClient():
                     company_timestamp = datetime.datetime.fromtimestamp(
                         company['properties']['createdate']['timestamp']/1000
                     )
-                
-                if company_timestamp >= since:       
+
+                if company_timestamp >= since:
                     companies.append(company)
 
             has_more = response['has-more']
@@ -192,7 +192,7 @@ class TestClient():
         records = self.denest_properties('companies', records)
 
         return records
-    
+
     def get_contact_lists(self, since):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
@@ -203,7 +203,7 @@ class TestClient():
             since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
         since = str(since.timestamp() * 1000).split(".")[0]
         params = {'since': since}
-        
+
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
         # paginating through all the contact_lists
@@ -326,20 +326,18 @@ class TestClient():
             has_more = response['hasMore']
             v1_params['offset'] = response['offset']
 
-        # TODO clean this up, so confusig
+        # batch the v1 response ids into groups of 100
         v1_ids = [{'id': str(record['dealId'])} for record in records]
-        remainder = len(v1_ids)%100
-        slices = dict()
-        if len(v1_ids)//100:
-            for i in range(len(v1_ids)//100):
-                slices[i] = v1_ids[i*100:(i+1)*100]
-        if remainder:
-            slices[i+1] = v1_ids[-remainder:]
+        batches = []
+        batch_size = 100
+        for i in range(0, len(v1_ids), batch_size):
+            batches.append(v1_ids[i:i + batch_size])
+
         # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
         v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
         v3_property = ['hs_date_entered_appointmentscheduled']
         v3_records = []
-        for i, batch in slices.items():
+        for batch in batches:
             data = {'inputs': batch,
                     'properties': v3_property}
             v3_response = self.post(v3_url, data)
@@ -430,7 +428,6 @@ class TestClient():
                         if record[replication_key] >= self.start_date])
 
         return records
-
     def get_owners(self):
         """
         Get all owners.
@@ -440,14 +437,17 @@ class TestClient():
 
         return records
 
-    def get_subscription_changes(self, since):
+    def get_subscription_changes(self, since='default'):
         """
-        Get all subscription_changes by paginating using 'hasMore' and 'offset'.
+        Get all subscription_changes from 'since' date by paginating using 'hasMore' and 'offset'.
+        Default since date is one week ago
         """
         url = f"{BASE_URL}/email/public/v1/subscriptions/timeline"
         params = dict()
         records = []
         replication_key = list(self.replication_keys['subscription_changes'])[0]
+        if since == 'default':
+            since = datetime.datetime.fromtimestamp(self.start_date/1000)
         if not isinstance(since, datetime.datetime):
             since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
         since = str(since.timestamp() * 1000).split(".")[0]
@@ -480,7 +480,7 @@ class TestClient():
     ##########################################################################
     ### CREATE
     ##########################################################################
-    
+
     def create(self, stream, company_ids=[], subscriptions=[], times=1):
         """Dispatch create to make tests clean."""
         if stream == 'forms':
@@ -655,7 +655,7 @@ class TestClient():
                     return records
 
         raise NotImplementedError("All contacts already have an associated company")
-    
+
     def create_deal_pipelines(self):
         """
         HubSpot API
@@ -930,17 +930,18 @@ class TestClient():
         This will update email_events as well.
         TODO For updating sub_changes, utilize sub_id as an arg and make a passthrough method
         """
+        # by default, a new subscription change will be created from a previous subscription change from one week ago as defined in the get
         if subscriptions == []:
-            subscriptions = self.get_subscription_changes(since='') 
+            subscriptions = self.get_subscription_changes()
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
-        
+
         count = 0
         records = []
         print(f"creating {times} records")
 
         for item in subscription_id_list:
             if count < times:
-                #if item[0]                
+                #if item[0]
                 record_uuid = str(uuid.uuid4()).replace('-', '')
                 url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
                 data = {

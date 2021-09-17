@@ -10,6 +10,8 @@ from client import TestClient
 
 class TestHubspotStartDate(HubspotBaseTest):
 
+    def name(self):
+        return "tap_tester_hubspot_start_date_test"
     # TODOs
     # make setUp that generates 1 record for each stream under test, to ensure 1 record exists for today
     # set the original (first sync) start date to today minus 5 days
@@ -53,9 +55,10 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         if 'companies' in streams_under_test:
             _ = self.test_client.create_companies()
-
+        existing_companies = self.test_client.get_companies(self.get_properties()['start_date'])
+        company_ids = [company['companyId'] for company in existing_companies]
         if 'contacts_by_company' in streams_under_test:
-            _ = self.test_client.create_contacts_by_company()
+            _ = self.test_client.create_contacts_by_company(company_ids)
 
         if 'deal_pipelines' in streams_under_test:
             _ = self.test_client.create_deal_pipelines()
@@ -67,10 +70,6 @@ class TestHubspotStartDate(HubspotBaseTest):
                 for stream in {'email_events', 'subscription_changes'}]):
             _ = self.test_client.create_subscription_changes()
 
-
-    def name(self):
-        return "tap_tester_hubspot_start_date_test"
-
     def expected_streams(self):
         """returns the streams that are under test"""
         temporarliy_skipping_for_one_day = {'deal_pipelines','contacts_by_company'}
@@ -79,15 +78,17 @@ class TestHubspotStartDate(HubspotBaseTest):
         #      hardcode start_dates for these streams and run the test twice.
 
         return self.expected_check_streams().difference({
+            'deal_pipelines',
             'campaigns',  # Cannot create data dynamically
             'owners',  # Cannot create data dynamically
-        }).difference(temporarliy_skipping_for_one_day)
+        })#.difference(temporarliy_skipping_for_one_day)
 
 
     def get_properties(self, original=True):
         utc_today = datetime.datetime.strftime(
             datetime.datetime.utcnow(), self.START_DATE_FORMAT
         )
+
         if original:
             return {
                 'start_date' : self.timedelta_formatted(utc_today, days=-7)

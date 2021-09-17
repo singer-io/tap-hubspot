@@ -16,7 +16,9 @@ class HubspotBaseTest(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
+    BASIC_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
     EXPECTED_PAGE_SIZE = "expected-page-size"
+    
 
     #######################################
     #  Tap Configurable Metadata Methods  #

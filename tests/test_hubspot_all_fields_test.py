@@ -84,59 +84,81 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_num_associated_active_deal_registrations',
         'property_hs_num_associated_deal_registrations'
     },
+    'subscription_changes':{
+        'normalizedEmailId'
+    }
 }
 
 class TestHubspotAllFields(HubspotBaseTest):
     """Test that with all fields selected for a stream we replicate data as expected"""
 
     def name(self):
-        return "tap_tester_all_fields_all_fields_test"
+        return "tt_all_fields_dynamic_data_test"
 
-    def testable_streams(self):
+    def streams_under_test(self):
         """expected streams minus the streams not under test"""
         return self.expected_streams().difference({
-            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            'owners'
+        #    'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 
     def get_properties(self):
-        return {'start_date' : '2021-08-05T00:00:00Z'} # TODO make dynamic
+        return {
+            'start_date' : datetime.datetime.strftime(datetime.datetime.today()-datetime.timedelta(days=7), self.START_DATE_FORMAT)
+        }
 
-    @classmethod
-    def setUpClass(cls):
-        cls.maxDiff = None  # see all output in failure
+    def setUp(self):
+        self.maxDiff = None  # see all output in failure
 
-        cls.my_timestamp = cls.get_properties(cls)['start_date']
+        self.my_timestamp = self.get_properties()['start_date']
 
-        test_client = TestClient()
-        cls.expected_records = dict()
+        # TODO use the read method
+        test_client = TestClient(start_date=self.my_timestamp)
+        self.expected_records = dict()
+        streams = self.streams_under_test()
+        stream_to_run_last = 'contacts_by_company'
+        if stream_to_run_last in streams:
+            streams.remove(stream_to_run_last)
+            streams = list(streams)
+            streams.append(stream_to_run_last)
 
-        cls.expected_records['campaigns'] = test_client.get_campaigns()
-        cls.expected_records['forms'] = test_client.get_forms()
-        cls.expected_records['owners'] = test_client.get_owners()
-        cls.expected_records['engagements'] = test_client.get_engagements()
-        cls.expected_records['workflows'] = test_client.get_workflows()
-        cls.expected_records['email_events'] = test_client.get_email_events()
-        cls.expected_records['contact_lists'] = test_client.get_contact_lists()
-        cls.expected_records['contacts'] = test_client.get_contacts()
-        cls.expected_records['companies'] = test_client.get_companies(since=cls.my_timestamp)
-        company_ids = [company['companyId'] for company in cls.expected_records['companies']]
-        cls.expected_records['contacts_by_company'] = test_client.get_contacts_by_company(parent_ids=company_ids)
-        cls.expected_records['deal_pipelines'] = test_client.get_deal_pipelines()
-        cls.expected_records['deals'] = test_client.get_deals()
-        # cls.expected_records['subscription_changes'] = test_client.get_subscription_changes()  # see BUG_TDL-14938
+        for stream in streams:
+            # Get all records
+            if stream == 'contacts_by_company':
+                company_ids = [company['companyId'] for company in self.expected_records['companies']]
+                self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids)
+            elif stream in {'companies', 'contact_lists', 'subscription_changes', 'engagements'}:
+                self.expected_records[stream] = test_client.read(stream, since=self.my_timestamp)
+            else:
+                self.expected_records[stream] = test_client.read(stream)
 
-        # cls.expected_records = get_expected_records_from_test_client() # TODO?
-
-        for stream, records in cls.expected_records.items():
+        for stream, records in self.expected_records.items():
             print(f"The test client found {len(records)} {stream} records.")
 
+
+        self.convert_datatype(self.expected_records)
+
+    def convert_datatype(self, expected_records):
+        for stream, records in expected_records.items():
+            for record in records:
+
+                # convert timestamps to string formatted datetime
+                timestamp_keys = {'timestamp'}
+                for key in timestamp_keys:
+                    timestamp = record.get(key)
+                    if timestamp:
+                        unformatted = datetime.datetime.fromtimestamp(timestamp/1000)
+                        formatted = datetime.datetime.strftime(unformatted, self.BASIC_DATE_FORMAT)
+                        record[key] = formatted
+
+        return expected_records
     def test_run(self):
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select only the expected streams tables
-        expected_streams = self.testable_streams()
+        expected_streams = self.streams_under_test()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         for catalog_entry in catalog_entries:
             stream_schema = menagerie.get_annotated_schema(conn_id, catalog_entry['stream_id'])
@@ -223,3 +245,16 @@ class TestHubspotAllFields(HubspotBaseTest):
                                                             for primary_key in primary_keys])
                                                      for record in actual_records}
                 self.assertSetEqual(expected_primary_key_values, actual_records_primary_key_values)
+
+class TestHubspotAllFieldsStatic(TestHubspotAllFields):
+    def name(self):
+        return "tt_all_fields_static_data_test"
+
+    def streams_under_test(self):
+        """expected streams minus the streams not under test"""
+        return {'owners'} #self.expected_streams().difference({
+        #    'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+        # })
+
+    def get_properties(self):
+        return {'start_date' : '2021-05-02T00:00:00Z'}
