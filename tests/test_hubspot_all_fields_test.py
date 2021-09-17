@@ -252,7 +252,7 @@ class TestHubspotAllFieldsStatic(TestHubspotAllFields):
 
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
-        return {'owners'} #self.expected_streams().difference({
+        return {'owners'}
         #    'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         # })
 
