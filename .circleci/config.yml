@@ -74,13 +74,6 @@ workflows:
           requires:
             - ensure_env
       - integration_test:
-          name: "Discovery Test"
-          context: circleci-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
-          requires:
-            - build
-      - integration_test:
           name: "Start Date Test"
           context: circleci-user
           test_command: |-
@@ -100,7 +93,16 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
           requires:
-            - build
+            - "Start Date Test"
+            - "Automatic Fields Test"
+      - integration_test:
+          name: "Discovery Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
+          requires:
+            - "Start Date Test"
+            - "Automatic Fields Test"
       - integration_test:
           name: "All Fields Test"
           context: circleci-user
@@ -108,8 +110,6 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields_test.py
           requires:
             - "Discovery Test"
-            - "Start Date Test"
-            - "Automatic Fields Test"
             - "Child Streams Test"
       - integration_test:
           name: "Pagination Test"
