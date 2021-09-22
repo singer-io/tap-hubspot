@@ -24,12 +24,10 @@ jobs:
           paths:
             - tap-hubspot
             - dev_env.sh
-
   build:
     executor: tap_tester
     steps:
-      -run: echo "Tests have passed."
-
+      - run: echo "Tests have passed."
   run_pylint_and_unittests:
     executor: tap_tester
     steps:
