@@ -14,6 +14,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /usr/local/share/virtualenvs/dev_env.sh
             python3 -m venv /usr/local/share/virtualenvs/tap-hubspot/
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
@@ -22,6 +23,7 @@ jobs:
           root: /usr/local/share/virtualenvs/
           paths:
             - tap-hubspot
+            - dev_env.sh
   build:
     executor: tap_tester
     steps:
@@ -31,8 +33,9 @@ jobs:
       - run:
           name: 'pylint'
           command: |
+            source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            pylint tap_hubspot -d C,R,W
+            pylint tap_hubspot -d $PYLINT_DISABLE_LIST
       - run:
           name: 'Unit Tests'
           command: |
@@ -52,12 +55,10 @@ jobs:
       - checkout
       - attach_workspace:
           at: /usr/local/share/virtualenvs
-      - add_ssh_keys
       - run:
           name: 'Integration Tests'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
+            source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             << parameters.test_command >>
       - slack/notify-on-failure:
@@ -93,16 +94,14 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
           requires:
-            - "Discovery Test"
-            - "Automatic Fields Test"
+            - build
       - integration_test:
           name: "Start Date Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date_test.py
           requires:
-            - "Discovery Test"
-            - "Automatic Fields Test"
+            - build
       - integration_test:
           name: "All Fields Test"
           context: circleci-user
@@ -126,6 +125,3 @@ workflows:
             branches:
               only:
                 - master
-    jobs:
-      - build:
-          context: circleci-user
