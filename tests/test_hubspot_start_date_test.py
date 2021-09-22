@@ -14,16 +14,6 @@ class TestHubspotStartDate(HubspotBaseTest):
 
     def name(self):
         return "tap_tester_hubspot_start_date_test"
-    # TODOs
-    # make setUp that generates 1 record for each stream under test, to ensure 1 record exists for today
-    # set the original (first sync) start date to today minus 5 days
-    # set the second sync start date to today
-
-    # although...
-
-    # maybe we should base expected records off of the replication-key values in the test_client records
-    # then we will always know excatly which records should be synced, and we will avoid stability issue
-    # when devs/qa run tests locally....
 
     def setUp(self):
         """
@@ -136,8 +126,9 @@ class TestHubspotStartDate(HubspotBaseTest):
                     # Verify the second sync has less data
                     self.assertGreater(first_sync_count, second_sync_count)
                 else:
+                    # If Start date is not obeyed then verify the syncs are equal
                     self.assertEqual(first_sync_count, second_sync_count)
-
+                    self.assertEqual(first_sync_primary_keys, second_sync_primary_keys)
 class TestHubspotStartDateStatic(TestHubspotStartDate):
     def name(self):
         return "tt_start_date_static_data_test"
