@@ -124,16 +124,16 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination_test.py
           requires:
             - "All Fields Test"
-       - build:
-           context: circleci-user
-           requires:
-             - 'Integration Tests'
-             - "Discovery Test"
-             - "Automatic Fields Test"
-             - "Child Streams Test"
-             - "Start Date Test"
-             - "All Fields Test"
-             - "Pagination Test"
+      - build:
+          context: circleci-user
+          requires:
+            - 'Integration Tests'
+            - "Discovery Test"
+            - "Automatic Fields Test"
+            - "Child Streams Test"
+            - "Start Date Test"
+            - "All Fields Test"
+            - "Pagination Test"
   build_daily:
     <<: *commit_jobs
     triggers:
