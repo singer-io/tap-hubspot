@@ -125,12 +125,7 @@ workflows:
       - build:
           context: circleci-user
           requires:
-            - "Discovery Test"
-            - "Automatic Fields Test"
-            - "Child Streams Test"
-            - "Start Date Test"
             - "All Fields Test"
-            - "Pagination Test"
   build_daily:
     <<: *commit_jobs
     triggers:
