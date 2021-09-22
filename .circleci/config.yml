@@ -35,7 +35,8 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            pylint tap_hubspot -d $PYLINT_DISABLE_LIST
+            # BUG https://jira.talendforge.org/browse/TDL-15447
+            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,consider-using-from-import,logging-format-interpolation,unused-variable,singleton-comparison,useless-object-inheritance,unnecessary-pass,wrong-import-order,global-statement,unused-argument,unused-import,wildcard-import,unused-wildcard-import,import-error,use-list-literal,no-self-use,duplicate-code"
       - run:
           name: 'Unit Tests'
           command: |
