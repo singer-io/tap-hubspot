@@ -48,7 +48,7 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         # If any streams cannot have data generated programmatically,
         #      hardcode start_dates for these streams and run the test twice.
-
+        # streams tested in TestHubspotStartDateStatic should be removed
         return self.expected_check_streams().difference({
             'deal_pipelines',
             'owners',
