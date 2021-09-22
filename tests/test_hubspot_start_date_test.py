@@ -30,7 +30,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         (of start_date_1 -> now) than there are in the sync 2 time bin (of start_date_2 -> now).
         """
         streams_under_test = self.expected_streams()
-        self.test_client = TestClient()
+        self.test_client = TestClient(self.get_properties()['start_date'])
 
         if 'campaigns' in streams_under_test:
             _ = self.test_client.create_campaigns()

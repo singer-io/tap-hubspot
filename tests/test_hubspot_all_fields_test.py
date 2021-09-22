@@ -98,8 +98,8 @@ class TestHubspotAllFields(HubspotBaseTest):
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
         return self.expected_streams().difference({
-            'owners'
-        #    'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            'owners',
+            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 
     def get_properties(self):
@@ -110,10 +110,8 @@ class TestHubspotAllFields(HubspotBaseTest):
     def setUp(self):
         self.maxDiff = None  # see all output in failure
 
-        self.my_timestamp = self.get_properties()['start_date']
-
         # TODO use the read method
-        test_client = TestClient(start_date=self.my_timestamp)
+        test_client = TestClient(start_date=self.get_properties()['start_date'])
         self.expected_records = dict()
         streams = self.streams_under_test()
         stream_to_run_last = 'contacts_by_company'
@@ -128,7 +126,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                 company_ids = [company['companyId'] for company in self.expected_records['companies']]
                 self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids)
             elif stream in {'companies', 'contact_lists', 'subscription_changes', 'engagements'}:
-                self.expected_records[stream] = test_client.read(stream, since=self.my_timestamp)
+                self.expected_records[stream] = test_client.read(stream)
             else:
                 self.expected_records[stream] = test_client.read(stream)
 
@@ -221,14 +219,16 @@ class TestHubspotAllFields(HubspotBaseTest):
                         # TODO There are dynamic fields on here that we just can't track.
                         #      But shouldn't we be doing dynamic field discovery on these things? BUG?
                         # deals workaround for 'property_hs_date_entered_<property>' fields
-                        bad_key_prefix = 'property_hs_date_entered_'
+                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_'}
                         bad_keys = set()
                         for key in expected_keys_adjusted:
-                            if key.startswith(bad_key_prefix) and key not in actual_keys_adjusted:
-                                bad_keys.add(key)
+                            for prefix in bad_key_prefixes:
+                                if key.startswith(prefix) and key not in actual_keys_adjusted:
+                                    bad_keys.add(key)
                         for key in actual_keys_adjusted:
-                            if key.startswith(bad_key_prefix) and key not in expected_keys_adjusted:
-                                bad_keys.add(key)
+                            for prefix in bad_key_prefixes:
+                                if key.startswith(prefix) and key not in expected_keys_adjusted:
+                                    bad_keys.add(key)
                         for key in bad_keys:
                             if key in expected_keys_adjusted:
                                 expected_keys_adjusted.remove(key)
@@ -252,9 +252,10 @@ class TestHubspotAllFieldsStatic(TestHubspotAllFields):
 
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
-        return {'owners'}
-        #    'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        # })
+        return {
+            'owners',
+            # 'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+        }
 
     def get_properties(self):
         return {'start_date' : '2021-05-02T00:00:00Z'}
