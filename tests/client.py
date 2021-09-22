@@ -155,6 +155,9 @@ class TestClient():
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
         url = f"{BASE_URL}/companies/v2/companies/paged"
+        if not since:
+            since = self.start_date_strf
+
         if not isinstance(since, datetime.datetime):
             since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
         params = {'properties': ["createdate", "hs_lastmodifieddate"]}
@@ -198,7 +201,9 @@ class TestClient():
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
         url = f"{BASE_URL}/contacts/v1/lists"
-        params = dict()
+        if not since:
+            since = self.start_date_strf
+
         if not isinstance(since, datetime.datetime):
             since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
         since = str(since.timestamp() * 1000).split(".")[0]
@@ -437,7 +442,7 @@ class TestClient():
 
         return records
 
-    def get_subscription_changes(self, since='default'):
+    def get_subscription_changes(self, since=''):
         """
         Get all subscription_changes from 'since' date by paginating using 'hasMore' and 'offset'.
         Default since date is one week ago
@@ -446,8 +451,9 @@ class TestClient():
         params = dict()
         records = []
         replication_key = list(self.replication_keys['subscription_changes'])[0]
-        if since == 'default':
-            since = datetime.datetime.fromtimestamp(self.start_date/1000)
+        if not since:
+            since = self.start_date_strf
+
         if not isinstance(since, datetime.datetime):
             since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
         since = str(since.timestamp() * 1000).split(".")[0]
@@ -1034,17 +1040,13 @@ class TestClient():
     def __init__(self, start_date=''):
         self.BaseTest = HubspotBaseTest()
         self.replication_keys = self.BaseTest.expected_replication_keys()
-
         self.CONFIG = self.BaseTest.get_credentials()
         self.CONFIG.update(self.BaseTest.get_properties())
 
-        # TODO just pass this into init! This is not a valid approach as-is
-        if start_date:
-            self.start_date = datetime.datetime.strptime(
-            start_date, self.BaseTest.START_DATE_FORMAT).timestamp() * 1000
-        else:
-            self.start_date = datetime.datetime.strptime(
-                self.CONFIG['start_date'], self.BaseTest.START_DATE_FORMAT).timestamp() * 1000
+        self.start_date_strf = start_date if start_date else self.CONFIG['start_date']
+        self.start_date = datetime.datetime.strptime(
+                self.start_date_strf, self.BaseTest.START_DATE_FORMAT
+        ).timestamp() * 1000
 
         self.acquire_access_token_from_refresh_token()
 

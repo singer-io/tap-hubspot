@@ -31,6 +31,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         over time there will always be more records in the sync 1 time bin
         (of start_date_1 -> now) than there are in the sync 2 time bin (of start_date_2 -> now).
         """
+
         print("running streams with creates")
         streams_under_test = self.expected_streams() - {'email_events'} # we get this for free with subscription_changes
         self.my_start_date = self.get_properties()['start_date']
@@ -42,7 +43,6 @@ class TestHubspotStartDate(HubspotBaseTest):
                 self.test_client.create(stream, company_ids)
             else:
                 self.test_client.create(stream)
-
 
     def expected_streams(self):
 
