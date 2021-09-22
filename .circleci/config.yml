@@ -125,7 +125,6 @@ workflows:
       - build:
           context: circleci-user
           requires:
-            - 'Integration Tests'
             - "Discovery Test"
             - "Automatic Fields Test"
             - "Child Streams Test"
