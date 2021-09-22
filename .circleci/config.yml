@@ -114,7 +114,10 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields_test.py
           requires:
+            - "Child Streams Test"
             - "Start Date Test"
+            - "Automatic Fields Test"
+            - "Discovery Test"
       - integration_test:
           name: "Pagination Test"
           context: circleci-user
