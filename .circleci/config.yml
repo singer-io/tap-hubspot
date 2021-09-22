@@ -125,7 +125,7 @@ workflows:
       - build:
           context: circleci-user
           requires:
-            - "All Fields Test"
+            - "Pagination Test"
   build_daily:
     <<: *commit_jobs
     triggers:
