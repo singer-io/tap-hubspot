@@ -5,9 +5,15 @@ import re
 
 from base import HubspotBaseTest
 
+STATIC_DATA_STREAMS = {'owners'}
+
 class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
-        return "tap_tester_hubspot_automatic_fields_test"
+        return "tt_hubspot_automatic_dynamic_test"
+
+    def streams_to_test(self):
+        """streams to test"""
+        return self.expected_streams() - STATIC_DATA_STREAMS
 
     def test_run(self):
         """
@@ -18,10 +24,9 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select only the expected streams tables
-        expected_streams = self.expected_streams()
+        expected_streams = self.streams_to_test()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=False)
-
 
         # TODO | Include the following step in this test if/when hubspot conforms to the standards of metadata
         # # Verify our selection worked as expected
@@ -44,20 +49,6 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
         #         # remove replication keys
         #         self.assertEqual(expected_automatic_fields, selected_fields)
-
-        # setting state for companies stream in order to decrease row count and run time
-        state = {
-            'bookmarks': {
-                'companies': {
-                    'current_sync_start': None,
-                    'hs_lastmodifieddate': '2021-08-01T00:00:00.000000Z',
-                    'offset': {}
-                },
-            },
-            'currently_syncing': None
-        }
-
-        menagerie.set_state(conn_id, state)
 
         # Run a sync job using orchestrator
         sync_record_count = self.run_and_verify_sync(conn_id)
@@ -98,3 +89,17 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                     pk = self.expected_primary_keys()[stream]
                     pks_values = [tuple([message['data'][p] for p in pk]) for message in data['messages']]
                     self.assertEqual(len(pks_values), len(set(pks_values)))
+
+
+class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
+    def streams_to_test(self):
+        """streams to test"""
+        return STATIC_DATA_STREAMS
+
+    def name(self):
+        return "tt_hubspot_automatic_dynamic_test"
+
+    def get_properties(self):
+        return {
+            'start_date' : '2021-05-02T00:00:00Z',
+        }
