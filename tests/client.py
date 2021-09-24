@@ -982,15 +982,16 @@ class TestClient():
     def create_owners(self):
         """
         HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
-        TODO - use selenium
+        TODO - use selenium?
         """
         raise NotImplementedError("Only able to create owners from web app")
 
     def create_subscription_changes(self, subscriptions=[] , times=1):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
-        This will update email_events as well.
-        TODO For updating sub_changes, utilize sub_id as an arg and make a passthrough method
+        NOTE: This will update email_events as well.
+
+        TODO Consider updating sub_changes, utilize sub_id as an arg and make a passthrough method
         """
         # by default, a new subscription change will be created from a previous subscription change from one week ago as defined in the get
         if subscriptions == []:
@@ -1154,7 +1155,7 @@ class TestClient():
                 "need to have at least one record remaining"
             )
         for record_id in record_ids_to_delete:
-            if record_id == 'default':
+            if record_id == 'default' or len(record_id) > 16: # not a timestamp, not made by this client
                 continue # skip
             yesterday = datetime.datetime.now() + datetime.timedelta(days=-1)
             record_created = datetime.datetime.fromtimestamp(int(record_id[:10]))

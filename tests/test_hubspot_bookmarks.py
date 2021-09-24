@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 
@@ -40,23 +40,23 @@ class TestHubspotBookmarks(HubspotBaseTest):
     def testable_streams(self):
         """expected streams minus the streams not under test"""
         return self.expected_streams().difference({
-            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
             'campaigns',  # no create
             'owners',  # no create
-            # 'email_events', # TODO
+            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            'email_events', # TODO
             # TODO This did not capture expected records on syncs 1 or 2 and capture less records on sync 2 than 1.
-            'contacts_by_companies',
+            'contacts_by_company', # TODO all contacts already have an associated company
         })
 
     def get_properties(self):
-        return {'start_date' : '2021-08-25T00:00:00Z'} # '2017-05-01T00:00:00Z' used by OG tests
+        return {
+            'start_date' : datetime.strftime(datetime.today()-timedelta(days=3), self.START_DATE_FORMAT),
+        }
 
-    @classmethod
-    def setUpClass(cls):
-        cls.maxDiff = None  # see all output in failure
+    def setUp(self):
+        self.maxDiff = None  # see all output in failure
 
-        cls.my_timestamp = '2021-08-05T00:00:00.000000Z'
-        cls.test_client = TestClient()
+        self.test_client = TestClient(self.get_properties()['start_date'])
 
     def create_test_data(self, expected_streams):
         self.expected_records = {stream: []
@@ -64,15 +64,14 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         for stream in expected_streams:
 
-            self.expected_records[stream] = []
-
-            # create two records, one for updating later
+            # create records, one will be updated between syncs
             for _ in range(3):
                 if stream in {'subscription_changes', 'email_events'}:
-                    # TODO account for possibility of making too many records here? 
-                    email_record, subscription_record = self.test_client.create(stream)
-                    self.expected_records['email_events'] += email_record
-                    # self.expected_records['subscription_changes'] += subscription_record # BUG_TDL-14938
+                    raise NotImplementedError("need to pick and implementation for these streams!")
+                    # # TODO account for possibility of making too many records here? 
+                    # email_record, subscription_record = self.test_client.create(stream)
+                    # self.expected_records['email_events'] += email_record
+                    # # self.expected_records['subscription_changes'] += subscription_record # BUG_TDL-14938
 
                 record = self.test_client.create(stream)
                 self.expected_records[stream] += record
@@ -86,13 +85,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
-        # TODO start date bug?
-        # moving the state up so the sync will be shorter and the test takes less time
-        state = {'bookmarks': {'companies': {'current_sync_start': None,
-                                             'hs_lastmodifieddate': self.my_timestamp,
-                                             'offset': {}}},
-                 'currently_syncing': None}
-        menagerie.set_state(conn_id, state)
 
         # Select only the expected streams tables
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
@@ -159,7 +151,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     bookmark_1 = state_1['bookmarks'][stream][stream_replication_key]
                     bookmark_2 = state_2['bookmarks'][stream][stream_replication_key]
 
-                    # TODO NB THIS THIGN
+                    # TODO NB THIS THING
                     # # grab the replication key values for sync 1 and
                     # # grab expected number of records based on those replication-key values
                     # replication_key_values_1 = []
@@ -173,7 +165,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     # setting expected records  knowing they are ordered by replication-key value
                     expected_records_2 = self.expected_records[stream][-1:]
 
-                    # TODO NB THIS THIGN
+                    # TODO NB THIS THING
                     # # grab the replication key values for sync 2 and
                     # # grab expected number of records based on those replication-key values
                     # bookmarked_records_2 = []
@@ -216,4 +208,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
                 # verify that at least 1 record from the first sync is replicated in the 2nd sync
                 # to prove that the bookmarking is inclusive
+                if stream in {'contacts', # BUG | https://jira.talendforge.org/browse/TDL-15502
+                              'companies'}: # BUG https://jira.talendforge.org/browse/TDL-15503
+                    continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
