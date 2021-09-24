@@ -104,7 +104,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def get_properties(self):
         return {
-            'start_date' : datetime.datetime.strftime(datetime.datetime.today()-datetime.timedelta(days=7), self.START_DATE_FORMAT)
+            'start_date' : datetime.datetime.strftime(datetime.datetime.today()-datetime.timedelta(days=3), self.START_DATE_FORMAT)
         }
 
     def setUp(self):

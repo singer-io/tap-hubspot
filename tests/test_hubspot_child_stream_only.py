@@ -1,5 +1,7 @@
 """Test tap field selection of child streams without its parent."""
 import re
+from datetime import datetime as dt
+from datetime import timedelta
 
 from tap_tester import connections
 from tap_tester import menagerie
@@ -15,6 +17,11 @@ class FieldSelectionChildTest(HubspotBaseTest):
     def name():
         return "tap_tester_hubspot_child_streams_test"
 
+    def get_properties(self):
+        return {
+            'start_date' : dt.strftime(dt.today()-timedelta(days=2), self.START_DATE_FORMAT)
+        }
+
     def test_run(self):
         """
         Verify that when a child stream is selected without its parent that
@@ -22,7 +29,7 @@ class FieldSelectionChildTest(HubspotBaseTest):
         • the error indicates which parent stream needs to be selected
         • when the parent is selected the tap doesn't critical error
         """
-        streams_to_test = {stream for stream in self.expected_streams() if stream == "contacts_by_company"}
+        streams_to_test = {"contacts_by_company"}
 
         conn_id = self.create_connection_and_run_check()
 
@@ -56,7 +63,7 @@ class FieldSelectionChildTest(HubspotBaseTest):
         self.assertEqual(exit_status['discovery_exit_status'], 0)
 
         # Select only child and required parent and make sure there is no critical error
-        streams_to_test = {stream for stream in self.expected_streams() if stream in ("contacts_by_company","companies")}
+        streams_to_test = {"contacts_by_company", "companies"}
 
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in streams_to_test]
 

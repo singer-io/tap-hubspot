@@ -43,7 +43,9 @@ class HubspotBaseTest(unittest.TestCase):
         return "tap-hubspot"
 
     def get_properties(self):
-        return {'start_date' : '2021-05-02T00:00:00Z'} # '2017-05-01T00:00:00Z' used by OG tests
+        return {
+            'start_date' : dt.strftime(dt.today()-timedelta(days=7), self.START_DATE_FORMAT)
+        }
 
     def get_credentials(self):
         return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),
