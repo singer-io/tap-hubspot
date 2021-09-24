@@ -293,22 +293,15 @@ class TestClient():
         while has_more:
             # get a page worth of contacts and pull the vids
             response_1 = self.get(url_1, params=params_1)
-            response_1_pks_rks= {record['vid']: record['versionTimestamp']
-                                 for record in response_1['contacts']}
+            vids = [record['vid'] for record in response_1['contacts']
+                    if record['versionTimestamp'] >= self.start_date]
             has_more = response_1['has-more']
             params_1['vidOffset'] = response_1['vid-offset']
 
             # get the detailed contacts records by vids
-            params_2['vid'] = list(response_1_pks_rks.keys())
+            params_2['vid'] = vids
             response_2 = self.get(url_2, params=params_2)
-
-            for vid, record in response_2.items():
-                converted_rk = self.BaseTest.datetime_from_timestamp(
-                    response_1_pks_rks[int(vid)]/1000, self.BOOKMARK_DATE_FORMAT
-                )
-                record['versionTimestamp'] = converted_rk
-
-                records.append(record)
+            records.extend([record for record in response_2.values()])
 
         records = self.denest_properties('contacts', records)
         return records
