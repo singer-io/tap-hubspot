@@ -93,7 +93,7 @@ class TestHubspotAllFields(HubspotBaseTest):
     """Test that with all fields selected for a stream we replicate data as expected"""
 
     def name(self):
-        return "tt_all_fields_dynamic_data_test"
+        return "tt_hubspot_all_fields_dynamic"
 
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
@@ -248,7 +248,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
 class TestHubspotAllFieldsStatic(TestHubspotAllFields):
     def name(self):
-        return "tt_all_fields_static_data_test"
+        return "tt_hubspot_all_fields_static"
 
     def streams_under_test(self):
         """expected streams minus the streams not under test"""

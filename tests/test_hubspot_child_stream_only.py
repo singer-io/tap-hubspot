@@ -15,7 +15,7 @@ class FieldSelectionChildTest(HubspotBaseTest):
 
     @staticmethod
     def name():
-        return "tap_tester_hubspot_child_streams_test"
+        return "tt_hubspot_child_streams"
 
     def get_properties(self):
         return {

@@ -9,7 +9,7 @@ STATIC_DATA_STREAMS = {'owners'}
 
 class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
-        return "tt_hubspot_automatic_dynamic_test"
+        return "tt_hubspot_automatic"
 
     def streams_to_test(self):
         """streams to test"""
@@ -55,7 +55,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         synced_records = runner.get_records_from_target_output()
 
         # Assert the records for each stream
-        for stream in self.expected_streams():
+        for stream in expected_streams:
             with self.subTest(stream=stream):
 
                 # Verify that data is present
@@ -97,7 +97,7 @@ class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
         return STATIC_DATA_STREAMS
 
     def name(self):
-        return "tt_hubspot_automatic_dynamic_test"
+        return "tt_hubspot_automatic_dynamic"
 
     def get_properties(self):
         return {

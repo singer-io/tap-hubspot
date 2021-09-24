@@ -18,7 +18,7 @@ class TestHubspotPagination(HubspotBaseTest):
 
     @staticmethod
     def name():
-        return "tap_tester_hubspot_pagination_test"
+        return "tt_hubspot_pagination"
 
     def get_properties(self):
         return {
