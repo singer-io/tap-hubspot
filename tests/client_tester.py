@@ -44,7 +44,6 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     assert len(old_records) < len(new_records), \
     #         f"Before companies post found {len(old_records)} records. After post found {len(new_records)} records"
 
-
     # def test_contact_lists_create(self):
     #     # Testing contact_lists POST
 
@@ -128,7 +127,6 @@ class TestHubspotTestClient(HubspotBaseTest):
 
     # def test_forms_create(self):
     #     # Testing create_forms POST
-
     #     old_records = self.test_client.get_forms()
     #     our_record = self.test_client.create_forms()
     #     new_records = self.test_client.get_forms()
@@ -151,4 +149,4 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     1+1
     #     old_email = new_record
     #     new_email = "new-email@hubspot.com"
-        
+
