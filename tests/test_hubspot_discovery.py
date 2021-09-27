@@ -11,7 +11,7 @@ class DiscoveryTest(HubspotBaseTest):
 
     @staticmethod
     def name():
-        return "tap_tester_hubspot_discovery_test"
+        return "tt_hubspot_discovery"
 
     def test_run(self):
         """

@@ -35,17 +35,14 @@ class TestHubspotBookmarks(HubspotBaseTest):
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
     def name(self):
-        return "tap_tester_bookmarks_test"
+        return "tt_hubspot_bookmarks"
 
-    def testable_streams(self):
+    def streams_to_test(self):
         """expected streams minus the streams not under test"""
         return self.expected_streams().difference({
             'campaigns',  # no create
             'owners',  # no create
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-            'email_events', # TODO
-            # TODO This did not capture expected records on syncs 1 or 2 and capture less records on sync 2 than 1.
-            'contacts_by_company', # TODO all contacts already have an associated company
         })
 
     def get_properties(self):
@@ -66,25 +63,22 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
             # create records, one will be updated between syncs
             for _ in range(3):
-                if stream in {'subscription_changes', 'email_events'}:
-                    raise NotImplementedError("need to pick and implementation for these streams!")
-                    # # TODO account for possibility of making too many records here? 
-                    # email_record, subscription_record = self.test_client.create(stream)
-                    # self.expected_records['email_events'] += email_record
+                if stream == 'email_events':
+                    email_record = self.test_client.create(stream)
+                    self.expected_records['email_events'] += email_record
                     # # self.expected_records['subscription_changes'] += subscription_record # BUG_TDL-14938
-
-                record = self.test_client.create(stream)
-                self.expected_records[stream] += record
+                else:
+                    record = self.test_client.create(stream)
+                    self.expected_records[stream] += record
 
     def test_run(self):
-        expected_streams = self.testable_streams()
+        expected_streams = self.streams_to_test()
 
         self.create_test_data(expected_streams)
 
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
-
 
         # Select only the expected streams tables
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]

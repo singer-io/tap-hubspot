@@ -169,7 +169,7 @@ class TestClient():
 
         return records
 
-    def get_companies(self, since):
+    def get_companies(self, since=''):
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
@@ -418,19 +418,22 @@ class TestClient():
         records = self.denest_properties('deals', records)
         return records
 
-    def get_email_events(self):
+    def get_email_events(self, recipient=''):
         """
         Get all email_events by paginating using 'hasMore' and 'offset'.
         """
         url = f"{BASE_URL}/email/public/v1/events"
         replication_key = list(self.replication_keys['email_events'])[0]
         params = dict()
+        if recipient:
+            params['recipient'] = recipient
         records = []
 
         has_more = True
         while has_more:
 
             response = self.get(url, params=params)
+
             records.extend([record for record in response['events']
                             if record['created'] >= self.start_date])
 
@@ -696,7 +699,9 @@ class TestClient():
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
         """
         url = f"{BASE_URL}/crm-associations/v1/associations"
-        #TODO only use contacts-company combinations that do not exist yet
+        if company_ids == []:
+            company_ids = [company['companyId'] for company in self.get_companies()]
+
         contact_records = self.get_contacts()
         contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
         for company_id in set(company_ids):
@@ -712,10 +717,14 @@ class TestClient():
                     }
                     # generate a record
                     self.put(url, data)
-                    records = [{'company-id': company_id, 'contact-id': contact_id}]
-                    return records
+                    record = [{'company-id': company_id, 'contact-id': contact_id}]
+                    return record
 
-        raise NotImplementedError("All contacts already have an associated company")
+        raise NotImplementedError(
+            "All contacts may already have an associated company. "
+            f"Method was passed {len(company_ids)} companies [:param company_ids:] to check against."
+        )
+
 
     def create_deal_pipelines(self):
         """
@@ -998,14 +1007,16 @@ class TestClient():
             subscriptions = self.get_subscription_changes()
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
         count = 0
-        records = []
+        email_records = []
+        subscription_records = []
         print(f"creating {times} records")
 
         for item in subscription_id_list:
             if count < times:
                 #if item[0]
                 record_uuid = str(uuid.uuid4()).replace('-', '')
-                url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
+                recipient = record_uuid + "@stitchdata.com"
+                url = f"{BASE_URL}/email/public/v1/subscriptions/{recipient}"
                 data = {
                     "subscriptionStatuses": [
                         {
@@ -1019,30 +1030,19 @@ class TestClient():
                 }
                 # generate a record
                 response = self.put(url, data)
-                # time.sleep(10)  # TODO This is not a good implementation, but it gives us both email and subs...
-                # emails = self.get_email_events()
-                # subscriptions = self.get_subscription_changes()
-
-                # email_event =  [email
-                #                 for email in emails
-                #                 for sub in email.get('subscriptions', [])
-                #                 if sub['id'] == a_sub_id and
-                #                 email['recipient'] == an_email]
-                # subscription_change = [sub
-                #                        for sub in subscriptions
-                #                        for change in sub['changes']
-                #                        if change.get('subscriptionId') == a_sub_id and
-                #                        sub['recipient'] == an_email]
+                time.sleep(10)  # TODO This is not a good implementation, but it gives us both email and subs...
+                email_event = self.get_email_events(recipient=recipient)
+                #subscriptions = self.get_subscription_changes()
                 # if len(email_event) > 1 or len(subscription_change) > 1:
                 #     raise RuntimeError(
                 #         "Expected this change to generate 1 email_event and 1 subscription_change only. "
                 #         "Generate {len(email_event)} email_events and {len(subscription_changes)} subscription_changes."
                 #     )
-                # records = [email_event, subscription_change]
-                records.append([response])
+                email_records.extend(email_event)
+                #subscription_records.append(subscription_change)
                 count += 1
 
-        return records
+        return email_records # , subscription_records
 
     def create_workflows(self):
         """
