@@ -204,7 +204,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
                     primary_key_dict = {primary_key: expected_record[primary_key] for primary_key in primary_keys}
                     primary_key_values = list(primary_key_dict.values())
-
+                    
                     with self.subTest(expected_record=primary_key_dict):
                         # grab the replicated record that corresponds to expected_record by checking primary keys
                         matching_actual_records_by_pk = get_matching_actual_record_by_pk(primary_key_dict, actual_records)
@@ -266,17 +266,16 @@ class TestHubspotAllFields(HubspotBaseTest):
                 if expected_primary_key_values.issubset(actual_records_primary_key_values):
                     print(f"WARNING Unexpected {stream} records replicated: {actual_records_primary_key_values - expected_primary_key_values}")
 
+class TestHubspotAllFieldsStatic(TestHubspotAllFields):
+    def name(self):
+        return "tt_hubspot_all_fields_static"
 
-# class TestHubspotAllFieldsStatic(TestHubspotAllFields):
-#     def name(self):
-#         return "tt_hubspot_all_fields_static"
+    def streams_under_test(self):
+        """expected streams minus the streams not under test"""
+        return {
+            'owners',
+            # 'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+        }
 
-#     def streams_under_test(self):
-#         """expected streams minus the streams not under test"""
-#         return {
-#             'owners',
-#             # 'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-#         }
-
-#     def get_properties(self):
-#         return {'start_date' : '2021-05-02T00:00:00Z'}
+    def get_properties(self):
+        return {'start_date' : '2021-05-02T00:00:00Z'}
