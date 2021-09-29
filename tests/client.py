@@ -188,7 +188,7 @@ class TestClient():
         while has_more:
 
             response = self.get(url, params=params)
-            # TODO refactor this? so that we get start date for free?
+
             for company in response['companies']:
                 if company['properties']['hs_lastmodifieddate']:
                     company_timestamp = datetime.datetime.fromtimestamp(
