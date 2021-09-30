@@ -18,7 +18,7 @@ class TestHubspotPagination(HubspotBaseTest):
 
     @staticmethod
     def name():
-        return "tap_tester_hubspot_pagination_test"
+        return "tt_hubspot_pagination"
 
     def get_properties(self):
         return {
@@ -90,6 +90,7 @@ class TestHubspotPagination(HubspotBaseTest):
             if limit
         }
         streams_to_test = streams_with_page_limits.difference({
+            'email_changes',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 
