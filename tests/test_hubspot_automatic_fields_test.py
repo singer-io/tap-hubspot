@@ -9,11 +9,6 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
         return "tap_tester_hubspot_automatic_fields_test"
 
-    def get_properties(self):
-        return {
-            'start_date' : '2021-05-02T00:00:00Z',
-        }
-
     def expected_streams(self):
         """streams to test"""
         return self.expected_check_streams()
