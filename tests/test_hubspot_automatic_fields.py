@@ -60,7 +60,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
                 # Verify that data is present
                 record_count = sync_record_count.get(stream, 0)
-                self.assertLessEqual(1, record_count, msg=f"record count: {record_count}")
+                self.assertGreater(record_count, 0)
 
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
@@ -101,5 +101,5 @@ class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
 
     def get_properties(self):
         return {
-            'start_date' : '2021-05-02T00:00:00Z',
+            'start_date' : '2021-08-19T00:00:00Z',
         }

@@ -8,6 +8,7 @@ from tap_tester import menagerie
 from tap_tester import runner
 
 from base import HubspotBaseTest
+from client import TestClient
 
 
 class FieldSelectionChildTest(HubspotBaseTest):
@@ -21,6 +22,16 @@ class FieldSelectionChildTest(HubspotBaseTest):
         return {
             'start_date' : dt.strftime(dt.today()-timedelta(days=2), self.START_DATE_FORMAT)
         }
+
+    def setUp(self):
+        test_client = TestClient(start_date=self.get_properties()['start_date'])
+
+        contact = test_client.create('contacts')
+        company = test_client.create('companies')[0]
+        contact_by_company = test_client.create_contacts_by_company(
+            company_ids=[company['companyId']],
+            contact_records=contact
+        )
 
     def test_run(self):
         """
@@ -51,7 +62,7 @@ class FieldSelectionChildTest(HubspotBaseTest):
 
         # Verify tap and target exit codes
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        
+
         # Verify that the tap error message shows you need to select the parent stream
         self.assertRaises(AssertionError, menagerie.verify_sync_exit_status, self, exit_status, sync_job_name)
         self.assertEqual(exit_status['tap_error_message'],
@@ -64,9 +75,7 @@ class FieldSelectionChildTest(HubspotBaseTest):
 
         # Select only child and required parent and make sure there is no critical error
         streams_to_test = {"contacts_by_company", "companies"}
-
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in streams_to_test]
-
         for catalog_entry in catalog_entries:
             stream_schema = menagerie.get_annotated_schema(conn_id, catalog_entry['stream_id'])
             connections.select_catalog_and_fields_via_metadata(
