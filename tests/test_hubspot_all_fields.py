@@ -103,11 +103,6 @@ class TestHubspotAllFields(HubspotBaseTest):
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 
-    def get_properties(self):
-        return {
-            'start_date' : datetime.datetime.strftime(datetime.datetime.today()-datetime.timedelta(days=7), self.START_DATE_FORMAT)
-        }
-
     def setUp(self):
         self.maxDiff = None  # see all output in failure
 

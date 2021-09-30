@@ -548,10 +548,6 @@ class TestClient():
                    "value": "http://app.stitchdata.com"
                  },
                  {
-                   "property": "company",
-                   "value": "Talend"
-                 },
-                 {
                    "property": "phone",
                    "value": "555-122-2323"
                  },
@@ -635,14 +631,15 @@ class TestClient():
         records = [response]
         return records
 
-    def create_contacts_by_company(self, company_ids):
+    def create_contacts_by_company(self, company_ids, contact_records=[]):
         """
         https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
         """
         url = f"{BASE_URL}/crm-associations/v1/associations"
         # only use contacts-company combinations that do not exist yet
-        contact_records = self.get_contacts()
+        if not contact_records:
+            contact_records = self.get_contacts()
         contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
         for company_id in set(company_ids):
             for contact in contact_records:
