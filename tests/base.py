@@ -43,7 +43,7 @@ class HubspotBaseTest(unittest.TestCase):
         return "tap-hubspot"
 
     def get_properties(self):
-        start_date = dt.today() + timedelta(days=1)
+        start_date = dt.today() - timedelta(days=1)
         start_date_with_fmt = dt.strftime(start_date, self.START_DATE_FORMAT)
 
         return {'start_date' : start_date_with_fmt}
