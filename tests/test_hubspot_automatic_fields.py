@@ -9,9 +9,9 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
         return "tap_tester_hubspot_automatic_fields_test"
 
-    def expected_streams(self):
+    def streams_to_test(self):
         """streams to test"""
-        return self.expected_check_streams()
+        return self.expected_streams() - {'owners'}
 
 
     def test_run(self):
@@ -23,7 +23,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select only the expected streams tables
-        expected_streams = self.expected_streams()
+        expected_streams = self.streams_to_test()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=False)
 
@@ -69,12 +69,12 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         synced_records = runner.get_records_from_target_output()
 
         # Assert the records for each stream
-        for stream in self.expected_streams():
+        for stream in expected_streams:
             with self.subTest(stream=stream):
 
                 # Verify that data is present
                 record_count = sync_record_count.get(stream, 0)
-                self.assertLessEqual(1, record_count, msg=f"record count: {record_count}")
+                self.assertGreater(record_count, 0)
 
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
@@ -103,3 +103,18 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                     pk = self.expected_primary_keys()[stream]
                     pks_values = [tuple([message['data'][p] for p in pk]) for message in data['messages']]
                     self.assertEqual(len(pks_values), len(set(pks_values)))
+
+class TestHubspotAutomaticFieldsStatic(TestHubspotAutomaticFields):
+    def name(self):
+        return "tt_hubspot_auto_static"
+
+    def streams_to_test(self):
+        """expected streams minus the streams not under test"""
+        return {
+            'owners',
+        }
+
+    def get_properties(self, original=True):
+        return {
+            'start_date' : '2021-08-19T00:00:00Z'
+        }
