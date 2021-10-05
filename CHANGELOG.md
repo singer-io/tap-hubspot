@@ -1,5 +1,7 @@
 # Changelog
 
+## 2.9.6
+  * Remove contacts_by_company from discovery [#15](https://github.com/symon-ai/target-s3-csv/pull/15)
 ## 2.9.5
   * Fixes a bug in sending the fields to the v3 Deals endpoint [#145](https://github.com/singer-io/tap-hubspot/pull/145)
 
