@@ -39,6 +39,22 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
+        return {
+            "companies",
+            "contact_lists",
+            # "contacts",
+            # "contacts_by_company",
+            "deal_pipelines",
+            "deals",
+            # "email_events",
+            # "engagements",
+            # "forms",
+            # "subscription_changes",
+            # "workflows",
+        }
+
+    def asdf_streams_to_test(self):
+        """expected streams minus the streams not under test"""
         return self.expected_streams().difference({
             'campaigns',  # no create
             'owners',  # no create
@@ -60,16 +76,16 @@ class TestHubspotBookmarks(HubspotBaseTest):
                                  for stream in expected_streams}
 
         for stream in expected_streams:
-
-            # create records, one will be updated between syncs
-            for _ in range(3):
-                # if stream == 'email_events':
-                #     email_record = self.test_client.create(stream)
-                #     self.expected_records['email_events'] += email_record
+            if stream == 'email_events':
+                email_records = self.test_client.create(stream, times=3)
+                self.expected_records['email_events'] += email_records
                 #     # # self.expected_records['subscription_changes'] += subscription_record # BUG_TDL-14938
                 # else:
-                record = self.test_client.create(stream)
-                self.expected_records[stream] += record
+            else:
+                # create records, one will be updated between syncs
+                for _ in range(3):
+                    record = self.test_client.create(stream)
+                    self.expected_records[stream] += record
 
     def test_run(self):
         expected_streams = self.streams_to_test()
@@ -102,6 +118,34 @@ class TestHubspotBookmarks(HubspotBaseTest):
             self.expected_records[stream] += record
 
         # Update records TODO
+        for stream in {'companies', 'contact_lists', 'deals', 'deal_pipelines'}:
+            if stream == 'workflows':
+                workflow_id = self.expected_records[stream][0]['id']
+                contact_email = self.expected_records['contacts'][0]['properties']['email']['value']
+                record = self.test_client.update_workflows(workflow_id, contact_email)
+            elif stream == 'companies':
+                company_id = self.expected_records[stream][0]['companyId']
+                record = self.test_client.update_companies(company_id)
+            elif stream == 'contacts':
+                contact_id = self.expected_records[stream][0]['vid']
+                record = self.test_client.update_contacts(contact_id)
+            elif stream == 'contact_lists':
+                contact_list_id = self.expected_records[stream][0]['listId']
+                record = self.test_client.update_contact_lists(contact_list_id)
+            elif stream == 'deal_pipelines':
+                deal_pipeline_id = self.expected_records[stream][0]['pipelineId']
+                record = self.test_client.update_deal_pipelines(deal_pipeline_id)
+            elif stream == 'deals':
+                deal_id = self.expected_records[stream][0]['dealId']
+                record = self.test_client.update_deals(deal_id)
+            elif stream == 'forms':
+                form_id = self.expected_records[stream][0]['guid']
+                record = self.test_client.update_forms(form_id)
+            elif stream == 'engagements':
+                engagement_id = self.expected_records[stream][0]['engagement_id']
+                record = self.test_client.update_engagements(engagement_id)
+
+            self.expected_records[stream].append(record)
 
         #run second sync
         second_record_count_by_stream = self.run_and_verify_sync(conn_id)

@@ -58,10 +58,16 @@ class TestClient():
         print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
             print(response.text)
-        response.raise_for_status()
-        json_response = response.json()
 
+        response.raise_for_status()
+
+        if response.status_code == 204:
+            print(f"TEST CLIENT | WARNING Response is empty")
+            # TODO catch simplejson.scanner.JSONDecodeError
+            return []
+        json_response = response.json()
         return json_response
+
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -70,12 +76,33 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def put(self, url, data, params=dict()):
+    def put(self, url, data, params=dict(), debug=False):
         """Perfroma a PUT using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.put(url, json=data, params=params, headers=headers)
         print(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
+
+        response.raise_for_status()
+
+    @backoff.on_exception(backoff.constant,
+                          (requests.exceptions.RequestException,
+                           requests.exceptions.HTTPError),
+                          max_tries=5,
+                          jitter=None,
+                          giveup=giveup,
+                          interval=10)
+    def patch(self, url, data, params=dict(), debug=True):
+        """Perfroma a PATCH using the standard requests method and log the action"""
+        headers = dict(self.HEADERS)
+        headers['content-type'] = "application/json"
+        response = requests.put(url, json=data, params=params, headers=headers)
+        print(f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
+
         response.raise_for_status()
 
     @backoff.on_exception(backoff.constant,
@@ -169,6 +196,11 @@ class TestClient():
 
         return records
 
+    def _get_company_by_id(self, company_id):
+        url = f"{BASE_URL}/companies/v2/companies/{company_id}"
+        response = self.get(url)
+        return response
+
     def get_companies(self, since=''):
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
@@ -207,19 +239,25 @@ class TestClient():
 
         # get the details of each company
         for company in companies:
-            url = f"{BASE_URL}/companies/v2/companies/{company['companyId']}"
-            response = self.get(url)
+            response = self._get_company_by_id(company['companyId'])
             records.append(response)
 
         records = self.denest_properties('companies', records)
 
         return records
 
-    def get_contact_lists(self, since):
+    def get_contact_lists(self, since, list_id=''):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
         url = f"{BASE_URL}/contacts/v1/lists"
+
+        if list_id:
+            url += f"/{list_id}"
+            response = self.get(url)
+
+            return response
+
         if not since:
             since = self.start_date_strf
 
@@ -230,6 +268,7 @@ class TestClient():
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
+
         # paginating through all the contact_lists
         has_more = True
         while has_more:
@@ -351,6 +390,13 @@ class TestClient():
         records = self.denest_properties('deal_pipelines', records)
         return records
 
+    def _get_deals_by_pk(self, deal_id):
+        url = f"{BASE_URL}/deals/v1/deal/{deal_id}"
+        params = {'includeAllProperties': True}
+        response = self.get(url, params=params)
+
+        return response
+
     def get_deals(self):
         """
         Get all deals from the v1 endpoiint by paginating using 'hasMore' and 'offset'.
@@ -442,6 +488,16 @@ class TestClient():
 
         return records
 
+    def _get_engagements_by_pk(self, engagement_id):
+        """
+        Get a specific engagement reocrd using it's id
+        """
+        url = f"{BASE_URL}/engagements/v1/engagements/{engagement_id}"
+
+        response = self.get(url)
+
+        return response
+
     def get_engagements(self):
         """
         Get all engagements by paginating using 'hasMore' and 'offset'.
@@ -467,6 +523,16 @@ class TestClient():
 
         return records
 
+    def _get_forms_by_pk(self, form_id):
+        """
+        Get a specific forms record using the 'form_guid'.
+        :params form_id: the 'form_guid' value
+        """
+        url = f"{BASE_URL}/forms/v2/forms/{form_id}"
+        response = self.get(url)
+
+        return response
+
     def get_forms(self):
         """
         Get all forms.
@@ -480,6 +546,7 @@ class TestClient():
                         if record[replication_key] >= self.start_date])
 
         return records
+
     def get_owners(self):
         """
         Get all owners.
@@ -516,18 +583,26 @@ class TestClient():
 
         return records
 
+    def _get_workflows_by_pk(self, workflow_id=''):
+        """Get a specific workflow by pk value"""
+        url = f"{BASE_URL}/automation/v3/workflows/{workflow_id}"
+
+        response = self.get(url)
+
+        return response
+
     def get_workflows(self):
         """
         Get all workflows.
         """
-        url = f"{BASE_URL}/automation/v3/workflows"
+        url = f"{BASE_URL}/automation/v3/workflows/"
         replication_key = list(self.replication_keys['workflows'])[0]
         records = []
 
         response = self.get(url)
+
         records.extend([record for record in response['workflows']
                         if record[replication_key] >= self.start_date])
-
         return records
 
     ##########################################################################
@@ -1054,6 +1129,7 @@ class TestClient():
             "name": "Test Workflow",
             "type": "DRIP_DELAY",
             "onlyEnrollsManually": True,
+            "enabled": True,
             "actions": [
                 {
                     "type": "DELAY",
@@ -1085,43 +1161,224 @@ class TestClient():
     ### Updates
     ##########################################################################
 
+    def update_workflows(self, workflow_id, contact_email):
+        """
+        Update a workflow by enrolling a contact in the workflow.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/workflows/add_contact
+
+        :param workflow_id: id of the workflow object to update
+        :param contact_email: email of the contact to enroll in the workflow
+
+        :return:
+        """
+        url = f"{BASE_URL}/automation/v2/workflows/{workflow_id}/enrollments/contacts/{contact_email}"
+        self.post(url)
+        record = self._get_workflows_by_pk(workflow_id)
+
+        return record
+
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)
+
+    def update_campaigns(self):
+        """
+        Couldn't find endpoint...
+        """
+        raise NotImplementedError("TODO SPIKE needed on updating campaigns since there was no endpoint.")
+
+    def update_companies(self, company_id):
+        """
+        Update a company by changing it's description
+        :param company_id: the primary key value of the company to update
+        :return: the updated record using the _get_company_by_id
+
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/companies/update_company
+        """
+        url = f"{BASE_URL}/companies/v2/companies/{company_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        data = {
+            "properties": [
+                {
+                    "name": "description",
+                    "value": f"An updated description {record_uuid}"
+                }
+            ]
+        }
+        self.put(url, data)
+
+        record = self._get_company_by_id(company_id)
+
+        return record
+
     def update_contacts(self, vid):
-        #TODO left off here INCOMPLETE
         """
-
-        Update a single contact record.
+        Update a single contact record with a new email.
         Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/update_contact
-        """
-        # record_uuid = str(uuid.uuid4()).replace('-', '')
-        # records = self.get_contacts()
-        # url = f"{BASE_URL}/contacts/v1/contact/vid/{vid}/profile"
-        # data = {
-        #     "properties": [
-        #         {
-        #             "property": "email",
-        #             "value": "new-email@hubspot.com"
-        #         },
-        #         {
-        #             "property": "firstname",
-        #             "value": "Updated"
-        #         },
-        #         {
-        #             "property": "lastname",
-        #             "value": "Record"
-        #         },
-        #         {
-        #             "property": "website",
-        #             "value": "http://updated.example.com"
-        #         },
-        #         {
-        #             "property": "lifecyclestage",
-        #             "value": "customer"
-        #         }
-        #     ]
-        # }
 
+        :param vid: the primary key value of the record to update
+        :return: the updated record using the get_contracts_by_pks method
+        """
+        url = f"{BASE_URL}/contacts/v1/contact/vid/{vid}/profile"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        data = {
+            "properties": [
+                {
+                    "property": "email",
+                    "value": f"{record_uuid}@stitchdata.com"
+                },
+                {
+                    "property": "firstname",
+                    "value": "Updated"
+                },
+                {
+                    "property": "lastname",
+                    "value": "Record"
+                },
+                {
+                    "property": "lifecyclestage",
+                    "value": "customer"
+                }
+            ]
+        }
+        _ = self.post(url, data=data)
+
+        record = self.get_contacts_by_pks(pks=[vid])
+
+        return record
+
+    def update_contact_lists(self, list_id):
+        """
+        Update a single contact list.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/lists/update_list
+
+        :param list_id: the primary key value of the record to update
+        :return: the updated record using the get_contracts_by_pks method
+        """
+        url = f"{BASE_URL}/contacts/v1/lists/{list_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        data = {"name": f"Updated {record_uuid}"}
+
+        _ = self.post(url, data=data)
+
+        record = self.get_contact_lists(since='', list_id=list_id)
+
+        return record
+
+    def update_deal_pipelines(self, pipeline_id):
+        """
+        Update a deal_pipeline record by changing it's label.
+        :param:
+        :return:
+        """
+        url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{pipeline_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "label": f"Updated {record_uuid}",
+            "displayOrder": 4,
+            "active": True,
+            "stages": [
+                {
+                    "stageId": record_uuid,
+                    "label": record_uuid,
+                    "displayOrder": 1,
+                    "metadata": {
+                        "probability": 0.5
+                    }
+                },
+            ]
+        }
+
+        _ = self.put(url, data=data)
+
+        deal_pipelines = self.get_deal_pipelines()
+        record = [pipeline for pipeline in deal_pipelines
+                  if pipeline['pipelineId'] == pipeline_id][0]
+
+        return record
+
+    def update_deals(self, deal_id):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/deals/update_deal
+
+        :param deal_id: the pk value of the deal record to update
+        :return: the updated deal record using a PUT and the results from a GET
+        """
+        url = f"{BASE_URL}/deals/v1/deal/{deal_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "properties": [
+                {
+                    "value": f"Updated {record_uuid}",
+                    "name": "dealname"
+                },
+            ]
+        }
+
+        # generate a record
+        _ = self.put(url, data)
+
+        response = self._get_deals_by_pk(deal_id)
+
+        return response
+
+    def update_forms(self, form_id):
+        """
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/forms/v2/update_form
+
+        :params form_id: the pk value of the form record to update
+        :return: the updated form record using the GET endpoint
+        """
+        url = f"{BASE_URL}/forms/v2/forms/{form_id}"
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+
+        data = {
+            "name": f"Updated {record_uuid}"
+        }
+        _ = self.put(url, data=data)
+
+        response = self._get_forms_by_pk(form_id)
+
+        return response
+
+    def update_owners(self):
+        """
+        HubSpot API The Owners API is read-only. Owners can only be updated in HubSpot.
+        TODO - use selenium?
+        """
+        raise NotImplementedError("Only able to update owners from web app")
+
+    def update_campaigns(self):
+        """
+        HubSpot API The Campaigns API is read-only. Campaigns can only be updated in HubSpot.
+        TODO - use selenium?
+        """
+        raise NotImplementedError("Only able to update campaigns from web app")
+
+    def update_engagements(self, engagement_id):
+        """
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/engagements/update_engagement-patch
+        :params engagement_id: the pk value of the engagment record to update
+        :return:
+        """
+        url = f"{BASE_URL}/engagements/v1/engagements/{engagement_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "metadata": {
+                "body": f"Updated {record_uuid}"
+            }
+        }
+
+        self.patch(url, data)
+
+        record = self._get_engagements_by_pk(engagement_id)
+
+        return record
 
     ##########################################################################
     ### Deletes

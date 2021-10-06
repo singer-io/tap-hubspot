@@ -5,8 +5,13 @@ from base import HubspotBaseTest
 
 class TestHubspotTestClient(HubspotBaseTest):
     """Test the basic functionality of our Test Client. This is a tool for sanity checks, nothing more."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.test_client = TestClient(self.get_properties()['start_date'])
 
-    test_client = TestClient()
+    ##########################################################################
+    ### TESTING CREATES
+    ##########################################################################
 
     # def test_contacts_create(self):
     #     # Testing contacts Post
@@ -142,11 +147,129 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     new_records = self.test_client.get_workflows()
     #     assert len(old_records) < len(new_records), \
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
-    #TODO not completed
-    # def test_contacts_update(self):
-    #     new_record = self.test_client.create_contact()
-    #     import ipdb; ipdb.set_trace()
-    #     1+1
-    #     old_email = new_record
-    #     new_email = "new-email@hubspot.com"
 
+
+    ##########################################################################
+    ### TESTING UPDATES
+    ##########################################################################
+
+
+    # def test_workflows_update(self):    # TODO This failed to change the record
+    #     # Testing update_workflows POST
+
+    #     # grab a contact's email to use as the update
+    #     contacts = self.test_client.get_contacts()
+    #     for contact in contacts:
+    #         if contact['properties'].get('email'):
+    #             contact_email = contact['properties']['email']['value']
+    #             break
+
+    #     # old
+    #     workflow = self.test_client.create('workflows')
+    #     workflow_id = workflow[0]['id']
+    #     old_record = self.test_client.get_workflows(workflow_id=workflow_id)
+
+
+    #     # do the update
+    #     our_record = self.test_client.update_workflows(workflow_id=workflow_id, contact_email=contact_email)
+
+    #     # new
+    #     new_record = self.test_client.get_workflows(workflow_id=workflow_id)
+
+    #     self.assertNotEqual(old_record, new_record)
+
+    # def test_contacts_update(self):
+    #     new_record = self.test_client.create_contacts()
+    #     record_vid = new_record[0]['vid']
+    #     old_email = new_record[0]['properties']['email']['value']
+
+    #     updated_record = self.test_client.update_contacts(record_vid)
+
+    #     self.assertNotEqual(updated_record[0]['properties']['email']['value'], old_email)
+
+    # def test_campaigns_update(self): TODO
+    #     """No endpoint found."""
+    #     self.fail("test_campaigns_update not implmented")
+
+    # def test_companies_update(self):
+    #     initial_record = self.test_client.create_companies()
+    #     time.sleep(6)
+    #     record_id = initial_record[0]['companyId']
+    #     initial_value = initial_record[0]['properties']['description']['value']
+
+    #     updated_record = self.test_client.update_companies(record_id)
+    #     updated_value = updated_record['properties']['description']['value']
+
+    #     self.assertNotEqual(initial_value, updated_value)
+
+    # def test_contact_lists_update(self):
+    #     initial_record = self.test_client.create_contact_lists()
+
+    #     record_id = initial_record[0]['listId']
+    #     initial_value = initial_record[0]['name']
+
+    #     updated_record = self.test_client.update_contact_lists(record_id)
+    #     updated_value = updated_record['name']
+
+    #     self.assertNotEqual(initial_value, updated_value)
+
+    # def test_deal_pipelines_update(self):
+    #     initial_record = self.test_client.get_deal_pipelines()
+
+    #     record_id = initial_record[0]['pipelineId']
+    #     initial_value = initial_record[0]['label']
+
+    #     updated_record = self.test_client.update_deal_pipelines(record_id)
+    #     updated_value = updated_record['label']
+
+    #     self.assertNotEqual(initial_value, updated_value)
+
+    # def test_deals_update(self):
+    #     initial_record = self.test_client.get_deals()
+
+    #     record_id = initial_record[0]['dealId']
+    #     initial_value = initial_record[0]['properties']['dealname']['value']
+
+    #     updated_record = self.test_client.update_deals(record_id)
+    #     updated_value = updated_record['properties']['dealname']['value']
+
+    #     self.assertNotEqual(initial_value, updated_value)
+
+    # def test_forms_update(self):
+    #     initial_record = self.test_client.get_forms()
+
+    #     record_id = initial_record[0]['guid']
+    #     initial_value = initial_record[0]['name']
+
+    #     updated_record = self.test_client.update_forms(record_id)
+    #     updated_value = updated_record['name']
+
+    #     self.assertNotEqual(initial_value, updated_value)
+
+    # def test_owners_update(self): TODO
+    #     """No endpoint found."""
+    #     self.fail("test_owners_update not implmented")
+
+    # def test_engagements_update(self):
+    #     initial_record = self.test_client.get_engagements()
+
+    #     record_id = initial_record[0]['engagement_id']
+    #     initial_value = initial_record[0]['metadata']
+
+    #     updated_record = self.test_client.update_engagements(record_id)
+    #     updated_value = updated_record['metadata']
+
+    #     self.assertNotEqual(initial_value, updated_value)
+
+    ##########################################################################
+    ### TODO updates
+    ##########################################################################
+    # def test_contacts_by_company_update(self):
+    #     pass
+
+    # def test_email_events_update(self):
+    #     pass
+
+
+    # def test_subscription_changes_update(self):
+    #     pass
