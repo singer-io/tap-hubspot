@@ -73,14 +73,14 @@ class TestHubspotTestClient(HubspotBaseTest):
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
 
-    # def test_deal_pipelines_create(self):
-    #     # Testing deal_pipelines POST
+    def test_deal_pipelines_create(self):
+        # Testing deal_pipelines POST
 
-    #     old_records = self.test_client.get_deal_pipelines()
-    #     our_record = self.test_client.create_deal_pipelines()
-    #     new_records = self.test_client.get_deal_pipelines()
-    #     assert len(old_records) < len(new_records), \
-    #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
+        old_records = self.test_client.get_deal_pipelines()
+        our_record = self.test_client.create_deal_pipelines()
+        new_records = self.test_client.get_deal_pipelines()
+        assert len(old_records) < len(new_records), \
+            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
     # def test_deal_pipelines_deletes(self):
     #     # Testing deal_pipelines DELETE

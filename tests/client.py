@@ -3,6 +3,8 @@ import time
 import requests
 import backoff
 import json
+# from json.decoder import JSONDecodeError
+
 import uuid
 import random
 from  tap_tester import menagerie
@@ -22,9 +24,11 @@ class TestClient():
 
     def giveup(exc):
         """Checks a response status code, returns True if unsuccessful unless rate limited."""
+        if exc.response.status_code == 429:
+            return False
+
         return exc.response is not None \
-            and 400 <= exc.response.status_code < 500 \
-            and exc.response.status_code != 429
+            and 400 <= exc.response.status_code < 500
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -283,10 +287,12 @@ class TestClient():
 
         return records
 
-    def get_contacts_by_pks(self, pks):  # TODO figure out if this implementation is cool
+    def _get_contacts_by_pks(self, pks):
         """
-        Get all contact vids by paginating using 'has-more' and 'vid-offset/vidOffset'.
-        Then use the vids to grab the detailed contacts records.
+        Get a specific contact by using the primary key value.
+
+        :params pks: vids
+        :return: the contacts record
         """
         url_2 = f"{BASE_URL}/contacts/v1/contact/vids/batch/"
         params_2 = {
@@ -307,7 +313,8 @@ class TestClient():
             records.append(record)
 
         records = self.denest_properties('contacts', records)
-        return records
+
+        return records[0]
 
     def get_contacts(self):
         """
@@ -495,6 +502,10 @@ class TestClient():
         url = f"{BASE_URL}/engagements/v1/engagements/{engagement_id}"
 
         response = self.get(url)
+
+        # added by tap
+        response['engagement_id'] = response['engagement']['id']
+        response['lastUpdated'] = response['engagement']['lastUpdated']
 
         return response
 
@@ -777,7 +788,12 @@ class TestClient():
         if not contact_records:
             contact_records = self.get_contacts()
 
-        contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
+        # TODO cleanup this method
+        if not (company_ids and contact_records):
+            contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
+        else:
+            contacts_by_company_records = []
+
         for company_id in set(company_ids):
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
@@ -1161,6 +1177,24 @@ class TestClient():
     ### Updates
     ##########################################################################
 
+    def update(self, stream, record_id):
+        if stream == 'companies':
+            return self.update_companies(record_id)
+        elif stream == 'contacts':
+            return self.update_contacts(record_id)
+        elif stream == 'contact_lists':
+            return self.update_contact_lists(record_id)
+        elif stream == 'deal_pipelines':
+            return self.update_deal_pipelines(record_id)
+        elif stream == 'deals':
+            return self.update_deals(record_id)
+        elif stream == 'forms':
+            return self.update_forms(record_id)
+        elif stream == 'engagements':
+            return self.update_engagements(record_id)
+        else:
+            raise NotImplementedError(f"Test client does not have an update method for {stream}")
+
     def update_workflows(self, workflow_id, contact_email):
         """
         Update a workflow by enrolling a contact in the workflow.
@@ -1244,7 +1278,7 @@ class TestClient():
         }
         _ = self.post(url, data=data)
 
-        record = self.get_contacts_by_pks(pks=[vid])
+        record = self._get_contacts_by_pks(pks=[vid])
 
         return record
 
@@ -1384,19 +1418,6 @@ class TestClient():
     ### Deletes
     ##########################################################################
 
-    # def delete_deal_pipelines(self, count=10)
-    #     """
-    #     Delete one deal_piplelines record based on the primary_key value
-    #     Hubspot API
-    #     https://legacydocs.hubspot.com/docs/methods/pipelines/delete_pipeline
-    #     """
-    #     records = self.get_deal_pipelines()
-    #     record_ids_to_delete = [records[i]['pipelineId'] for i in range(count)]
-
-    #     for record_id in record_ids_to_delete:
-    #         url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
-    #         self.delete(url)
-
     def delete_deal_pipelines(self, count=10):
         """
         Delete older records based on timestamp primary key
@@ -1413,12 +1434,13 @@ class TestClient():
         for record_id in record_ids_to_delete:
             if record_id == 'default' or len(record_id) > 16: # not a timestamp, not made by this client
                 continue # skip
-            yesterday = datetime.datetime.now() + datetime.timedelta(days=-1)
-            record_created = datetime.datetime.fromtimestamp(int(record_id[:10]))
-            if yesterday > record_created:
-                url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
-                self.delete(url)
-                count -= 1
+            # yesterday = datetime.datetime.now() + datetime.timedelta(days=-1)
+            # record_created = datetime.datetime.fromtimestamp(int(record_id[:10]))
+            # if yesterday > record_created:
+            url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
+            self.delete(url)
+            count -= 1
+
             if count == 0:
                 return
 
@@ -1465,6 +1487,6 @@ class TestClient():
         for stream, limits in stream_limitations.items():
             max_record_count, pipeline_count = limits
             if max_record_count - pipeline_count < 10:
-                delete_count = 10
+                delete_count = 50
                 self.delete_deal_pipelines(delete_count)
                 print(f"TEST CLIENT | {delete_count} records deleted from {stream}")
