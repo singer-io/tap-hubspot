@@ -9,16 +9,20 @@ import tap_tester.runner      as runner
 
 
 class HubspotBaseTest(unittest.TestCase):
+
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
+
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
     BASIC_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
     EXPECTED_PAGE_SIZE = "expected-page-size"
     OBEYS_START_DATE = "obey-start-date"
+    PARENT_STREAM = "parent-stream"
 
     #######################################
     #  Tap Configurable Metadata Methods  #
@@ -63,7 +67,7 @@ class HubspotBaseTest(unittest.TestCase):
             "campaigns": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False 
+                self.OBEYS_START_DATE: False
             },
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
@@ -88,9 +92,10 @@ class HubspotBaseTest(unittest.TestCase):
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
-                self.REPLICATION_METHOD: self.FULL,
+                self.REPLICATION_METHOD: self.INCREMENTAL,# DOCS_BUG listed as FULL_TABLE
                 self.EXPECTED_PAGE_SIZE: 100,
-                self.OBEYS_START_DATE: True
+                self.OBEYS_START_DATE: True,
+                self.PARENT_STREAM: 'companies'
             },
             "deal_pipelines": {
                 self.PRIMARY_KEYS: {"pipelineId"},
@@ -373,15 +378,18 @@ class HubspotBaseTest(unittest.TestCase):
     def datetime_from_timestamp(self, value, str_format="%Y-%m-%dT00:00:00Z"):
         """
         Takes in a unix timestamp in milliseconds.
-        Returns a string formatted python datetime 
+        Returns a string formatted python datetime
         """
         try:
             datetime_value = dt.fromtimestamp(value)
-            datetime_str = dt.strftime(datetime_value, str_format) 
-        except ValueError as err: 
+            datetime_str = dt.strftime(datetime_value, str_format)
+        except ValueError as err:
             raise NotImplementedError(
                 f"Invalid argument 'value':  {value}  "
                 "This method was designed to accept unix timestamps in milliseconds."
             )
         return datetime_str
 
+    def is_child(self, stream):
+        """return true if this stream is a child stream"""
+        return self.expected_metadata()[stream].get(self.PARENT_STREAM) is not None

@@ -10,7 +10,7 @@ import random
 from  tap_tester import menagerie
 from base import HubspotBaseTest
 
-
+DEBUG = False
 BASE_URL = "https://api.hubapi.com"
 
 
@@ -53,7 +53,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def post(self, url, data, params=dict(), debug=False):
+    def post(self, url, data=dict(), params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
         headers = dict(self.HEADERS)
@@ -80,7 +80,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def put(self, url, data, params=dict(), debug=False):
+    def put(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PUT using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
@@ -98,7 +98,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def patch(self, url, data, params=dict(), debug=True):
+    def patch(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PATCH using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
@@ -116,7 +116,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def delete(self, url, params=dict(), debug=True):
+    def delete(self, url, params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
         headers = dict(self.HEADERS)
@@ -1120,7 +1120,7 @@ class TestClient():
                 }
                 # generate a record
                 response = self.put(url, data)
-                time.sleep(10)  # TODO This is not a good implementation, but it gives us both email and subs...
+                #time.sleep(10)  # TODO This is not a good implementation, but it gives us both email and subs...
                 email_event = self.get_email_events(recipient=recipient)
                 #subscriptions = self.get_subscription_changes()
                 # if len(email_event) > 1 or len(subscription_change) > 1:
@@ -1205,11 +1205,16 @@ class TestClient():
 
         :return:
         """
-        url = f"{BASE_URL}/automation/v2/workflows/{workflow_id}/enrollments/contacts/{contact_email}"
-        self.post(url)
-        record = self._get_workflows_by_pk(workflow_id)
+        # url = f"{BASE_URL}/automation/v2/workflows/{workflow_id}/enrollments/contacts/{contact_email}"
+        # self.post(url)
+        # record = self._get_workflows_by_pk(workflow_id)
 
-        return record
+        # return record
+
+        # NB | Attemtped to enroll a contact but this did not change anything on the record. Enrollment is handled by
+        #      settings which are fields on a workflows record. The actual contacts' enrollment is not part of this record.
+
+        raise NotImplementedError("TODO SPIKE needed on updating workflows since there was no endpoint.")
 
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)

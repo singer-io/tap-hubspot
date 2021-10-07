@@ -167,14 +167,14 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     # old
     #     workflow = self.test_client.create('workflows')
     #     workflow_id = workflow[0]['id']
-    #     old_record = self.test_client.get_workflows(workflow_id=workflow_id)
+    #     old_record = self.test_client._get_workflows_by_pk(workflow_id=workflow_id)
 
 
     #     # do the update
     #     our_record = self.test_client.update_workflows(workflow_id=workflow_id, contact_email=contact_email)
 
     #     # new
-    #     new_record = self.test_client.get_workflows(workflow_id=workflow_id)
+    #     new_record = self.test_client._get_workflows_by_pk(workflow_id=workflow_id)
 
     #     self.assertNotEqual(old_record, new_record)
 

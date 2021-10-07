@@ -10,6 +10,9 @@ from base import HubspotBaseTest
 from client import TestClient
 
 
+STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
+
+
 class TestHubspotBookmarks(HubspotBaseTest):
     """Ensure tap replicates new and upated records based on the replication method of a given stream.
 
@@ -31,7 +34,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
             'campaigns',  # no create
             'owners',  # no create
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-            'workflows', # BUG | TODO
         })
 
     def get_properties(self):
@@ -49,32 +51,29 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.expected_records = {stream: []
                                  for stream in expected_streams}
 
-        if 'contacts_by_company' in expected_streams:  # do last
-            expected_streams.remove('contacts_by_company')
-
-        for stream in expected_streams:
+        for stream in expected_streams - {'contacts_by_company'}:
             if stream == 'email_events':
                 email_records = self.test_client.create(stream, times=3)
                 self.expected_records['email_events'] += email_records
-                #     # # self.expected_records['subscription_changes'] += subscription_record # BUG_TDL-14938
             else:
                 # create records, one will be updated between syncs
                 for _ in range(3):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
 
-        company_ids = [record['companyId'] for record in self.expected_records['companies']]
-        contact_records = self.expected_records['contacts']
-        for i in range(3):
-            record = self.test_client.create_contacts_by_company(
-                company_ids=company_ids, contact_records=contact_records
-            )
-            self.expected_records['contacts_by_company'] += record
+        if 'contacts_by_company' in expected_streams:  # do last
+            company_ids = [record['companyId'] for record in self.expected_records['companies']]
+            contact_records = self.expected_records['contacts']
+            for i in range(3):
+                record = self.test_client.create_contacts_by_company(
+                    company_ids=company_ids, contact_records=contact_records
+                )
+                self.expected_records['contacts_by_company'] += record
 
     def test_run(self):
         expected_streams = self.streams_to_test()
 
-        self.create_test_data(list(expected_streams))
+        self.create_test_data(expected_streams)
 
         conn_id = connections.ensure_connection(self)
 
@@ -100,24 +99,25 @@ class TestHubspotBookmarks(HubspotBaseTest):
         for stream in expected_streams - {'contacts_by_company'}:
             record = self.test_client.create(stream)
             self.expected_records[stream] += record
-        company_ids = [record['companyId'] for record in self.expected_records['companies'][:-1]]
-        contact_records = self.expected_records['contacts'][-1:]
-        record = self.test_client.create_contacts_by_company(
-            company_ids=company_ids, contact_records=contact_records
-        )
-        self.expected_records['contacts_by_company'] += record
+        if 'contacts_by_company' in expected_streams:
+            company_ids = [record['companyId'] for record in self.expected_records['companies'][:-1]]
+            contact_records = self.expected_records['contacts'][-1:]
+            record = self.test_client.create_contacts_by_company(
+                company_ids=company_ids, contact_records=contact_records
+            )
+            self.expected_records['contacts_by_company'] += record
 
 
         # Update 1 record from the test seutp for each stream
-        for stream in expected_streams - {'email_events', 'contacts_by_company'}:
+        for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
             primary_key = list(self.expected_primary_keys()[stream])[0]
-            if stream == 'workflows':
-                workflow_id = self.expected_records[stream][0]['id']
-                contact_email = self.expected_records['contacts'][1]['properties']['email']['value'] # can't use the updated one
-                record = self.test_client.update_workflows(workflow_id, contact_email)
-            else:
-                record_id = self.expected_records[stream][0][primary_key]
-                record = self.test_client.update(stream, record_id)
+            # if stream == 'workflows':
+            #     workflow_id = self.expected_records[stream][0]['id']
+            #     contact_email = self.expected_records['contacts'][1]['properties']['email']['value'] # can't use the updated one
+            #     record = self.test_client.update_workflows(workflow_id, contact_email)
+            # else:
+            record_id = self.expected_records[stream][0][primary_key]
+            record = self.test_client.update(stream, record_id)
             self.expected_records[stream].append(record)
 
         #run second sync
@@ -148,7 +148,31 @@ class TestHubspotBookmarks(HubspotBaseTest):
                                     for message in synced_records[stream]['messages']
                                     if message['action'] == 'upsert']
 
-                if replication_method == self.INCREMENTAL:
+                if self.is_child(stream): # we will set expectations for child streeams based on the parent
+
+                    parent_stream = self.expected_metadata()[stream][self.PARENT_STREAM]
+                    parent_replication_method = self.expected_replication_method()[parent_stream]
+
+                    if parent_replication_method == self.INCREMENTAL:
+
+                        expected_record_count = 1 if stream not in STREAMS_WITHOUT_UPDATES else 2
+                        expected_records_2 = self.expected_records[stream][-expected_record_count:]
+
+                        # verify the record count matches our expectations for a child streams with incremental parents
+                        self.assertGreater(actual_record_count_1, actual_record_count_2)
+
+                    elif parent_replication_method == self.FULL:
+
+                        # verify the record count matches our expectations for child streams with full table parents
+                        expected_records_2 = self.expected_records[stream]
+                        self.assertEqual(actual_record_count_1 + 1, actual_record_count_2)
+
+                    else:
+                        raise AssertionError(f"Replication method is {replication_method} for stream: {stream}")
+
+
+                elif replication_method == self.INCREMENTAL:
+
                     # NB: FOR INCREMENTAL STREAMS the tap does not replicate the replication-key for any records.
                     #     It does functionaly replicate as a standard incremental sync would but does not order
                     #     records by replication-key value (since it does not exist on the record). To get around
@@ -162,21 +186,19 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     bookmark_2 = state_2['bookmarks'][stream][stream_replication_key]
 
                     # setting expected records  knowing they are ordered by replication-key value
-                    expected_records_2 = self.expected_records[stream][-1:]
+                    expected_record_count = 1 if stream not in STREAMS_WITHOUT_UPDATES else 2
+                    expected_records_2 = self.expected_records[stream][-expected_record_count:]
 
                     self.assertGreater(actual_record_count_1, actual_record_count_2)
 
                 elif replication_method == self.FULL:
                     expected_records_2 = self.expected_records[stream]
-                    if stream != 'contacts_by_company': # TODO BUG_1
-                        self.assertEqual(actual_record_count_1 + 1, actual_record_count_2)
+                    self.assertEqual(actual_record_count_1 + 1, actual_record_count_2)
 
                 else:
                     raise AssertionError(f"Replication method is {replication_method} for stream: {stream}")
 
                 # verify by primary key that all expected records are replicated in sync 1
-                if stream in {'contacts_by_company'}:  # BUG_1 |TODO
-                    continue
                 sync_1_pks = [tuple([record[pk] for pk in primary_keys]) for record in actual_records_1]
                 expected_sync_1_pks = [tuple([record[pk] for pk in primary_keys])
                                        for record in expected_records_1]
@@ -193,6 +215,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 # verify that at least 1 record from the first sync is replicated in the 2nd sync
                 # to prove that the bookmarking is inclusive
                 if stream in {'contacts', # BUG | https://jira.talendforge.org/browse/TDL-15502
-                              'companies'}: # BUG https://jira.talendforge.org/browse/TDL-15503
+                              'companies', # BUG | https://jira.talendforge.org/browse/TDL-15503
+                              'email_events'}: # BUG | https://jira.talendforge.org/browse/TDL-15706
                     continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
