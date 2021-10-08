@@ -102,7 +102,7 @@ class TestClient():
         """Perfroma a PATCH using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
-        response = requests.put(url, json=data, params=params, headers=headers)
+        response = requests.patch(url, json=data, params=params, headers=headers)
         print(f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
             print(response.text)
@@ -1120,7 +1120,10 @@ class TestClient():
                 }
                 # generate a record
                 response = self.put(url, data)
-                #time.sleep(10)  # TODO This is not a good implementation, but it gives us both email and subs...
+
+                # TODO Cleanup this method once BUG_TDL-14938 is addressed
+                # The intention is for this method to return both of the objects that it creates with this put
+
                 email_event = self.get_email_events(recipient=recipient)
                 #subscriptions = self.get_subscription_changes()
                 # if len(email_event) > 1 or len(subscription_change) > 1:

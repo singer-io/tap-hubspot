@@ -97,7 +97,7 @@ class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
         return STATIC_DATA_STREAMS
 
     def name(self):
-        return "tt_hubspot_automatic_dynamic"
+        return "tt_hubspot_automatic_static"
 
     def get_properties(self):
         return {
