@@ -23,7 +23,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
      - Verify the bookmark is the max value sent to the target for the a given replication key.
      - Verify 2nd sync respects the bookmark.
     """
-    BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
     def name(self):
         return "tt_hubspot_bookmarks"
@@ -108,14 +107,9 @@ class TestHubspotBookmarks(HubspotBaseTest):
             self.expected_records['contacts_by_company'] += record
 
 
-        # Update 1 record from the test seutp for each stream
-        for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
+        # Update 1 record from the test seutp for each stream that has an update endpoint
+        for stream in create_streams - STREAMS_WITHOUT_UPDATES:
             primary_key = list(self.expected_primary_keys()[stream])[0]
-            # if stream == 'workflows':
-            #     workflow_id = self.expected_records[stream][0]['id']
-            #     contact_email = self.expected_records['contacts'][1]['properties']['email']['value'] # can't use the updated one
-            #     record = self.test_client.update_workflows(workflow_id, contact_email)
-            # else:
             record_id = self.expected_records[stream][0][primary_key]
             record = self.test_client.update(stream, record_id)
             self.expected_records[stream].append(record)
