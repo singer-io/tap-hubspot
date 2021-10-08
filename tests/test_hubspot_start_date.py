@@ -13,7 +13,7 @@ STATIC_DATA_STREAMS = {'owners', 'campaigns'}
 class TestHubspotStartDate(HubspotBaseTest):
 
     def name(self):
-        return "tt_hubspot_start_dated"
+        return "tt_hubspot_start_date"
 
     def setUp(self):
         """
