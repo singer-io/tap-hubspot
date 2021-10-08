@@ -108,7 +108,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
 
         # Update 1 record from the test seutp for each stream that has an update endpoint
-        for stream in create_streams - STREAMS_WITHOUT_UPDATES:
+        for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
             primary_key = list(self.expected_primary_keys()[stream])[0]
             record_id = self.expected_records[stream][0][primary_key]
             record = self.test_client.update(stream, record_id)
