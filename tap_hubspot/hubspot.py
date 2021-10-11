@@ -441,6 +441,9 @@ class Hubspot:
                 "contacts",
                 "companies",
                 "deal_pipelines",
+                "deal_properties",
+                "contact_properties",
+                "company_properties",
             ]:
                 replication_value = parser.isoparse(
                     self.get_value(record, replication_path)
