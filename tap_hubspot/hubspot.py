@@ -173,8 +173,26 @@ class Hubspot:
             yield from self.get_submissions()
         elif self.tap_stream_id == "contacts_events":
             yield from self.get_contacts_events()
+        elif self.tap_stream_id == "deal_properties":
+            yield from self.get_properties("deals")
+        elif self.tap_stream_id == "contact_properties":
+            yield from self.get_properties("contacts")
+        elif self.tap_stream_id == "company_properties":
+            yield from self.get_properties("companies")
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
+
+    def get_properties(self, object_type: str):
+        path = f"/crm/v3/properties/{object_type}"
+        data_field = "results"
+        replication_path = ["updatedAt"]
+        offset_key = "after"
+        yield from self.get_records(
+            path,
+            replication_path,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
 
     def get_owners(self):
         path = "/crm/v3/owners"
