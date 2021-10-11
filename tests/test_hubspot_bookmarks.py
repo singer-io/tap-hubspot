@@ -30,6 +30,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
+
         expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
 
         return expected_streams.difference({
