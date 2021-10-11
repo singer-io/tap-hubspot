@@ -86,28 +86,28 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
           requires:
-            - run_pylint_and_unittests
+            - ensure_env
       - integration_test:
           name: "Automatic Fields Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
           requires:
-            - run_pylint_and_unittests
+            - ensure_env
       - integration_test:
           name: "Child Streams Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
           requires:
-            - run_pylint_and_unittests
+            - ensure_env
       - integration_test:
           name: "Start Date Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
           requires:
-            - run_pylint_and_unittests
+            - ensure_env
       - integration_test:
           name: "All Fields Test"
           context: circleci-user
@@ -119,12 +119,19 @@ workflows:
             - "Automatic Fields Test"
             - "Discovery Test"
       - integration_test:
+          name: "Bookmarks Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+          requires:
+            - "All Fields Test"
+      - integration_test:
           name: "Pagination Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - "All Fields Test"
+            - "Bookmarks Test"
       - build:
           context: circleci-user
           requires:

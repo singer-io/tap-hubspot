@@ -13,7 +13,7 @@ STATIC_DATA_STREAMS = {'owners', 'campaigns'}
 class TestHubspotStartDate(HubspotBaseTest):
 
     def name(self):
-        return "tap_tester_hubspot_start_date_test"
+        return "tt_hubspot_start_dated"
 
     def setUp(self):
         """
@@ -131,7 +131,7 @@ class TestHubspotStartDate(HubspotBaseTest):
                     self.assertEqual(first_sync_primary_keys, second_sync_primary_keys)
 class TestHubspotStartDateStatic(TestHubspotStartDate):
     def name(self):
-        return "tt_start_date_static_data_test"
+        return "tt_hubspot_start_date_static"
 
     def expected_streams(self):
         """expected streams minus the streams not under test"""

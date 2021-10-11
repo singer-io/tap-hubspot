@@ -1,29 +1,34 @@
 import datetime
+import time
 import requests
 import backoff
 import json
+# from json.decoder import JSONDecodeError
+
 import uuid
 import random
 from  tap_tester import menagerie
 from base import HubspotBaseTest
 
-
+DEBUG = False
 BASE_URL = "https://api.hubapi.com"
 
 
 class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
-
+    BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     ##########################################################################
     ### CORE METHODS
     ##########################################################################
 
     def giveup(exc):
         """Checks a response status code, returns True if unsuccessful unless rate limited."""
+        if exc.response.status_code == 429:
+            return False
+
         return exc.response is not None \
-            and 400 <= exc.response.status_code < 500 \
-            and exc.response.status_code != 429
+            and 400 <= exc.response.status_code < 500
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -48,7 +53,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def post(self, url, data, params=dict(), debug=False):
+    def post(self, url, data=dict(), params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
         headers = dict(self.HEADERS)
@@ -57,10 +62,16 @@ class TestClient():
         print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
             print(response.text)
-        response.raise_for_status()
-        json_response = response.json()
 
+        response.raise_for_status()
+
+        if response.status_code == 204:
+            print(f"TEST CLIENT | WARNING Response is empty")
+            # TODO catch simplejson.scanner.JSONDecodeError
+            return []
+        json_response = response.json()
         return json_response
+
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -69,12 +80,51 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
-    def put(self, url, data, params=dict()):
+    def put(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PUT using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.put(url, json=data, params=params, headers=headers)
         print(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
+
+        response.raise_for_status()
+
+    @backoff.on_exception(backoff.constant,
+                          (requests.exceptions.RequestException,
+                           requests.exceptions.HTTPError),
+                          max_tries=5,
+                          jitter=None,
+                          giveup=giveup,
+                          interval=10)
+    def patch(self, url, data, params=dict(), debug=DEBUG):
+        """Perfroma a PATCH using the standard requests method and log the action"""
+        headers = dict(self.HEADERS)
+        headers['content-type'] = "application/json"
+        response = requests.patch(url, json=data, params=params, headers=headers)
+        print(f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
+
+        response.raise_for_status()
+
+    @backoff.on_exception(backoff.constant,
+                          (requests.exceptions.RequestException,
+                           requests.exceptions.HTTPError),
+                          max_tries=5,
+                          jitter=None,
+                          giveup=giveup,
+                          interval=10)
+    def delete(self, url, params=dict(), debug=DEBUG):
+        """Perfroma a POST using the standard requests method and log the action"""
+
+        headers = dict(self.HEADERS)
+        headers['content-type'] = "application/json"
+        response = requests.delete(url, params=params, headers=headers)
+        print(f"TEST CLIENT | DELETE {url} params={params}  STATUS: {response.status_code}")
+        if debug:
+            print(response.text)
         response.raise_for_status()
 
     def denest_properties(self, stream, records):
@@ -150,7 +200,12 @@ class TestClient():
 
         return records
 
-    def get_companies(self, since):
+    def _get_company_by_id(self, company_id):
+        url = f"{BASE_URL}/companies/v2/companies/{company_id}"
+        response = self.get(url)
+        return response
+
+    def get_companies(self, since=''):
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
@@ -169,7 +224,7 @@ class TestClient():
         while has_more:
 
             response = self.get(url, params=params)
-            # TODO refactor this? so that we get start date for free?
+
             for company in response['companies']:
                 if company['properties']['hs_lastmodifieddate']:
                     company_timestamp = datetime.datetime.fromtimestamp(
@@ -188,19 +243,25 @@ class TestClient():
 
         # get the details of each company
         for company in companies:
-            url = f"{BASE_URL}/companies/v2/companies/{company['companyId']}"
-            response = self.get(url)
+            response = self._get_company_by_id(company['companyId'])
             records.append(response)
 
         records = self.denest_properties('companies', records)
 
         return records
 
-    def get_contact_lists(self, since):
+    def get_contact_lists(self, since, list_id=''):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
         url = f"{BASE_URL}/contacts/v1/lists"
+
+        if list_id:
+            url += f"/{list_id}"
+            response = self.get(url)
+
+            return response
+
         if not since:
             since = self.start_date_strf
 
@@ -211,6 +272,7 @@ class TestClient():
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
+
         # paginating through all the contact_lists
         has_more = True
         while has_more:
@@ -224,6 +286,35 @@ class TestClient():
             params['offset'] = response['offset']
 
         return records
+
+    def _get_contacts_by_pks(self, pks):
+        """
+        Get a specific contact by using the primary key value.
+
+        :params pks: vids
+        :return: the contacts record
+        """
+        url_2 = f"{BASE_URL}/contacts/v1/contact/vids/batch/"
+        params_2 = {
+            'showListMemberships': True,
+            'formSubmissionMode': "all",
+        }
+        records = []
+        # get the detailed contacts records by vids
+        params_2['vid'] = pks
+        response_2 = self.get(url_2, params=params_2)
+        for vid, record in response_2.items():
+            ts_ms = int(record['properties']['lastmodifieddate']['value'])/1000
+            converted_ts = self.BaseTest.datetime_from_timestamp(
+                ts_ms, self.BOOKMARK_DATE_FORMAT
+            )
+            record['versionTimestamp'] = converted_ts
+
+            records.append(record)
+
+        records = self.denest_properties('contacts', records)
+
+        return records[0]
 
     def get_contacts(self):
         """
@@ -250,7 +341,6 @@ class TestClient():
             response_1 = self.get(url_1, params=params_1)
             vids = [record['vid'] for record in response_1['contacts']
                     if record['versionTimestamp'] >= self.start_date]
-
             has_more = response_1['has-more']
             params_1['vidOffset'] = response_1['vid-offset']
 
@@ -306,6 +396,13 @@ class TestClient():
 
         records = self.denest_properties('deal_pipelines', records)
         return records
+
+    def _get_deals_by_pk(self, deal_id):
+        url = f"{BASE_URL}/deals/v1/deal/{deal_id}"
+        params = {'includeAllProperties': True}
+        response = self.get(url, params=params)
+
+        return response
 
     def get_deals(self):
         """
@@ -374,19 +471,22 @@ class TestClient():
         records = self.denest_properties('deals', records)
         return records
 
-    def get_email_events(self):
+    def get_email_events(self, recipient=''):
         """
         Get all email_events by paginating using 'hasMore' and 'offset'.
         """
         url = f"{BASE_URL}/email/public/v1/events"
         replication_key = list(self.replication_keys['email_events'])[0]
         params = dict()
+        if recipient:
+            params['recipient'] = recipient
         records = []
 
         has_more = True
         while has_more:
 
             response = self.get(url, params=params)
+
             records.extend([record for record in response['events']
                             if record['created'] >= self.start_date])
 
@@ -394,6 +494,20 @@ class TestClient():
             params['offset'] = response['offset']
 
         return records
+
+    def _get_engagements_by_pk(self, engagement_id):
+        """
+        Get a specific engagement reocrd using it's id
+        """
+        url = f"{BASE_URL}/engagements/v1/engagements/{engagement_id}"
+
+        response = self.get(url)
+
+        # added by tap
+        response['engagement_id'] = response['engagement']['id']
+        response['lastUpdated'] = response['engagement']['lastUpdated']
+
+        return response
 
     def get_engagements(self):
         """
@@ -420,6 +534,16 @@ class TestClient():
 
         return records
 
+    def _get_forms_by_pk(self, form_id):
+        """
+        Get a specific forms record using the 'form_guid'.
+        :params form_id: the 'form_guid' value
+        """
+        url = f"{BASE_URL}/forms/v2/forms/{form_id}"
+        response = self.get(url)
+
+        return response
+
     def get_forms(self):
         """
         Get all forms.
@@ -433,6 +557,7 @@ class TestClient():
                         if record[replication_key] >= self.start_date])
 
         return records
+
     def get_owners(self):
         """
         Get all owners.
@@ -469,18 +594,26 @@ class TestClient():
 
         return records
 
+    def _get_workflows_by_pk(self, workflow_id=''):
+        """Get a specific workflow by pk value"""
+        url = f"{BASE_URL}/automation/v3/workflows/{workflow_id}"
+
+        response = self.get(url)
+
+        return response
+
     def get_workflows(self):
         """
         Get all workflows.
         """
-        url = f"{BASE_URL}/automation/v3/workflows"
+        url = f"{BASE_URL}/automation/v3/workflows/"
         replication_key = list(self.replication_keys['workflows'])[0]
         records = []
 
         response = self.get(url)
+
         records.extend([record for record in response['workflows']
                         if record[replication_key] >= self.start_date])
-
         return records
 
     ##########################################################################
@@ -573,6 +706,17 @@ class TestClient():
         # generate a contacts record
         response = self.post(url, data)
         records = [response]
+
+        get_url = f"{BASE_URL}/contacts/v1/contact/vid/{response['vid']}/profile"
+        params = {'includeVersion': True}
+        get_resp = self.get(get_url, params=params)
+
+        converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
+            get_resp['versionTimestamp']/1000, self.BOOKMARK_DATE_FORMAT
+        )
+        get_resp['versionTimestamp'] = converted_versionTimestamp
+        records = self.denest_properties('contacts', [get_resp])
+
         return records
 
     def create_campaigns(self):
@@ -583,11 +727,11 @@ class TestClient():
 
         # url = f"{BASE_URL}"
         # data = {}
-        raise NotImplementedError("TODO SPIKE needed on create campaign since there was no endpoint")
         # generate a record
         # response = self.post(url, data)
         # records = [response]
         # return records
+        raise NotImplementedError("TODO SPIKE needed on create campaign since there was no endpoint")
 
     def create_companies(self):
         """
@@ -631,16 +775,25 @@ class TestClient():
         records = [response]
         return records
 
-    def create_contacts_by_company(self, company_ids, contact_records=[]):
+    def create_contacts_by_company(self, company_ids=[], contact_records=[]):
         """
-        https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
+        TODO https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
         """
         url = f"{BASE_URL}/crm-associations/v1/associations"
+        if not company_ids:
+            company_ids = [company['companyId'] for company in self.get_companies()]
+
         # only use contacts-company combinations that do not exist yet
         if not contact_records:
             contact_records = self.get_contacts()
-        contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
+
+        # TODO cleanup this method
+        if not (company_ids and contact_records):
+            contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
+        else:
+            contacts_by_company_records = []
+
         for company_id in set(company_ids):
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
@@ -654,37 +807,40 @@ class TestClient():
                     }
                     # generate a record
                     self.put(url, data)
-                    records = [{'company-id': company_id, 'contact-id': contact_id}]
-                    return records
+                    record = [{'company-id': company_id, 'contact-id': contact_id}]
+                    return record
 
-        raise NotImplementedError("All contacts already have an associated company")
+        raise NotImplementedError(
+            "All contacts may already have an associated company. "
+            f"Method was passed {len(company_ids)} companies [:param company_ids:] to check against."
+        )
+
 
     def create_deal_pipelines(self):
         """
         HubSpot API
         https://legacydocs.hubspot.com/docs/methods/pipelines/create_new_pipeline
         """
-        record_uuid = str(uuid.uuid4()).replace('-', '')
-        record_uuid2 = str(uuid.uuid4()).replace('-', '')
-
+        timestamp1 = str(datetime.datetime.now().timestamp()).replace(".", "")
+        timestamp2 = str(datetime.datetime.now().timestamp()).replace(".", "")
         url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals"
         data = {
-            "pipelineId": record_uuid,
-            "label": f"API test ticket pipeline {record_uuid}",
+            "pipelineId": timestamp1,
+            "label": f"API test ticket pipeline {timestamp1}",
             "displayOrder": 2,
             "active": True,
             "stages": [
                 {
-                    "stageId": f"example_stage {record_uuid}",
-                    "label": f"Example stage{record_uuid}",
+                    "stageId": f"example_stage {timestamp1}",
+                    "label": f"Example stage{timestamp1}",
                     "displayOrder": 1,
                     "metadata": {
                         "probability": 0.5
                     }
                 },
                 {
-                    "stageId": f"another_example_stage{record_uuid2}",
-                    "label": f"Another example stage{record_uuid2}",
+                    "stageId": f"another_example_stage{timestamp2}",
+                    "label": f"Another example stage{timestamp2}",
                     "displayOrder": 2,
                     "metadata": {
                         "probability": 1.0
@@ -794,6 +950,8 @@ class TestClient():
 
         # generate a record
         response = self.post(url, data)
+        response['engagement_id'] = response['engagement']['id']
+
         records = [response]
         return records
 
@@ -923,30 +1081,32 @@ class TestClient():
     def create_owners(self):
         """
         HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
-        TODO - use selenium
+        TODO - use selenium?
         """
         raise NotImplementedError("Only able to create owners from web app")
 
     def create_subscription_changes(self, subscriptions=[] , times=1):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
-        This will update email_events as well.
-        TODO For updating sub_changes, utilize sub_id as an arg and make a passthrough method
+        NOTE: This will update email_events as well.
+
+        TODO Consider updating sub_changes, utilize sub_id as an arg and make a passthrough method
         """
         # by default, a new subscription change will be created from a previous subscription change from one week ago as defined in the get
         if subscriptions == []:
             subscriptions = self.get_subscription_changes()
         subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
-
         count = 0
-        records = []
+        email_records = []
+        subscription_records = []
         print(f"creating {times} records")
 
         for item in subscription_id_list:
             if count < times:
                 #if item[0]
                 record_uuid = str(uuid.uuid4()).replace('-', '')
-                url = f"{BASE_URL}/email/public/v1/subscriptions/{{}}".format(record_uuid+"@stitchdata.com")
+                recipient = record_uuid + "@stitchdata.com"
+                url = f"{BASE_URL}/email/public/v1/subscriptions/{recipient}"
                 data = {
                     "subscriptionStatuses": [
                         {
@@ -960,9 +1120,22 @@ class TestClient():
                 }
                 # generate a record
                 response = self.put(url, data)
-                records.append([response])
+
+                # TODO Cleanup this method once BUG_TDL-14938 is addressed
+                # The intention is for this method to return both of the objects that it creates with this put
+
+                email_event = self.get_email_events(recipient=recipient)
+                #subscriptions = self.get_subscription_changes()
+                # if len(email_event) > 1 or len(subscription_change) > 1:
+                #     raise RuntimeError(
+                #         "Expected this change to generate 1 email_event and 1 subscription_change only. "
+                #         "Generate {len(email_event)} email_events and {len(subscription_changes)} subscription_changes."
+                #     )
+                email_records.extend(email_event)
+                #subscription_records.append(subscription_change)
                 count += 1
-        return records
+
+        return email_records # , subscription_records
 
     def create_workflows(self):
         """
@@ -975,6 +1148,7 @@ class TestClient():
             "name": "Test Workflow",
             "type": "DRIP_DELAY",
             "onlyEnrollsManually": True,
+            "enabled": True,
             "actions": [
                 {
                     "type": "DELAY",
@@ -1006,8 +1180,277 @@ class TestClient():
     ### Updates
     ##########################################################################
 
+    def update(self, stream, record_id):
+        if stream == 'companies':
+            return self.update_companies(record_id)
+        elif stream == 'contacts':
+            return self.update_contacts(record_id)
+        elif stream == 'contact_lists':
+            return self.update_contact_lists(record_id)
+        elif stream == 'deal_pipelines':
+            return self.update_deal_pipelines(record_id)
+        elif stream == 'deals':
+            return self.update_deals(record_id)
+        elif stream == 'forms':
+            return self.update_forms(record_id)
+        elif stream == 'engagements':
+            return self.update_engagements(record_id)
+        else:
+            raise NotImplementedError(f"Test client does not have an update method for {stream}")
+
+    def update_workflows(self, workflow_id, contact_email):
+        """
+        Update a workflow by enrolling a contact in the workflow.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/workflows/add_contact
+
+        :param workflow_id: id of the workflow object to update
+        :param contact_email: email of the contact to enroll in the workflow
+
+        :return:
+        """
+        # url = f"{BASE_URL}/automation/v2/workflows/{workflow_id}/enrollments/contacts/{contact_email}"
+        # self.post(url)
+        # record = self._get_workflows_by_pk(workflow_id)
+
+        # return record
+
+        # NB | Attemtped to enroll a contact but this did not change anything on the record. Enrollment is handled by
+        #      settings which are fields on a workflows record. The actual contacts' enrollment is not part of this record.
+
+        raise NotImplementedError("TODO SPIKE needed on updating workflows since there was no endpoint.")
+
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)
+
+    def update_campaigns(self):
+        """
+        Couldn't find endpoint...
+        """
+        raise NotImplementedError("TODO SPIKE needed on updating campaigns since there was no endpoint.")
+
+    def update_companies(self, company_id):
+        """
+        Update a company by changing it's description
+        :param company_id: the primary key value of the company to update
+        :return: the updated record using the _get_company_by_id
+
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/companies/update_company
+        """
+        url = f"{BASE_URL}/companies/v2/companies/{company_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        data = {
+            "properties": [
+                {
+                    "name": "description",
+                    "value": f"An updated description {record_uuid}"
+                }
+            ]
+        }
+        self.put(url, data)
+
+        record = self._get_company_by_id(company_id)
+
+        return record
+
+    def update_contacts(self, vid):
+        """
+        Update a single contact record with a new email.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/update_contact
+
+        :param vid: the primary key value of the record to update
+        :return: the updated record using the get_contracts_by_pks method
+        """
+        url = f"{BASE_URL}/contacts/v1/contact/vid/{vid}/profile"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        data = {
+            "properties": [
+                {
+                    "property": "email",
+                    "value": f"{record_uuid}@stitchdata.com"
+                },
+                {
+                    "property": "firstname",
+                    "value": "Updated"
+                },
+                {
+                    "property": "lastname",
+                    "value": "Record"
+                },
+                {
+                    "property": "lifecyclestage",
+                    "value": "customer"
+                }
+            ]
+        }
+        _ = self.post(url, data=data)
+
+        record = self._get_contacts_by_pks(pks=[vid])
+
+        return record
+
+    def update_contact_lists(self, list_id):
+        """
+        Update a single contact list.
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/lists/update_list
+
+        :param list_id: the primary key value of the record to update
+        :return: the updated record using the get_contracts_by_pks method
+        """
+        url = f"{BASE_URL}/contacts/v1/lists/{list_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        data = {"name": f"Updated {record_uuid}"}
+
+        _ = self.post(url, data=data)
+
+        record = self.get_contact_lists(since='', list_id=list_id)
+
+        return record
+
+    def update_deal_pipelines(self, pipeline_id):
+        """
+        Update a deal_pipeline record by changing it's label.
+        :param:
+        :return:
+        """
+        url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{pipeline_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "label": f"Updated {record_uuid}",
+            "displayOrder": 4,
+            "active": True,
+            "stages": [
+                {
+                    "stageId": record_uuid,
+                    "label": record_uuid,
+                    "displayOrder": 1,
+                    "metadata": {
+                        "probability": 0.5
+                    }
+                },
+            ]
+        }
+
+        _ = self.put(url, data=data)
+
+        deal_pipelines = self.get_deal_pipelines()
+        record = [pipeline for pipeline in deal_pipelines
+                  if pipeline['pipelineId'] == pipeline_id][0]
+
+        return record
+
+    def update_deals(self, deal_id):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/deals/update_deal
+
+        :param deal_id: the pk value of the deal record to update
+        :return: the updated deal record using a PUT and the results from a GET
+        """
+        url = f"{BASE_URL}/deals/v1/deal/{deal_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "properties": [
+                {
+                    "value": f"Updated {record_uuid}",
+                    "name": "dealname"
+                },
+            ]
+        }
+
+        # generate a record
+        _ = self.put(url, data)
+
+        response = self._get_deals_by_pk(deal_id)
+
+        return response
+
+    def update_forms(self, form_id):
+        """
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/forms/v2/update_form
+
+        :params form_id: the pk value of the form record to update
+        :return: the updated form record using the GET endpoint
+        """
+        url = f"{BASE_URL}/forms/v2/forms/{form_id}"
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+
+        data = {
+            "name": f"Updated {record_uuid}"
+        }
+        _ = self.put(url, data=data)
+
+        response = self._get_forms_by_pk(form_id)
+
+        return response
+
+    def update_owners(self):
+        """
+        HubSpot API The Owners API is read-only. Owners can only be updated in HubSpot.
+        TODO - use selenium?
+        """
+        raise NotImplementedError("Only able to update owners from web app")
+
+    def update_campaigns(self):
+        """
+        HubSpot API The Campaigns API is read-only. Campaigns can only be updated in HubSpot.
+        TODO - use selenium?
+        """
+        raise NotImplementedError("Only able to update campaigns from web app")
+
+    def update_engagements(self, engagement_id):
+        """
+        Hubspot API https://legacydocs.hubspot.com/docs/methods/engagements/update_engagement-patch
+        :params engagement_id: the pk value of the engagment record to update
+        :return:
+        """
+        url = f"{BASE_URL}/engagements/v1/engagements/{engagement_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "metadata": {
+                "body": f"Updated {record_uuid}"
+            }
+        }
+
+        self.patch(url, data)
+
+        record = self._get_engagements_by_pk(engagement_id)
+
+        return record
+
+    ##########################################################################
+    ### Deletes
+    ##########################################################################
+
+    def delete_deal_pipelines(self, count=10):
+        """
+        Delete older records based on timestamp primary key
+        https://legacydocs.hubspot.com/docs/methods/pipelines/delete_pipeline
+        """
+        records = self.get_deal_pipelines()
+        record_ids_to_delete = [record['pipelineId'] for record in records]
+        if len(record_ids_to_delete) == 1 or \
+           len(record_ids_to_delete) <= count:
+            raise RuntimeError(
+                "delete count is greater or equal to the number of existing records for deal_pipelines, "
+                "need to have at least one record remaining"
+            )
+        for record_id in record_ids_to_delete:
+            if record_id == 'default' or len(record_id) > 16: # not a timestamp, not made by this client
+                continue # skip
+            # yesterday = datetime.datetime.now() + datetime.timedelta(days=-1)
+            # record_created = datetime.datetime.fromtimestamp(int(record_id[:10]))
+            # if yesterday > record_created:
+            url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
+            self.delete(url)
+            count -= 1
+
+            if count == 0:
+                return
 
     ##########################################################################
     ### OAUTH
@@ -1048,3 +1491,10 @@ class TestClient():
         self.acquire_access_token_from_refresh_token()
 
         self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
+        stream_limitations = {'deal_pipelines': [100, len(self.get_deal_pipelines())]}
+        for stream, limits in stream_limitations.items():
+            max_record_count, pipeline_count = limits
+            if max_record_count - pipeline_count < 10:
+                delete_count = 50
+                self.delete_deal_pipelines(delete_count)
+                print(f"TEST CLIENT | {delete_count} records deleted from {stream}")

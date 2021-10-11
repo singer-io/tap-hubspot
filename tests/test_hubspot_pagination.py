@@ -90,7 +90,7 @@ class TestHubspotPagination(HubspotBaseTest):
             if limit
         }
         streams_to_test = streams_with_page_limits.difference({
-            'email_changes',
+            'email_events',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 
