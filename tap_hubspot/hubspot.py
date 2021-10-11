@@ -427,12 +427,14 @@ class Hubspot:
                 replication_value = parser.isoparse(
                     self.get_value(record, replication_path)
                 )
-                self.store_ids_submissions(record)
 
             else:
                 replication_value = self.milliseconds_to_datetime(
                     self.get_value(record, replication_path)
                 )
+            if self.tap_stream_id == "contacts":
+                self.store_ids_submissions(record)
+
             yield record, replication_value
 
     def get_value(self, obj: dict, path_to_replication_key=None, default=None):
