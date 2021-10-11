@@ -60,9 +60,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 calculated_bookmark_value = self.timedelta_formatted(
                     state_1['bookmarks']['owners']['updatedAt'], days=-1, str_format=self.BASIC_DATE_FORMAT
                 )
-        # new_state = {'bookmarks': {'campaigns': {'offset': {}},
-        #                       'owners': {'updatedAt': calculated_bookmark_value}},
-        #              'currently_syncing': None}
+
         menagerie.set_state(conn_id, new_state)
 
         # run second sync

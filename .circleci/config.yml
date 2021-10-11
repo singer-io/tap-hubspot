@@ -119,10 +119,17 @@ workflows:
             - "Automatic Fields Test"
             - "Discovery Test"
       - integration_test:
-          name: "Bookmarks Test"
+          name: "Bookmarks Test CRUD"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+          requires:
+            - "All Fields Test"
+      - integration_test:
+          name: "Bookmarks Test Static Data"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
           requires:
             - "All Fields Test"
       - integration_test:
@@ -131,7 +138,8 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - "Bookmarks Test"
+            - "Bookmarks Test CRUD"
+            - "Bookmarks Test Static Data"
       - build:
           context: circleci-user
           requires:
