@@ -445,9 +445,10 @@ class Hubspot:
                 "contact_properties",
                 "company_properties",
             ]:
-                replication_value = parser.isoparse(
-                    self.get_value(record, replication_path)
-                )
+
+                replication_value = self.get_value(record, replication_path)
+                if replication_value:
+                    replication_value = parser.isoparse(replication_value)
 
             else:
                 replication_value = self.milliseconds_to_datetime(
