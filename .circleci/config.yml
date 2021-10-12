@@ -133,6 +133,13 @@ workflows:
           requires:
             - "All Fields Test"
       - integration_test:
+          name: "Interrupted State Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
+          requires:
+            - "All Fields Test"
+      - integration_test:
           name: "Pagination Test"
           context: circleci-user
           test_command: |-
@@ -140,6 +147,7 @@ workflows:
           requires:
             - "Bookmarks Test CRUD"
             - "Bookmarks Test Static Data"
+            - "Interrupted State Test"
       - build:
           context: circleci-user
           requires:
