@@ -22,6 +22,9 @@ STREAMS = {
     "submissions": {},
     "email_events": {"bookmark_key": "created"},
     "deals": {"bookmark_key": "updatedAt"},
+    "deal_properties": {"bookmark_key": "updatedAt"},
+    "contact_properties": {"bookmark_key": "updatedAt"},
+    "company_properties": {"bookmark_key": "updatedAt"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
