@@ -1439,8 +1439,7 @@ class TestClient():
         """
         if not records:
             records = self.get_contact_lists()
-        import ipdb; ipdb.set_trace()
-        1+1
+
         record_ids_to_delete = [record['listId'] for record in records]
         if len(record_ids_to_delete) == 1 or \
            len(record_ids_to_delete) <= count:
