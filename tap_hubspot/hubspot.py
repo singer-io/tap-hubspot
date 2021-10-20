@@ -128,6 +128,9 @@ MANDATORY_PROPERTIES = {
         "sql_in_date",
         "quote_sent_timestamp",
         "qualified_opportunity",
+        "new_logo_date",  # essensys
+        "contribution_channel",  # essensys
+        "firststagedate_min_",  # essensys
     ],
 }
 
