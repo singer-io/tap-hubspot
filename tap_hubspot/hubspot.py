@@ -335,7 +335,11 @@ class Hubspot:
             except:
                 continue
             yield from self.get_records(
-                path, params=params, data_field=data_field, offset_key=offset_key
+                path,
+                params=params,
+                data_field=data_field,
+                offset_key=offset_key,
+                guid=guid,
             )
 
     def is_enterprise(self):
@@ -434,7 +438,13 @@ class Hubspot:
             self.event_state["contacts_events_ids"].sync()
 
     def get_records(
-        self, path, replication_path=None, params=None, data_field=None, offset_key=None
+        self,
+        path,
+        replication_path=None,
+        params=None,
+        data_field=None,
+        offset_key=None,
+        guid=None,
     ):
         for record in self.paginate(
             path, params=params, data_field=data_field, offset_key=offset_key
@@ -459,6 +469,8 @@ class Hubspot:
                 )
             if self.tap_stream_id == "contacts":
                 self.store_ids_submissions(record)
+            if self.tap_stream_id == "submissions":
+                record["form_id"] = guid
 
             yield record, replication_value
 
