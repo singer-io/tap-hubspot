@@ -1447,14 +1447,10 @@ class TestClient():
                 "delete count is greater or equal to the number of existing records for contact_lists, "
                 "need to have at least one record remaining"
             )
-        for record_id in record_ids_to_delete:
+        for record_id in record_ids_to_delete[:count]:
             url = f"{BASE_URL}/contacts/v1/lists/{record_id}"
-
+            
             self.delete(url)
-            count -= 1
-
-            if count == 0:
-                return
 
 
     def delete_deal_pipelines(self, records=[], count=10):
