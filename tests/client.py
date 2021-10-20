@@ -262,24 +262,30 @@ class TestClient():
 
             return response
 
-        params = {}
-        if since:
+
+        if since == 'all':
+            params = {}
+        else:
+            if not since:
+                since = self.start_date_strf
+
             if not isinstance(since, datetime.datetime):
                 since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
+
             since = str(since.timestamp() * 1000).split(".")[0]
             params = {'since': since}
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
 
-        # paginating through all the contact_lists
+        # paginating through allxo the contact_lists
         has_more = True
         while has_more:
 
             response = self.get(url, params=params)
             for record in response['lists']:
 
-                if not since or int(since) <= record[replication_key]:
+                if since == 'all'  or int(since) <= record[replication_key]:
                     records.append(record)
 
             has_more = response['has-more']
@@ -1519,7 +1525,7 @@ class TestClient():
         self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
 
 
-        contact_lists_records = self.get_contact_lists()
+        contact_lists_records = self.get_contact_lists(since='all')
         deal_pipelines_records = self.get_deal_pipelines()
         stream_limitations = {'deal_pipelines': [100, deal_pipelines_records],
                               'contact_lists': [1500, contact_lists_records]}
