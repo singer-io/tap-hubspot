@@ -1464,6 +1464,7 @@ class TestClient():
         """
         if not records:
             records = self.get_deal_pipelines()
+
         record_ids_to_delete = [record['pipelineId'] for record in records]
         if len(record_ids_to_delete) == 1 or \
            len(record_ids_to_delete) <= count:
@@ -1522,8 +1523,8 @@ class TestClient():
         self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
 
 
-        deal_pipelines_records = self.get_contact_lists()
-        contact_lists_records = self.get_deal_pipelines()
+        contact_lists_records = self.get_contact_lists()
+        deal_pipelines_records = self.get_deal_pipelines()
         stream_limitations = {'deal_pipelines': [100, deal_pipelines_records],
                               'contact_lists': [1500, contact_lists_records]}
 
