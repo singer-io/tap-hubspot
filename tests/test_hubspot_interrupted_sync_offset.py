@@ -10,37 +10,38 @@ from base import HubspotBaseTest
 from client import TestClient
 
 
-class TestHubspotInterruptedSyncOffset1(HubspotBaseTest):
+class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
 
     def name(self):
-        return "tt_hubspot_sync_interrupt_offset_1"
+        return "tt_hubspot_interrupt_contact_lists"
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        covered_elsewhere = {  # covered in TestHubspotInterruptedSync1
-            'companies',
-            'engagements'
+        untested = {
+            # Streams tested elsewhere
+            'companies', # covered in TestHubspotInterruptedSync1
+            'engagements', # covered in TestHubspotInterruptedSync1
+            # Feature Request | TDL-16095: [tap-hubspot] All incremental
+            #                   streams should implement the interruptible sync feature
+            'forms', # TDL-16095
+            'owners', # TDL-16095
+            'workflows', # TDL-16095
+            # Streams that do not apply
+            'deal_pipelines', # interruptible does not apply, child of deals
+            'campaigns', # unable to manually find a partial state with our test data
+            'email_events', # unable to manually find a partial state with our test data
+            'contacts_by_company', # interruptible does not apply, child of 'companies'
+            'subscription_changes', # BUG_TDL-14938
         }
-        streams_with_bugs = {
-            'subscription_changes'
-        }
-        todo_streams = {'contacts_by_company'}
 
-        return self.expected_streams() - covered_elsewhere - streams_with_bugs - todo_streams
+        return self.expected_streams() - untested
 
-    """
-    'contacts': {'offset': {'vidOffset': 3502}
-    'deals': {'hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
-    'offset': {'offset': 3442973342}}
-    """
     def stream_to_interrupt(self):
-        #return 'contact_lists'
-        return 'contacts'
+        return 'contact_lists'
 
     def state_to_inject(self):
-        # return {'offset': {'offset': 250}}
-        return
+        return {'offset': {'offset': 250}}
 
     def get_properties(self):
         return {
@@ -53,6 +54,11 @@ class TestHubspotInterruptedSyncOffset1(HubspotBaseTest):
         self.maxDiff = None  # see all output in failure
 
     def test_run(self):
+
+        # BUG TDL-16094 [tap-hubspot] `contacts` streams fails to recover from sync interruption
+        if self.stream_to_interrupt() == 'contacts':
+            self.skipTest("Skipping contacts TEST! See BUG[TDL-16094]")
+
 
         expected_streams = self.streams_to_test()
 
@@ -87,52 +93,43 @@ class TestHubspotInterruptedSyncOffset1(HubspotBaseTest):
         synced_records_2 = runner.get_records_from_target_output()
         state_2 = menagerie.get_state(conn_id)
 
-        # # Test the interrupted stream
-        # stream = self.stream_to_interrupt()
-        # primary_keys = self.expected_primary_keys()[stream]
-
-        # actual_record_count_2 = second_record_count_by_stream[stream]
-        # actual_records_2 = [message['data']
-        #                     for message in synced_records_2[stream]['messages']
-        #                     if message['action'] == 'upsert']
-
-        # actual_record_count_1 = first_record_count_by_stream[stream]
-        # actual_records_1 = [message['data']
-        #                     for message in synced_records[stream]['messages']
-        #                     if message['action'] == 'upsert']
-
-        # # verify the record count 
-        # self.assertEqual(actual_record_count_1, actual_record_count_2)
-
-
         # verify the uninterrupted sync and the simulated resuming sync end with the same bookmark values
-        self.assertEqual(state_1, state_2)
-        """
-        {'bookmarks': {'campaigns': {'offset': {}},
-                       'contact_lists': {'offset': {},
-                                         'updatedAt': '2021-10-12T12:30:37.352000Z'},
-                       'contacts': {'offset': {},
-                                    'versionTimestamp': '2021-10-12T12:30:54.819000Z'},
-                       'deals': {'hs_lastmodifieddate': '2021-10-12T12:30:37.916000Z',
-                                 'offset': {}},
-                       'email_events': {'offset': {},
-                                        'startTimestamp': '2021-10-12T00:00:00.000000Z'},
-                       'forms': {'updatedAt': '2021-10-12T12:30:38.501000Z'},
-                       'owners': {'updatedAt': '2021-10-09T00:00:00Z'},
-                       'subscription_changes': {'offset': {},
-                                                'startTimestamp': '2021-10-12T00:00:00.000000Z'},
-                       'workflows': {'updatedAt': '2021-10-12T12:29:26.537000Z'}},
-         'currently_syncing': None}
-        """
-# class TestHubspotInterruptedSyncOffset2(TestHubspotInterruptedSyncOffset1):
-#     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
+        with self.subTest(stream=stream):
+            self.assertEqual(state_1, state_2)
 
-#     def name(self):
-#         return "tt_hubspot_sync_interrupt_offset_2"
 
-#     def stream_to_interrupt(self):
-#         return 'contacts'
+class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
+    """Testing interrupted syncs for streams that implement unique bookmarking logic."""
 
-#     def state_to_inject(self):
-#         return {'offset': {'offset': 250}}
+    def name(self):
+        return "tt_hubspot_interrupt_contacts"
 
+    def get_properties(self):
+        return {
+            'start_date' : '2021-10-01T00:00:00Z'
+        }
+
+
+    def stream_to_interrupt(self):
+        return 'contacts'
+
+    def state_to_inject(self):
+        return {'offset': {'vidOffset': 3502}}
+
+class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetContactLists):
+    """Testing interrupted syncs for streams that implement unique bookmarking logic."""
+
+    def name(self):
+        return "tt_hubspot_interrupt_deals"
+
+    def get_properties(self):
+        return {
+            'start_date' : '2021-10-10T00:00:00Z'
+        }
+
+    def stream_to_interrupt(self):
+        return 'deals'
+
+    def state_to_inject(self):
+        return  {'hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
+                 'offset': {'offset': 3442973342}}
