@@ -250,7 +250,7 @@ class TestClient():
 
         return records
 
-    def get_contact_lists(self, since, list_id=''):
+    def get_contact_lists(self, since='', list_id=''):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
@@ -262,24 +262,30 @@ class TestClient():
 
             return response
 
-        if not since:
-            since = self.start_date_strf
 
-        if not isinstance(since, datetime.datetime):
-            since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
-        since = str(since.timestamp() * 1000).split(".")[0]
-        params = {'since': since}
+        if since == 'all':
+            params = {}
+        else:
+            if not since:
+                since = self.start_date_strf
+
+            if not isinstance(since, datetime.datetime):
+                since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
+
+            since = str(since.timestamp() * 1000).split(".")[0]
+            params = {'since': since}
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
 
-        # paginating through all the contact_lists
+        # paginating through allxo the contact_lists
         has_more = True
         while has_more:
 
             response = self.get(url, params=params)
             for record in response['lists']:
-                if int(since) <= record[replication_key]:
+
+                if since == 'all'  or int(since) <= record[replication_key]:
                     records.append(record)
 
             has_more = response['has-more']
@@ -1425,13 +1431,42 @@ class TestClient():
     ##########################################################################
     ### Deletes
     ##########################################################################
+    def cleanup(self, stream, records, count=10):
+        if stream == 'deal_pipelines':
+            self.delete_deal_pipelines(records, count)
+        elif stream == 'contact_lists':
+            self.delete_contact_lists(records, count)
+        else:
+            raise NotImplementedError(f"No delete method implemented for {stream}.")
 
-    def delete_deal_pipelines(self, count=10):
+    def delete_contact_lists(self, records=[], count=10):
+        """
+        https://legacydocs.hubspot.com/docs/methods/lists/delete_list
+        """
+        if not records:
+            records = self.get_contact_lists()
+
+        record_ids_to_delete = [record['listId'] for record in records]
+        if len(record_ids_to_delete) == 1 or \
+           len(record_ids_to_delete) <= count:
+            raise RuntimeError(
+                "delete count is greater or equal to the number of existing records for contact_lists, "
+                "need to have at least one record remaining"
+            )
+        for record_id in record_ids_to_delete[:count]:
+            url = f"{BASE_URL}/contacts/v1/lists/{record_id}"
+            
+            self.delete(url)
+
+
+    def delete_deal_pipelines(self, records=[], count=10):
         """
         Delete older records based on timestamp primary key
         https://legacydocs.hubspot.com/docs/methods/pipelines/delete_pipeline
         """
-        records = self.get_deal_pipelines()
+        if not records:
+            records = self.get_deal_pipelines()
+
         record_ids_to_delete = [record['pipelineId'] for record in records]
         if len(record_ids_to_delete) == 1 or \
            len(record_ids_to_delete) <= count:
@@ -1442,13 +1477,11 @@ class TestClient():
         for record_id in record_ids_to_delete:
             if record_id == 'default' or len(record_id) > 16: # not a timestamp, not made by this client
                 continue # skip
-            # yesterday = datetime.datetime.now() + datetime.timedelta(days=-1)
-            # record_created = datetime.datetime.fromtimestamp(int(record_id[:10]))
-            # if yesterday > record_created:
+
             url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
             self.delete(url)
-            count -= 1
 
+            count -= 1
             if count == 0:
                 return
 
@@ -1489,12 +1522,18 @@ class TestClient():
         ).timestamp() * 1000
 
         self.acquire_access_token_from_refresh_token()
-
         self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
-        stream_limitations = {'deal_pipelines': [100, len(self.get_deal_pipelines())]}
+
+
+        contact_lists_records = self.get_contact_lists(since='all')
+        deal_pipelines_records = self.get_deal_pipelines()
+        stream_limitations = {'deal_pipelines': [100, deal_pipelines_records],
+                              'contact_lists': [1500, contact_lists_records]}
+
         for stream, limits in stream_limitations.items():
-            max_record_count, pipeline_count = limits
-            if max_record_count - pipeline_count < 10:
-                delete_count = 50
-                self.delete_deal_pipelines(delete_count)
+            max_record_count, records = limits
+            pipeline_count = len(records)
+            if (max_record_count - pipeline_count) / max_record_count <= 0.1: # at/above 90% of record limit
+                delete_count = int(max_record_count / 2)
+                self.cleanup(stream, records, delete_count)
                 print(f"TEST CLIENT | {delete_count} records deleted from {stream}")
