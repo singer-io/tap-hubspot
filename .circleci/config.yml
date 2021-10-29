@@ -138,15 +138,23 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
-            - "All Fields Test"
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
+      - integration_test:
+          name: "Interrupted State with Offset Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
       - integration_test:
           name: "Pagination Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - "Bookmarks Test CRUD"
-            - "Bookmarks Test Static Data"
+            - "Interrupted State with Offset Test"
             - "Interrupted State Test"
       - build:
           context: circleci-user
