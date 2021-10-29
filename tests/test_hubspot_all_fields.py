@@ -28,6 +28,11 @@ KNOWN_EXTRA_FIELDS = {
 }
 
 KNOWN_MISSING_FIELDS = {
+    'contacts':{ # BUG https://jira.talendforge.org/browse/TDL-16016
+        'property_hs_latest_source_data_2',
+        'property_hs_latest_source',
+        'property_hs_latest_source_data_1',
+    },
     'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
         'authorId',
         'teamIds'
