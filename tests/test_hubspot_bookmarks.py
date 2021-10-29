@@ -186,7 +186,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     expected_record_count = 1 if stream not in STREAMS_WITHOUT_UPDATES else 2
                     expected_records_2 = self.expected_records[stream][-expected_record_count:]
 
+                    # verify only the new and updated records are captured  checking record countx
                     self.assertGreater(actual_record_count_1, actual_record_count_2)
+
+                    # verify the state was updated with incremented bookmark
+                    if stream != 'email_events':  # BUG TDL-15706
+                        self.assertGreater(bookmark_2, bookmark_1)
 
                 elif replication_method == self.FULL:
                     expected_records_2 = self.expected_records[stream]
