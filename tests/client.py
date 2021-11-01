@@ -180,6 +180,7 @@ class TestClient():
             return self.get_subscription_changes(since)
         else:
             raise NotImplementedError
+
     def get_campaigns(self):
         """
         Get all campaigns by id, then grab the details of each campaign.
