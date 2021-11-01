@@ -131,6 +131,8 @@ MANDATORY_PROPERTIES = {
         "new_logo_date",  # essensys
         "contribution_channel",  # essensys
         "firststagedate_min_",  # essensys
+        "company__target_market__tiers_",  # capmo_de
+        "company_target_market",  # capmo_de
     ],
 }
 
