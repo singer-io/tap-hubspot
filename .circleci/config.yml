@@ -119,19 +119,43 @@ workflows:
             - "Automatic Fields Test"
             - "Discovery Test"
       - integration_test:
-          name: "Bookmarks Test"
+          name: "Bookmarks Test CRUD"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
           requires:
             - "All Fields Test"
       - integration_test:
+          name: "Bookmarks Test Static Data"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
+          requires:
+            - "All Fields Test"
+      - integration_test:
+          name: "Interrupted State Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
+      - integration_test:
+          name: "Interrupted State with Offset Test"
+          context: circleci-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
+      - integration_test:
           name: "Pagination Test"
           context: circleci-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - "Bookmarks Test"
+            - "Interrupted State with Offset Test"
+            - "Interrupted State Test"
       - build:
           context: circleci-user
           requires:

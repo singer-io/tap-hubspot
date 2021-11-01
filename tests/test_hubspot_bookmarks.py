@@ -11,6 +11,7 @@ from client import TestClient
 
 
 STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
+STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
 
 
 class TestHubspotBookmarks(HubspotBaseTest):
@@ -29,9 +30,10 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        return self.expected_streams().difference({
-            'campaigns',  # no create
-            'owners',  # no create
+
+        expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
+
+        return expected_streams.difference({
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 
@@ -72,7 +74,9 @@ class TestHubspotBookmarks(HubspotBaseTest):
     def test_run(self):
         expected_streams = self.streams_to_test()
 
-        self.create_test_data(expected_streams)
+        # generate 3 records for every stream that has a create endpoint
+        create_streams = expected_streams - STREAMS_WITHOUT_CREATES
+        self.create_test_data(create_streams)
 
         conn_id = connections.ensure_connection(self)
 
@@ -87,7 +91,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 catalog_entry,
                 stream_schema
             )
-
 
         # Run sync 1
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
@@ -183,7 +186,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     expected_record_count = 1 if stream not in STREAMS_WITHOUT_UPDATES else 2
                     expected_records_2 = self.expected_records[stream][-expected_record_count:]
 
+                    # verify only the new and updated records are captured  checking record countx
                     self.assertGreater(actual_record_count_1, actual_record_count_2)
+
+                    # verify the state was updated with incremented bookmark
+                    if stream != 'email_events':  # BUG TDL-15706
+                        self.assertGreater(bookmark_2, bookmark_1)
 
                 elif replication_method == self.FULL:
                     expected_records_2 = self.expected_records[stream]
