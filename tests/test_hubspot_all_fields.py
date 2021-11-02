@@ -125,7 +125,6 @@ class TestHubspotAllFields(HubspotBaseTest):
     def setUp(self):
         self.maxDiff = None  # see all output in failure
 
-        # TODO use the read method
         test_client = TestClient(start_date=self.get_properties()['start_date'])
         self.expected_records = dict()
         streams = self.streams_under_test()
@@ -210,6 +209,9 @@ class TestHubspotAllFields(HubspotBaseTest):
                             continue # skip this expected record if it isn't replicated
                         actual_record = matching_actual_records_by_pk[0]
 
+                        expected_keys = set(expected_record.keys())
+                        actual_keys = set(actual_record.keys())
+
                         # NB: KNOWN_MISSING_FIELDS is a dictionary of streams to aggregated missing fields.
                         #     We will check each expected_record to see which of the known keys is present in expectations
                         #     and then will add them to the known_missing_keys set.
@@ -217,6 +219,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                         for missing_key in KNOWN_MISSING_FIELDS.get(stream, set()):
                             if missing_key in expected_record.keys():
                                 known_missing_keys.add(missing_key)
+                                del expected_record[missing_key]
 
                         # NB : KNOWN_EXTRA_FIELDS is a dictionary of streams to fields that should not
                         #      be replicated but are. See the variable declaration at top of file for linked BUGs.
@@ -224,10 +227,10 @@ class TestHubspotAllFields(HubspotBaseTest):
                         for extra_key in KNOWN_EXTRA_FIELDS.get(stream, set()):
                             known_extra_keys.add(extra_key)
 
-
                         # Verify the fields in our expected record match the fields in the corresponding replicated record
-                        expected_keys_adjusted = set(expected_record.keys()).union(known_extra_keys)
-                        actual_keys_adjusted = set(actual_record.keys()).union(known_missing_keys)
+                        expected_keys_adjusted = expected_keys.union(known_extra_keys)
+                        actual_keys_adjusted = actual_keys.union(known_missing_keys)
+
                         # TODO There are dynamic fields on here that we just can't track.
                         #      But shouldn't we be doing dynamic field discovery on these things? BUG?
                         # deals workaround for 'property_hs_date_entered_<property>' fields
@@ -249,9 +252,8 @@ class TestHubspotAllFields(HubspotBaseTest):
 
                         self.assertSetEqual(expected_keys_adjusted, actual_keys_adjusted)
 
-                        # TODO need to check values in addition to keys
-                        # if stream in {'campaigns',}:
-                        #     self.assertDictEqual(expected_record, actual_record)
+                        # Future Testing | TDL-16145
+                        # self.assertDictEqual(expected_record, actual_record)
 
                 # Toss out a warn if tap is replicating more than the expected records were replicated
                 expected_primary_key_values = {tuple([record[primary_key]
@@ -262,6 +264,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                                                      for record in actual_records}
                 if expected_primary_key_values.issubset(actual_records_primary_key_values):
                     print(f"WARNING Unexpected {stream} records replicated: {actual_records_primary_key_values - expected_primary_key_values}")
+
 
 class TestHubspotAllFieldsStatic(TestHubspotAllFields):
     def name(self):

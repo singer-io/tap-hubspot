@@ -145,7 +145,26 @@ class TestClient():
                     # denest each property to be a top level key
                     record[f'property_{property_key}'] = property_value
 
-        print(f"TEST CLIENT | Transforming {len(records)} {stream} records")
+        print(f"TEST CLIENT | Transforming (denesting) {len(records)} {stream} records")
+        return records
+
+    def datatype_transformations(self, stream, records):
+        """
+        Takes a list of records and checks each for a 'properties' key to denest.
+        Returns the list of denested records.
+        """
+        datetime_columns = {
+            'owners': {'createdAt', 'updatedAt'},
+        }
+        if stream in datetime_columns.keys():
+            for record in records:
+                for column in record.keys():
+                    if column in datetime_columns[stream]:
+                        record[column]= self.BaseTest.datetime_from_timestamp(
+                            record[column]/1000, self.BOOKMARK_DATE_FORMAT
+                        )
+
+        print(f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
         return records
 
     ##########################################################################
@@ -571,8 +590,8 @@ class TestClient():
         """
         url = f"{BASE_URL}/owners/v2/owners"
         records = self.get(url)
-
-        return records
+        transformed_records = self.datatype_transformations('owners', records)
+        return transformed_records
 
     def get_subscription_changes(self, since=''):
         """
