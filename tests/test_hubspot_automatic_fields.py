@@ -28,8 +28,10 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=False)
 
-        # TODO | Include the following step in this test if/when hubspot conforms to the standards of metadata
-        # # Verify our selection worked as expected
+        # Include the following step in this test if/when hubspot conforms to the standards of metadata
+        # See bugs BUG_TDL-9939 and BUG_TDL-14938
+
+        # # Verify our selection resulted in no fields selected except for those with inclusion of 'automatic'
         # catalogs_selection = menagerie.get_catalogs(conn_id)
         # for cat in catalogs_selection:
         #     with self.subTest(cat=cat):

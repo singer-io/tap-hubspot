@@ -66,12 +66,16 @@ class TestClient():
         response.raise_for_status()
 
         if response.status_code == 204:
+
             print(f"TEST CLIENT | WARNING Response is empty")
-            # TODO catch simplejson.scanner.JSONDecodeError
+            # NB: There is a simplejson.scanner.JSONDecodeError thrown when we attempt
+            #     to do a response.json() on a 204 response. To get around this we just return an empty list
+            #     as we assume that a 204 will not have body. A better implementation would be to catch the
+            #     decode error, however were not able to get approach working.
             return []
+
         json_response = response.json()
         return json_response
-
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -145,7 +149,26 @@ class TestClient():
                     # denest each property to be a top level key
                     record[f'property_{property_key}'] = property_value
 
-        print(f"TEST CLIENT | Transforming {len(records)} {stream} records")
+        print(f"TEST CLIENT | Transforming (denesting) {len(records)} {stream} records")
+        return records
+
+    def datatype_transformations(self, stream, records):
+        """
+        Takes a list of records and checks each for a 'properties' key to denest.
+        Returns the list of denested records.
+        """
+        datetime_columns = {
+            'owners': {'createdAt', 'updatedAt'},
+        }
+        if stream in datetime_columns.keys():
+            for record in records:
+                for column in record.keys():
+                    if column in datetime_columns[stream]:
+                        record[column]= self.BaseTest.datetime_from_timestamp(
+                            record[column]/1000, self.BOOKMARK_DATE_FORMAT
+                        )
+
+        print(f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
         return records
 
     ##########################################################################
@@ -180,6 +203,7 @@ class TestClient():
             return self.get_subscription_changes(since)
         else:
             raise NotImplementedError
+
     def get_campaigns(self):
         """
         Get all campaigns by id, then grab the details of each campaign.
@@ -570,8 +594,8 @@ class TestClient():
         """
         url = f"{BASE_URL}/owners/v2/owners"
         records = self.get(url)
-
-        return records
+        transformed_records = self.datatype_transformations('owners', records)
+        return transformed_records
 
     def get_subscription_changes(self, since=''):
         """
@@ -595,7 +619,9 @@ class TestClient():
             has_more = response['hasMore']
             params['offset'] = response['offset']
             for record in response['timeline']:
-                if int(since) <= record['timestamp']: # TODO bug timestamp is the replication method rather than replication_method which is startTimestamp
+                # Future Testing TDL-16166 | Investigate difference between timestamp and startTimestamp
+                #                            this won't be feasible until BUG_TDL-14938 is addressed
+                if int(since) <= record['timestamp']:
                     records.append(record)
 
         return records
@@ -727,7 +753,7 @@ class TestClient():
 
     def create_campaigns(self):
         """
-        TODO couldn't find endpoint...
+        Couldn't find endpoint...
         """
         # record_uuid = str(uuid.uuid4()).replace('-', '')
 
@@ -737,7 +763,7 @@ class TestClient():
         # response = self.post(url, data)
         # records = [response]
         # return records
-        raise NotImplementedError("TODO SPIKE needed on create campaign since there was no endpoint")
+        raise NotImplementedError("No endpoint available in hubspot api.")
 
     def create_companies(self):
         """
@@ -759,6 +785,10 @@ class TestClient():
     def create_contact_lists(self):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
+
+        NB: This generates a list based on a 'twitterhandle' filter. There are many
+            different filters, but at the time of implementation it did not seem that
+            using different filters would result in any new fields.
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
@@ -775,7 +805,6 @@ class TestClient():
                 }]
             ]
         }
-        #TODO generate different filters
         # generate a record
         response = self.post(url, data)
         records = [response]
@@ -783,23 +812,15 @@ class TestClient():
 
     def create_contacts_by_company(self, company_ids=[], contact_records=[]):
         """
-        TODO https://legacydocs.hubspot.com/docs/methods/companies/add_contact_to_company
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
         """
         url = f"{BASE_URL}/crm-associations/v1/associations"
         if not company_ids:
             company_ids = [company['companyId'] for company in self.get_companies()]
-
-        # only use contacts-company combinations that do not exist yet
         if not contact_records:
             contact_records = self.get_contacts()
 
-        # TODO cleanup this method
-        if not (company_ids and contact_records):
-            contacts_by_company_records = self.get_contacts_by_company(set(company_ids))
-        else:
-            contacts_by_company_records = []
-
+        contacts_by_company_records = []
         for company_id in set(company_ids):
             for contact in contact_records:
                 # look for a contact that is not already in the contacts_by_company list
@@ -863,11 +884,13 @@ class TestClient():
     def create_deals(self):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/deals/create_deal
+
+        NB: We are currently using the 'default' pipeline and a single stage. This
+            is intentional so that we do not accidentally use a pipeline that may be deleted.
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         url = f"{BASE_URL}/deals/v1/deal/"
-        #TODO need to use various pipelines and stages
         data = {
             "associations": {
                 "associatedCompanyIds": [
@@ -917,7 +940,10 @@ class TestClient():
     def create_email_events(self):
         """
         HubSpot API  https://legacydocs.hubspot.com/docs/methods/email/email_events_overview
-        TODO We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()). If trying to expand data for other email_events, browser automation with an email application may be required
+
+        We are able to create email_events by updating email subscription status with a PUT (create_subscription_changes()).
+        If trying to expand data for other email_events, manually creating data and pinning start_date for a connection is
+        the preferred approach. We do not currently rely on this approach.
         """
 
         raise NotImplementedError("Use create_subscription_changes instead to create records for email_events stream")
@@ -925,7 +951,8 @@ class TestClient():
     def create_engagements(self):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/engagements/create_engagement
-        TODO - dependent on valid (currently hardcoded) contactId, companyId, and ownerId
+        NB: Dependent on valid (currently hardcoded) contactId, companyId, and ownerId.
+            THIS IS A POTENTIAL POINT OF INSTABILITY FOR THE TESTS
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
@@ -1087,16 +1114,14 @@ class TestClient():
     def create_owners(self):
         """
         HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
-        TODO - use selenium?
         """
-        raise NotImplementedError("Only able to create owners from web app")
+        raise NotImplementedError("Only able to create owners from web app manually. No api endpoint exists.")
 
     def create_subscription_changes(self, subscriptions=[] , times=1):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
-        NOTE: This will update email_events as well.
 
-        TODO Consider updating sub_changes, utilize sub_id as an arg and make a passthrough method
+        NB: This will update email_events as well.
         """
         # by default, a new subscription change will be created from a previous subscription change from one week ago as defined in the get
         if subscriptions == []:
@@ -1127,7 +1152,7 @@ class TestClient():
                 # generate a record
                 response = self.put(url, data)
 
-                # TODO Cleanup this method once BUG_TDL-14938 is addressed
+                # Cleanup this method once BUG_TDL-14938 is addressed
                 # The intention is for this method to return both of the objects that it creates with this put
 
                 email_event = self.get_email_events(recipient=recipient)
@@ -1209,21 +1234,11 @@ class TestClient():
         Update a workflow by enrolling a contact in the workflow.
         Hubspot API https://legacydocs.hubspot.com/docs/methods/workflows/add_contact
 
-        :param workflow_id: id of the workflow object to update
-        :param contact_email: email of the contact to enroll in the workflow
-
-        :return:
+        NB: Attemtped to enroll a contact but this did not change anything on the record. Enrollment is handled by
+            settings which are fields on a workflows record. The actual contacts' enrollment is not part of this record.
         """
-        # url = f"{BASE_URL}/automation/v2/workflows/{workflow_id}/enrollments/contacts/{contact_email}"
-        # self.post(url)
-        # record = self._get_workflows_by_pk(workflow_id)
 
-        # return record
-
-        # NB | Attemtped to enroll a contact but this did not change anything on the record. Enrollment is handled by
-        #      settings which are fields on a workflows record. The actual contacts' enrollment is not part of this record.
-
-        raise NotImplementedError("TODO SPIKE needed on updating workflows since there was no endpoint.")
+        raise NotImplementedError("No endpoint in hubspot api for  updating workflows.")
 
     def updated_subscription_changes(self, subscription_id):
         return self.create_subscription_changes(subscription_id)
@@ -1232,7 +1247,7 @@ class TestClient():
         """
         Couldn't find endpoint...
         """
-        raise NotImplementedError("TODO SPIKE needed on updating campaigns since there was no endpoint.")
+        raise NotImplementedError("No endpoint for updating campaigns in hubspot api.")
 
     def update_companies(self, company_id):
         """
@@ -1396,16 +1411,14 @@ class TestClient():
     def update_owners(self):
         """
         HubSpot API The Owners API is read-only. Owners can only be updated in HubSpot.
-        TODO - use selenium?
         """
-        raise NotImplementedError("Only able to update owners from web app")
+        raise NotImplementedError("Only able to update owners from web app manuanlly. No API endpoint in hubspot.")
 
     def update_campaigns(self):
         """
         HubSpot API The Campaigns API is read-only. Campaigns can only be updated in HubSpot.
-        TODO - use selenium?
         """
-        raise NotImplementedError("Only able to update campaigns from web app")
+        raise NotImplementedError("Only able to update campaigns from web app manuanlly. No API endpoint in hubspot.")
 
     def update_engagements(self, engagement_id):
         """
@@ -1455,7 +1468,7 @@ class TestClient():
             )
         for record_id in record_ids_to_delete[:count]:
             url = f"{BASE_URL}/contacts/v1/lists/{record_id}"
-            
+
             self.delete(url)
 
 
@@ -1490,8 +1503,11 @@ class TestClient():
     ##########################################################################
 
     def acquire_access_token_from_refresh_token(self):
-        # TODO does this limit test parallelization to n=1??
-        # TODO just import this from the tap to lessen the maintenance burden
+        """
+        NB: This will need to be updated if authorization is ever updated in the tap. We
+            attempted to import this from the tap to lessen the maintenance burden, but we
+            hit issues with the relative import.
+        """
         payload = {
             "grant_type": "refresh_token",
             "redirect_uri": self.CONFIG['redirect_uri'],
