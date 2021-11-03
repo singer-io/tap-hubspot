@@ -619,7 +619,9 @@ class TestClient():
             has_more = response['hasMore']
             params['offset'] = response['offset']
             for record in response['timeline']:
-                if int(since) <= record['timestamp']: # TODO bug timestamp is the replication method rather than replication_method which is startTimestamp
+                # TODO investigate difference between timestamp and startTimestamp
+                #      this won't be feasible until BUG_TDL-14938 is addressed
+                if int(since) <= record['timestamp']:
                     records.append(record)
 
         return records
