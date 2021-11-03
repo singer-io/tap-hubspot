@@ -84,15 +84,15 @@ class HubspotBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: True
             },
             "contacts": {
-                self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
+                self.PRIMARY_KEYS: {"vid"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
+                self.REPLICATION_KEYS: {"versionTimestamp"},
                 self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,# DOCS_BUG listed as FULL_TABLE
+                self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True,
                 self.PARENT_STREAM: 'companies'
@@ -103,7 +103,7 @@ class HubspotBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: True
             },
             "deals": {
-                self.PRIMARY_KEYS: {"dealId"},  # DOCS_BUG docs list 'dealId' and 'portalId
+                self.PRIMARY_KEYS: {"dealId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
                 self.OBEYS_START_DATE: True
@@ -111,12 +111,12 @@ class HubspotBaseTest(unittest.TestCase):
             "email_events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
+                self.REPLICATION_KEYS: {"startTimestamp"},
                 self.EXPECTED_PAGE_SIZE: 1000,
                 self.OBEYS_START_DATE: True
             },
             "engagements": {
-                self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
+                self.PRIMARY_KEYS: {"engagement_id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
                 self.EXPECTED_PAGE_SIZE: 250,
@@ -129,7 +129,7 @@ class HubspotBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: True
             },
             "owners": {
-                self.PRIMARY_KEYS: {"ownerId"},  # DOCS_BUG docs list 'portalId'
+                self.PRIMARY_KEYS: {"ownerId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
                 self.OBEYS_START_DATE: True  # TODO is this a BUG?
@@ -137,7 +137,7 @@ class HubspotBaseTest(unittest.TestCase):
             "subscription_changes": {
                 self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'timestamp'
+                self.REPLICATION_KEYS: {"startTimestamp"},
                 self.EXPECTED_PAGE_SIZE: 1000,
                 self.OBEYS_START_DATE: True
             },
