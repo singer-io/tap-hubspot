@@ -230,8 +230,11 @@ class TestHubspotAllFields(HubspotBaseTest):
                         expected_keys_adjusted = expected_keys.union(known_extra_keys)
                         actual_keys_adjusted = actual_keys.union(known_missing_keys)
 
-                        # TODO There are dynamic fields on here that we just can't track.
-                        #      But shouldn't we be doing dynamic field discovery on these things? BUG?
+                        # NB: The following woraround is for dynamic fields on the `deals` stream that we just can't track.
+                        #     At the time of implementation there is no customer feedback indicating that these dynamic fields
+                        #     would prove useful to an end user. The ones that we replicated with the test client are specific
+                        #     to our test data. We have determined that the filtering of these fields is an expected behavior.
+
                         # deals workaround for 'property_hs_date_entered_<property>' fields
                         bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_'}
                         bad_keys = set()

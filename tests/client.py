@@ -619,8 +619,8 @@ class TestClient():
             has_more = response['hasMore']
             params['offset'] = response['offset']
             for record in response['timeline']:
-                # TODO investigate difference between timestamp and startTimestamp
-                #      this won't be feasible until BUG_TDL-14938 is addressed
+                # Future Testing TDL-16166 | Investigate difference between timestamp and startTimestamp
+                #                            this won't be feasible until BUG_TDL-14938 is addressed
                 if int(since) <= record['timestamp']:
                     records.append(record)
 
