@@ -45,6 +45,7 @@ MANDATORY_PROPERTIES = {
         "lifecyclestage",
         "hs_date_entered_salesqualifiedlead",  # trengo custom field
         "became_a_sql_date",  # trengo custom field
+        "hs_additional_domains",
     ],
     "contacts": [
         "email",
