@@ -18,13 +18,13 @@ STREAMS = {
     },
     "contacts_events": {"bookmark_key": "lastSynced"},
     "deal_pipelines": {"bookmark_key": "updatedAt"},
-    # "engagements": {"bookmark_key": "lastUpdated"},
+    "engagements": {"bookmark_key": "lastUpdated"},
     "submissions": {},
-    # "email_events": {"bookmark_key": "created"},
+    "email_events": {"bookmark_key": "created"},
     "deals": {"bookmark_key": "updatedAt"},
-    # "deal_properties": {"bookmark_key": "updatedAt"},
-    # "contact_properties": {"bookmark_key": "updatedAt"},
-    # "company_properties": {"bookmark_key": "updatedAt"},
+    "deal_properties": {"bookmark_key": "updatedAt"},
+    "contact_properties": {"bookmark_key": "updatedAt"},
+    "company_properties": {"bookmark_key": "updatedAt"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
