@@ -143,6 +143,7 @@ MANDATORY_PROPERTIES = {
         "firststagedate_min_",  # essensys
         "company__target_market__tiers_",  # capmo_de
         "company_target_market",  # capmo_de
+        "hubspot_owner_id",
     ],
 }
 
