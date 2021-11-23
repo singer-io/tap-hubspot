@@ -146,6 +146,8 @@ MANDATORY_PROPERTIES = {
         "hubspot_owner_id",
         "hs_all_owner_ids",
         "hs_user_ids_of_all_owners",
+        "sql_date",  # pixelz_com
+        "sal_date",  # pixelz_com
     ],
 }
 
