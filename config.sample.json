@@ -4,5 +4,6 @@
   "client_secret": "my_secret",
   "refresh_token": "my_token",
   "start_date": "2017-01-01T00:00:00Z",
+  "request_timeout": 300,
   "disable_collection": false
 }
