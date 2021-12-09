@@ -46,8 +46,9 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
+            nosetests tests/unittests
             pip install coverage
-            nosetests --with-coverage --cover-erase --cover-html-dir=htmlcov tap_hubspot/tests
+            nosetests --with-coverage --cover-erase --cover-package=tap_hubspot --cover-html-dir=htmlcov tap_hubspot/tests/unittests
             coverage html
       - store_test_results:
           path: test_output/report.xml
