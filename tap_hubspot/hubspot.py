@@ -152,6 +152,9 @@ MANDATORY_PROPERTIES = {
         "hs_user_ids_of_all_owners",
         "sql_date",  # pixelz_com
         "sal_date",  # pixelz_com
+        "mql2_date",  # pixelz_com
+        "mql3_date",  # pixelz_com
+        "response_date",  # pixelz_com
     ],
 }
 
