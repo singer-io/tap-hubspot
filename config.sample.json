@@ -1,8 +1,7 @@
 {
-  "redirect_uri": "https://api.hubspot.com/",
-  "client_id": 123456789000,
-  "client_secret": "my_secret",
-  "refresh_token": "my_token",
-  "start_date": "2017-01-01T00:00:00Z",
-  "disable_collection": false
+  "redirect_uri": "https://app.dreamdata.io/oauth/validate",
+  "refresh_token": "a421f13e-000f-47b6-92ce-ebd52de5649b",
+  "start_date": "2021-11-05T02:39:09Z",
+  "client_id": "dab746b3-5307-4085-a82d-95eb5aa34a0c",
+  "client_secret": "f851905c-be30-4d40-9cf2-1daa39fe05b9"
 }

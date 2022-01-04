@@ -1,0 +1,37 @@
+{
+  "type": "RECORD",
+  "stream": "companies",
+  "record": {
+    "id": "3977070025",
+    "properties": {
+      "annualrevenue": null,
+      "country": "Netherlands",
+      "createdate": "2020-06-09T09:34:52.804Z",
+      "domain": "sendcloud.com",
+      "hs_all_owner_ids": "49876378",
+      "hs_date_entered_customer": "2021-10-18T07:34:33.823Z",
+      "hs_date_entered_opportunity": "2020-06-09T09:34:53.417Z",
+      "hs_date_entered_salesqualifiedlead": null,
+      "hs_date_exited_opportunity": "2021-10-18T07:34:33.823Z",
+      "hs_lastmodifieddate": "2021-11-05T10:04:23.206Z",
+      "hs_merged_object_ids": null,
+      "hs_object_id": "3977070025",
+      "hs_time_in_customer": "1564316167",
+      "hs_time_in_opportunity": "42847180406",
+      "hs_user_ids_of_all_owners": "11553559",
+      "hubspot_owner_id": "49876378",
+      "industry": "LOGISTICS_AND_SUPPLY_CHAIN",
+      "lifecyclestage": "customer",
+      "name": "Sendcloud",
+      "numberofemployees": "200",
+      "owneremail": null,
+      "ownername": null,
+      "total_revenue": null,
+      "type": null,
+      "website": "sendcloud.com"
+    },
+    "createdAt": "2020-06-09T09:34:52.804Z",
+    "updatedAt": "2021-11-05T10:04:23.206Z",
+    "archived": false
+  }
+}
