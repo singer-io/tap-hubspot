@@ -44,11 +44,7 @@ MANDATORY_PROPERTIES = {
         "hs_merged_object_ids",
         "lifecyclestage",
         "hs_date_entered_salesqualifiedlead",  # trengo custom field
-        "became_a_lead_date",  # trengo custom field
-        "became_a_mql_date",  # trengo custom field
         "became_a_sql_date",  # trengo custom field
-        "became_a_opportunity_date",  # trengo custom field
-        "class",  # trengo custom field
         "hs_additional_domains",
     ],
     "contacts": [
