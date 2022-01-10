@@ -82,42 +82,56 @@ workflows:
   commit: &commit_jobs
     jobs:
       - ensure_env:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
       - run_pylint_and_unittests:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           requires:
             - ensure_env
       - integration_test:
           name: "Discovery Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
           requires:
             - ensure_env
       - integration_test:
           name: "Automatic Fields Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
           requires:
             - ensure_env
       - integration_test:
           name: "Child Streams Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
           requires:
             - ensure_env
       - integration_test:
           name: "Start Date Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
           requires:
             - ensure_env
       - integration_test:
           name: "All Fields Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
           requires:
@@ -127,21 +141,27 @@ workflows:
             - "Discovery Test"
       - integration_test:
           name: "Bookmarks Test CRUD"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
           requires:
             - "All Fields Test"
       - integration_test:
           name: "Bookmarks Test Static Data"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
           requires:
             - "All Fields Test"
       - integration_test:
           name: "Interrupted State Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
@@ -149,7 +169,9 @@ workflows:
             - "Bookmarks Test CRUD"
       - integration_test:
           name: "Interrupted State with Offset Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
           requires:
@@ -157,21 +179,25 @@ workflows:
             - "Bookmarks Test CRUD"
       - integration_test:
           name: "Pagination Test"
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
             - "Interrupted State with Offset Test"
             - "Interrupted State Test"
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
           requires:
             - "Pagination Test"
   build_daily:
     <<: *commit_jobs
     triggers:
       - schedule:
-          cron: "0 6 * * *"
+          cron: "0 1 * * *"
           filters:
             branches:
               only:
