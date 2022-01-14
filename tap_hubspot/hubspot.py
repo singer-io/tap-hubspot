@@ -156,6 +156,7 @@ MANDATORY_PROPERTIES = {
         "mql3_date",  # pixelz_com
         "response_date",  # pixelz_com
         "funding_tranche_revenue_cloned", # capchase 
+        "funding_tranche_revenue_cloned_", # capchase 
     ],
 }
 
