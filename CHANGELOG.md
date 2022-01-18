@@ -1,5 +1,9 @@
 # Changelog
 
+
+## 2.9.7
+  * Add support for importing contact list contents [#2](https://github.com/symon-ai/tap-hubspot/pull/2/files)
+
 ## 2.9.6
   * Remove contacts_by_company from discovery [#15](https://github.com/symon-ai/target-s3-csv/pull/15)
 ## 2.9.5
