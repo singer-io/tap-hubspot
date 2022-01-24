@@ -161,6 +161,10 @@ MANDATORY_PROPERTIES = {
         "mql3_date",  # pixelz_com
         "response_date",  # pixelz_com
         "funding_tranche_revenue_cloned_", # capchase 
+        "true_source", # sendcloud_com
+        "date_became_sql", # sendcloud_com
+        "sql_date", # sendcloud_com
+        "deal_valid___scp", # sendcloud_com
     ],
 }
 
