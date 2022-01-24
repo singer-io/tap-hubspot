@@ -50,6 +50,11 @@ MANDATORY_PROPERTIES = {
         "became_a_opportunity_date",  # trengo custom field
         "class",  # trengo custom field
         "hs_additional_domains",
+        "marketing_pipeline_value_in__", # capmo
+        "recent_conversion_date", # capmo
+        "recent_conversion_event_name", # capmo
+        "first_conversion_date", # capmo
+        "first_conversion_event_name", # capmo
     ],
     "contacts": [
         "email",
@@ -155,7 +160,6 @@ MANDATORY_PROPERTIES = {
         "mql2_date",  # pixelz_com
         "mql3_date",  # pixelz_com
         "response_date",  # pixelz_com
-        "funding_tranche_revenue_cloned", # capchase 
         "funding_tranche_revenue_cloned_", # capchase 
     ],
 }
