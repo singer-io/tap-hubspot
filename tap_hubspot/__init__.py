@@ -87,7 +87,7 @@ ENDPOINTS = {
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
-    "engagements_all":        "/engagements/v1/engagements/paged",
+    "engagements_all":      "/engagements/v1/engagements/paged",
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
@@ -1090,7 +1090,13 @@ def discover_schemas():
     result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
-        schema, mdata = load_discovered_schema(stream)
+        try:
+            schema, mdata = load_discovered_schema(stream)
+        except SourceUnavailableException as e:
+            msg = str(e)[2:-1].replace("\\", "")
+            error_msg = json.loads(msg)
+            missing_scope = error_msg['errors'][0]['context']['requiredScopes']
+            LOGGER.warning(f"Failed to load: {stream.tap_stream_id}, missing scope {missing_scope}")
         result['streams'].append({'stream': stream.tap_stream_id,
                                   'tap_stream_id': stream.tap_stream_id,
                                   'schema': schema,
