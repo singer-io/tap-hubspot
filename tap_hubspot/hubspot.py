@@ -55,6 +55,7 @@ MANDATORY_PROPERTIES = {
         "recent_conversion_event_name", # capmo
         "first_conversion_date", # capmo
         "first_conversion_event_name", # capmo
+        "company__target_market__tiers_", # capmo
     ],
     "contacts": [
         "email",
