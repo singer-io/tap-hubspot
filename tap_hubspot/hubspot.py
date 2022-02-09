@@ -156,11 +156,14 @@ MANDATORY_PROPERTIES = {
         "hubspot_owner_id",
         "hs_all_owner_ids",
         "hs_user_ids_of_all_owners",
-        "sql_date",  # pixelz_com
         "sal_date",  # pixelz_com
-        "mql2_date",  # pixelz_com
-        "mql3_date",  # pixelz_com
-        "response_date",  # pixelz_com
+        "outreach_date",  # pixelz_com
+        "disco_demo_date",  # pixelz_com
+        "sql_date",  # pixelz_com
+        "pilot_date", # pixelz_com
+        "proposal_date", # pixelz_com
+        "closed_won_date", # pixelz_scom
+        "closed_lost_date", # pixelz_com
         "funding_tranche_revenue_cloned_", # capchase 
         "true_source", # sendcloud_com
         "date_became_sql", # sendcloud_com
