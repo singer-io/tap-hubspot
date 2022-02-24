@@ -1066,39 +1066,38 @@ class TestClient():
                     "default": True,
                     "isSmartGroup": False
                 },
-                {
-                    "fields": [
-                        {
-                            "name": "adress_1",
-                            "label": "Adress 1",
-                            "type": "string",
-                            "fieldType": "text",
-                            "description": "",
-                            "groupName": "",
-                            "displayOrder": 2,
-                            "required": False,
-                            "selectedOptions": [],
-                            "options": [],
-                            "validation": {
-                                "name": "",
-                                "message": "",
-                                "data": "",
-                                "useDefaultBlockList": False
-                            },
-                            "enabled": True,
-                            "hidden": False,
-                            "defaultValue": "",
-                            "isSmartField": False,
-                            "unselectedLabel": "",
-                            "placeholder": ""
-                        }
-                    ],
-                    "default": True,
-                    "isSmartGroup": False
-                }
+                # KDS: Removed due to INVALID_FORM_FIELDS error.
+                # {
+                #     "fields": [
+                #         {
+                #             "name": "adress_1",
+                #             "label": "Adress 1",
+                #             "type": "string",
+                #             "fieldType": "text",
+                #             "description": "",
+                #             "groupName": "",
+                #             "displayOrder": 2,
+                #             "required": False,
+                #             "selectedOptions": [],
+                #             "options": [],
+                #             "validation": {
+                #                 "name": "",
+                #                 "message": "",
+                #                 "data": "",
+                #                 "useDefaultBlockList": False
+                #             },
+                #             "enabled": True,
+                #             "hidden": False,
+                #             "defaultValue": "",
+                #             "isSmartField": False,
+                #             "unselectedLabel": "",
+                #             "placeholder": ""
+                #         }
+                #     ],
+                #     "default": True,
+                #     "isSmartGroup": False
+                # }
             ],
-            "createdAt": 1318534279910,
-            "updatedAt": 1413919291011,
             "performableHtml": "",
             "migratedFrom": "ld",
             "ignoreCurrentValues": False,
