@@ -14,6 +14,7 @@ This tap:
   - [Email Events](http://developers.hubspot.com/docs/methods/email/get_events)
   - [Engagements](https://developers.hubspot.com/docs/methods/engagements/get-all-engagements)
   - [Forms](http://developers.hubspot.com/docs/methods/forms/v2/get_forms)
+  - [Forms Submissions](https://developers.hubspot.com/docs/methods/forms/get-submissions-for-a-form)
   - [Keywords](http://developers.hubspot.com/docs/methods/keywords/get_keywords)
   - [Owners](http://developers.hubspot.com/docs/methods/owners/get_owners)
   - [Subscription Changes](http://developers.hubspot.com/docs/methods/email/get_subscriptions_timeline)

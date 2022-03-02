@@ -1,0 +1,29 @@
+{
+    "type": "object",
+    "properties": {
+        "guid": {
+            "type": ["null", "string"]
+        },
+        "submittedAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
+        "values": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": ["null", "string"]
+                    },
+                    "value": {
+                        "type": ["null", "string"]
+                    }
+                }
+            }
+        },
+        "pageUrl": {
+            "type": ["null", "string"]
+        }
+    }
+}
