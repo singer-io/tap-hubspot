@@ -115,6 +115,7 @@ MANDATORY_PROPERTIES = {
         "went_mql_date",
         "original_mql_date_before_reset",
         "converting_touch",
+        "mql_date" # humanforce
     ],
     "deals": [
         "hs_deal_amount_calculation_preference",
@@ -162,7 +163,7 @@ MANDATORY_PROPERTIES = {
         "sql_date",  # pixelz_com
         "pilot_date", # pixelz_com
         "proposal_date", # pixelz_com
-        "closed_won_date", # pixelz_scom
+        "closed_won_date", # pixelz_com
         "closed_lost_date", # pixelz_com
         "funding_tranche_revenue_cloned_", # capchase 
         "true_source", # sendcloud_com
