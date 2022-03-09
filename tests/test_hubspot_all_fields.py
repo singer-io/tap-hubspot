@@ -83,6 +83,7 @@ KNOWN_MISSING_FIELDS = {
         'publishedAt',
         'customUid',
         'isPublished',
+        'paymentSessionTemplateIds',
     },
     'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',
