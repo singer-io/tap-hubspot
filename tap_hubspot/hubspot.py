@@ -4,7 +4,7 @@ import ratelimit
 import singer
 import backoff
 from datetime import datetime, timezone
-from typing import Dict, Optional, DefaultDict, Set
+from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any
 from dateutil import parser
 
 
@@ -118,6 +118,7 @@ MANDATORY_PROPERTIES = {
         "mql_date" # humanforce
     ],
     "deals": [
+        "hs_lastmodifieddate",
         "hs_deal_amount_calculation_preference",
         "hs_forecast_amount",
         "amount",
@@ -205,7 +206,7 @@ class Hubspot:
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals()
+            yield from self.get_deals_v2(start_date, end_date)
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
