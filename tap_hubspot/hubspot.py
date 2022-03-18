@@ -229,15 +229,64 @@ class Hubspot:
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
-        deals = self.search(
-            "deals",
+        obj_type = "deals"
+        gen = self.search(
+            obj_type,
             filter_key,
             start_date,
             end_date,
             MANDATORY_PROPERTIES["deals"],
         )
-        for deal, ts in deals:
-            yield deal, ts
+
+        while True:
+            deals = {}
+            i = 0
+
+            for rec, ts in gen:
+                rec_id = rec["id"]
+                # ensure that there is a default entry for all contacts/companies
+                rec["associations"] = {
+                    # fit the legacy format to be backwards compatible:
+                    # "results": [{ "id": "<id>" }]
+                    "contacts": {"results": []},
+                    "companies": {"results": []},
+                }
+
+                deals[rec_id] = rec
+                i += 1
+                if i >= 10:
+                    break
+
+            ids = list(deals.keys())
+
+            for id, ass in self.get_associations(obj_type, "contacts", ids):
+                deals[id]["associations"]["contacts"] = {"results": ass}
+
+            for id, ass in self.get_associations(obj_type, "companies", ids):
+                deals[id]["associations"]["companies"] = {"results": ass}
+
+            for deal in deals.values():
+                yield deal, parser.isoparse(
+                    self.get_value(deal, ["properties", filter_key])
+                )
+
+    def get_associations(
+        self,
+        from_obj: str,
+        to_obj: str,
+        ids: List[str],
+    ) -> Iterable[Tuple[str, List[Dict[str, str]]]]:
+        body = {"inputs": [{"id": id} for id in ids]}
+        path = f"/crm/v3/associations/{from_obj.title()}/{to_obj.title()}/batch/read"
+
+        resp = self.do("POST", path, json=body)
+
+        data = resp.json()
+
+        associations = data.get("results", [])
+        for ass in associations:
+            from_id = ass["from"]["id"]
+            yield from_id, [{"id": o["id"]} for o in ass["to"]]
 
     def search(
         self,
