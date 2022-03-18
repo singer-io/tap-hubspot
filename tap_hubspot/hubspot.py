@@ -223,6 +223,38 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
+    def build_search_body(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        properties: list,
+        filter_key: str,
+        after: int,
+        limit: int = 100,
+    ):
+        return {
+            "filterGroups": [
+                {
+                    "filters": [
+                        {
+                            "propertyName": filter_key,
+                            "operator": "GTE",
+                            "value": str(int(start_date.timestamp() * 1000)),
+                        },
+                        {
+                            "propertyName": filter_key,
+                            "operator": "LT",
+                            "value": str(int(end_date.timestamp() * 1000)),
+                        },
+                    ]
+                }
+            ],
+            "properties": properties,
+            "sorts": [{"propertyName": filter_key, "direction": "ASCENDING"}],
+            "limit": limit,
+            "after": after,
+        }
+
     def get_properties(self, object_type: str):
         path = f"/crm/v3/properties/{object_type}"
         data_field = "results"
