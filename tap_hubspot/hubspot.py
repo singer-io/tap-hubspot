@@ -586,6 +586,49 @@ class Hubspot:
             response.raise_for_status()
             return response.json()
 
+    @backoff.on_exception(
+        backoff.expo,
+        (
+            requests.exceptions.RequestException,
+            requests.exceptions.ReadTimeout,
+            requests.exceptions.Timeout,
+            requests.exceptions.HTTPError,
+            ratelimit.exception.RateLimitException,
+            RetryAfterReauth,
+        ),
+        max_tries=10,
+    )
+    @limits(calls=100, period=10)
+    def do(
+        self,
+        method: str,
+        url: str,
+        data: Optional[Any] = None,
+        json: Optional[Any] = None,
+        params: Optional[Any] = None,
+    ) -> requests.Response:
+        params = params or {}
+        url = f"{self.BASE_URL}{url}"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+
+        with self.SESSION.request(
+            method,
+            url,
+            headers=headers,
+            params=params,
+            timeout=self.timeout,
+            json=json,
+            data=data,
+        ) as response:
+            if response.status_code == 401:
+                # attempt to refresh access token
+                self.refresh_access_token()
+                raise RetryAfterReauth
+
+            LOGGER.debug(response.url)
+            response.raise_for_status()
+            return response
+
     def test_endpoint(self, url, params={}):
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
