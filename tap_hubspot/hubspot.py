@@ -277,7 +277,7 @@ class Hubspot:
         ids: List[str],
     ) -> Iterable[Tuple[str, List[Dict[str, str]]]]:
         body = {"inputs": [{"id": id} for id in ids]}
-        path = f"/crm/v3/associations/{from_obj.title()}/{to_obj.title()}/batch/read"
+        path = f"/crm/v3/associations/{from_obj}/{to_obj}/batch/read"
 
         resp = self.do("POST", path, json=body)
 
