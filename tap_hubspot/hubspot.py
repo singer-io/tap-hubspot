@@ -4,7 +4,7 @@ import ratelimit
 import singer
 import backoff
 from datetime import datetime, timezone
-from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any
+from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any, Tuple
 from dateutil import parser
 
 
@@ -50,12 +50,12 @@ MANDATORY_PROPERTIES = {
         "became_a_opportunity_date",  # trengo custom field
         "class",  # trengo custom field
         "hs_additional_domains",
-        "marketing_pipeline_value_in__", # capmo
-        "recent_conversion_date", # capmo
-        "recent_conversion_event_name", # capmo
-        "first_conversion_date", # capmo
-        "first_conversion_event_name", # capmo
-        "company__target_market__tiers_", # capmo
+        "marketing_pipeline_value_in__",  # capmo
+        "recent_conversion_date",  # capmo
+        "recent_conversion_event_name",  # capmo
+        "first_conversion_date",  # capmo
+        "first_conversion_event_name",  # capmo
+        "company__target_market__tiers_",  # capmo
     ],
     "contacts": [
         "email",
@@ -115,7 +115,7 @@ MANDATORY_PROPERTIES = {
         "went_mql_date",
         "original_mql_date_before_reset",
         "converting_touch",
-        "mql_date" # humanforce
+        "mql_date",  # humanforce
     ],
     "deals": [
         "hs_lastmodifieddate",
@@ -162,17 +162,18 @@ MANDATORY_PROPERTIES = {
         "outreach_date",  # pixelz_com
         "disco_demo_date",  # pixelz_com
         "sql_date",  # pixelz_com
-        "pilot_date", # pixelz_com
-        "proposal_date", # pixelz_com
-        "closed_won_date", # pixelz_com
-        "closed_lost_date", # pixelz_com
-        "funding_tranche_revenue_cloned_", # capchase 
-        "true_source", # sendcloud_com
-        "date_became_sql", # sendcloud_com
-        "sql_date", # sendcloud_com
-        "deal_valid___scp", # sendcloud_com
+        "pilot_date",  # pixelz_com
+        "proposal_date",  # pixelz_com
+        "closed_won_date",  # pixelz_com
+        "closed_lost_date",  # pixelz_com
+        "funding_tranche_revenue_cloned_",  # capchase
+        "true_source",  # sendcloud_com
+        "date_became_sql",  # sendcloud_com
+        "sql_date",  # sendcloud_com
+        "deal_valid___scp",  # sendcloud_com
     ],
 }
+
 
 class Hubspot:
     BASE_URL = "https://api.hubapi.com"
@@ -223,6 +224,93 @@ class Hubspot:
             yield from self.get_properties("companies")
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
+
+    def get_deals_v2(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "hs_lastmodifieddate"
+        deals = self.search(
+            "deals",
+            filter_key,
+            start_date,
+            end_date,
+            MANDATORY_PROPERTIES["deals"],
+        )
+        for deal, ts in deals:
+            yield deal, ts
+
+    def search(
+        self,
+        object_type: str,
+        filter_key: str,
+        start_date: datetime,
+        end_date: datetime,
+        properties: List[str],
+        limit=100,
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        path = f"/crm/v3/objects/{object_type}/search"
+        max_ts: Optional[datetime] = None
+        after: int = 0
+        records_total: int = 0
+        records_count: int = 0
+        while True:
+            try:
+                body = self.build_search_body(
+                    start_date,
+                    end_date,
+                    properties,
+                    filter_key,
+                    after,
+                    limit=limit,
+                )
+                resp = self.do(
+                    "POST",
+                    path,
+                    json=body,
+                )
+            except requests.HTTPError as err:
+                if err.response.status_code == 520:
+                    continue
+                raise
+
+            data = resp.json()
+            records = data.get("results", [])
+
+            if not records:
+                return
+
+            for record in records:
+                ts_str = self.get_value(record, ["properties", filter_key])
+                ts = parser.isoparse(ts_str)
+                if max_ts is None or max_ts < ts:
+                    max_ts = ts
+
+                yield record, ts
+
+            records_count += len(records)
+
+            # all search-endpoints will fail with a 400 after 10,000 records returned
+            # (not pages). We use the last record in the last page to filter on.
+            if records_count == 10000:
+                records_total += records_count
+                assert max_ts is not None
+                # reset all pagination values
+                after = 0
+                start_date = max_ts
+                records = 0
+                continue
+
+            # pagination
+            page_after: Optional[str] = (
+                data.get("paging", {}).get("next", {}).get("after", None)
+            )
+
+            # when there are no more results for the query/after combination
+            # the paging.next.after will not be present in the payload
+            if page_after is None:
+                return
+
+            after = int(page_after)
 
     def build_search_body(
         self,
