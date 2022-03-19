@@ -203,6 +203,7 @@ class Hubspot:
 
             contacts_associations = self.get_associations(obj_type, "contacts", ids)
             companies_associations = self.get_associations(obj_type, "companies", ids)
+            property_history = self.get_property_history("deals", ["dealstage"], ids)
 
             for i, deal_id in enumerate(ids):
                 deal = chunk[i]
@@ -215,6 +216,8 @@ class Hubspot:
                     "companies": {"results": companies},
                 }
 
+                deal["propertiesWithHistory"] = property_history.get(deal_id, {})
+
                 yield deal, parser.isoparse(
                     self.get_value(deal, ["properties", filter_key])
                 )
@@ -223,6 +226,28 @@ class Hubspot:
         resp = self.do("GET", f"/crm/v3/properties/{obj_type}")
         data = resp.json()
         return [o["name"] for o in data["results"]]
+
+    def get_property_history(
+        self, obj_type: str, properties: List[str], ids: List[str]
+    ) -> Dict[str, Dict[str, List[Dict]]]:
+        body = {
+            "properties": properties,
+            "propertiesWithHistory": properties,
+            "inputs": [{"id": id} for id in ids],
+        }
+        path = f"/crm/v3/objects/{obj_type}/batch/read"
+        resp = self.do("POST", path, json=body)
+
+        data = resp.json()
+
+        history = data.get("results", [])
+
+        result: Dict[str, Dict[str, List[Dict]]] = {}
+        for entry in history:
+            obj_id = entry["id"]
+            result[obj_id] = entry["propertiesWithHistory"]
+
+        return result
 
     def get_associations(
         self,
