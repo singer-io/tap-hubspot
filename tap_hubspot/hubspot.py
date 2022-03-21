@@ -198,7 +198,7 @@ class Hubspot:
             properties,
         )
 
-        for chunk in chunker(gen, 10):
+        for chunk in chunker(gen, 50):
             ids: List[str] = [deal["id"] for deal in chunk]
 
             contacts_associations = self.get_associations(obj_type, "contacts", ids)
