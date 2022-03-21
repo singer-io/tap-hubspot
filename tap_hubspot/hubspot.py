@@ -271,6 +271,11 @@ class Hubspot:
                     self.get_value(deal, ["properties", filter_key])
                 )
 
+    def get_object_properties(self, obj_type: str) -> List[str]:
+        resp = self.do("GET", f"/crm/v3/properties/{obj_type}")
+        data = resp.json()
+        return [o["name"] for o in data["results"]]
+
     def get_associations(
         self,
         from_obj: str,
