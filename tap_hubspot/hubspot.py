@@ -242,12 +242,15 @@ class Hubspot:
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "deals"
+
+        properties = self.get_object_properties(obj_type)
+
         gen = self.search(
             obj_type,
             filter_key,
             start_date,
             end_date,
-            MANDATORY_PROPERTIES["deals"],
+            properties,
         )
 
         for chunk in chunker(gen, 10):
