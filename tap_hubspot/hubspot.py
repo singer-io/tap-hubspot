@@ -164,7 +164,7 @@ class Hubspot:
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
-            yield from self.get_deals_v2(start_date, end_date)
+            yield from self.get_deals(start_date, end_date)
         elif self.tap_stream_id == "email_events":
             yield from self.get_email_events(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "forms":
@@ -182,7 +182,7 @@ class Hubspot:
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
-    def get_deals_v2(
+    def get_deals(
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
@@ -451,19 +451,6 @@ class Hubspot:
         replication_path = ["updatedAt"]
         yield from self.get_records(
             path, replication_path, data_field=data_field, offset_key=offset_key
-        )
-
-    def get_deals(self):
-        path = "/crm/v3/objects/deals"
-        data_field = "results"
-        params = {
-            "limit": 100,
-            "associations": ["contacts", "companies", "engagements"],
-            "properties": MANDATORY_PROPERTIES["deals"],
-        }
-        offset_key = "after"
-        yield from self.get_records(
-            path, params=params, data_field=data_field, offset_key=offset_key
         )
 
     def get_email_events(self, start_date: datetime, end_date: datetime):
