@@ -117,61 +117,6 @@ MANDATORY_PROPERTIES = {
         "converting_touch",
         "mql_date",  # humanforce
     ],
-    "deals": [
-        "hs_lastmodifieddate",
-        "hs_deal_amount_calculation_preference",
-        "hs_forecast_amount",
-        "amount",
-        "hs_closed_amount",
-        "hs_predicted_amount_in_home_currency",
-        "hs_projected_amount",
-        "hs_closed_amount_in_home_currency",
-        "hs_predicted_amount",
-        "hs_projected_amount_in_home_currency",
-        "amount_in_home_currency",
-        "closedate",
-        "deal_currency_code",
-        "dealname",
-        "dealstage",
-        "dealtype",
-        "hs_is_closed",
-        "pipeline",
-        "hs_merged_object_ids",
-        "hs_analytics_source",
-        "hs_analytics_source_data_1",
-        "hs_analytics_source_data_2",
-        "hs_campaign",
-        "engagements_last_meeting_booked_campaign",
-        "engagements_last_meeting_booked_medium",
-        "engagements_last_meeting_booked_source",
-        "closed_lost_reason",
-        "closed_won_reason",
-        "lifecyclestage",
-        "sql_in_date",
-        "quote_sent_timestamp",
-        "qualified_opportunity",
-        "new_logo_date",  # essensys
-        "contribution_channel",  # essensys
-        "firststagedate_min_",  # essensys
-        "company__target_market__tiers_",  # capmo_de
-        "company_target_market",  # capmo_de
-        "hubspot_owner_id",
-        "hs_all_owner_ids",
-        "hs_user_ids_of_all_owners",
-        "sal_date",  # pixelz_com
-        "outreach_date",  # pixelz_com
-        "disco_demo_date",  # pixelz_com
-        "sql_date",  # pixelz_com
-        "pilot_date",  # pixelz_com
-        "proposal_date",  # pixelz_com
-        "closed_won_date",  # pixelz_com
-        "closed_lost_date",  # pixelz_com
-        "funding_tranche_revenue_cloned_",  # capchase
-        "true_source",  # sendcloud_com
-        "date_became_sql",  # sendcloud_com
-        "sql_date",  # sendcloud_com
-        "deal_valid___scp",  # sendcloud_com
-    ],
 }
 
 
