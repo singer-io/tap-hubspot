@@ -181,7 +181,7 @@ class Hubspot:
             yield from self.get_properties("companies")
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
-
+    
     def get_deals(
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
@@ -413,6 +413,39 @@ class Hubspot:
             data_field=data_field,
             offset_key=offset_key,
         )
+
+    def get_contacts_v2(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
+        self.event_state["contacts_start_date"] = start_date
+        self.event_state["contacts_end_date"] = end_date
+        filter_key = "lastmodifieddate"
+        obj_type = "contacts"
+        properties = self.get_object_properties(obj_type)
+
+        gen = self.search(
+            obj_type,
+            filter_key,
+            start_date,
+            end_date,
+            properties,
+        )
+
+        for chunk in chunker(gen, 100):
+            ids: List[str] = [contact["id"] for contact in chunk]
+
+            companies_associations = self.get_associations(obj_type, "companies", ids)
+
+            for i, contact_id in enumerate(ids):
+                contact = chunk[i]
+
+                companies = companies_associations.get(contact_id, [])
+
+                contact["associations"] = {
+                    "companies": {"results": companies},
+                }
+
+                yield contact, parser.isoparse(
+                    self.get_value(contact, ["properties", filter_key])
+                )
 
     def get_contacts(self, start_date: datetime, end_date: datetime):
         self.event_state["contacts_start_date"] = start_date
