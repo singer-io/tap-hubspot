@@ -95,7 +95,7 @@ class Hubspot:
         if self.tap_stream_id == "owners":
             yield from self.get_owners()
         elif self.tap_stream_id == "companies":
-            yield from self.get_companies()
+            yield from self.get_companies_v2(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
@@ -353,6 +353,40 @@ class Hubspot:
             offset_key=offset_key,
         )
 
+    def get_companies_v2(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "hs_lastmodifieddate"
+        obj_type = "companies"
+
+        properties = self.get_object_properties(obj_type)
+
+        gen = self.search(
+            obj_type,
+            filter_key,
+            start_date,
+            end_date,
+            properties,
+        )
+
+        for chunk in chunker(gen, 10):
+            ids: List[str] = [company["id"] for company in chunk]
+
+            engagements_associations = self.get_associations(obj_type, "engagements", ids)
+
+            for i, company_id in enumerate(ids):
+                company = chunk[i]
+
+                engagements = engagements_associations.get(company_id, [])
+
+                company["associations"] = {
+                    "engagements": {"results": engagements},
+                }
+
+                yield company, parser.isoparse(
+                    self.get_value(company, ["properties", filter_key])
+                )
+    
     def get_contacts(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
         self.event_state["contacts_start_date"] = start_date
         self.event_state["contacts_end_date"] = end_date
