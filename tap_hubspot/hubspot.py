@@ -56,69 +56,8 @@ MANDATORY_PROPERTIES = {
         "first_conversion_date",  # capmo
         "first_conversion_event_name",  # capmo
         "company__target_market__tiers_",  # capmo
-    ],
-    "contacts": [
-        "email",
-        "emailadresse",
-        "hs_email_domain",
-        "domain",
-        "utm_campaign_original",
-        "utm_medium_original",
-        "utm_source_original",
-        "utm_term_original",
-        "hs_analytics_source",
-        "hs_analytics_source_data_1",
-        "hs_analytics_source_data_2",
-        "hs_analytics_first_referrer",
-        "hs_analytics_first_url",
-        "hs_analytics_last_url",
-        "hs_analytics_num_page_views",
-        "hs_analytics_num_visits",
-        "hs_analytics_num_event_completions",
-        "hs_analytics_first_touch_converting_campaign",
-        "hs_analytics_last_touch_converting_campaign",
-        "hs_additional_emails",
-        "associatedcompanyid",
-        "hs_analytics_last_timestamp",
-        "recent_conversion_date",
-        "hs_calculated_form_submissions",
-        "hs_all_contact_vids",
-        "hs_facebook_click_id",
-        "hs_google_click_id",
-        "jobtitle",
-        "firstname",
-        "lastname",
-        "date_of_birth",
-        "first_conversion_date",
-        "first_conversion_event_name",
-        "form_submission_url",
-        "numemployees",
-        "employees_all_sites_",
-        "jobseniority",
-        "seniority",
-        "hs_buying_role",
-        "hs_calculated_merged_vids",
-        "hs_merged_object_ids",
-        "job_function",
-        "hs_persona",
-        "salutation",
-        "website_source",
-        "hs_lifecyclestage_customer_date",
-        "hs_lifecyclestage_lead_date",
-        "hs_lifecyclestage_marketingqualifiedlead_date",
-        "hs_lifecyclestage_salesqualifiedlead_date",
-        "hs_lifecyclestage_subscriber_date",
-        "hs_lifecyclestage_evangelist_date",
-        "hs_lifecyclestage_opportunity_date",
-        "hs_lifecyclestage_other_date",
-        "went_mql",
-        "went_mql_date",
-        "original_mql_date_before_reset",
-        "converting_touch",
-        "mql_date",  # humanforce
-    ],
+    ]
 }
-
 
 def chunker(iter: Iterable[Dict], size: int) -> Iterable[List[Dict]]:
     i = 0
@@ -414,7 +353,7 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_contacts_v2(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
+    def get_contacts(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
         self.event_state["contacts_start_date"] = start_date
         self.event_state["contacts_end_date"] = end_date
         filter_key = "lastmodifieddate"
@@ -446,22 +385,6 @@ class Hubspot:
                 yield contact, parser.isoparse(
                     self.get_value(contact, ["properties", filter_key])
                 )
-
-    def get_contacts(self, start_date: datetime, end_date: datetime):
-        self.event_state["contacts_start_date"] = start_date
-        self.event_state["contacts_end_date"] = end_date
-        path = "/crm/v3/objects/contacts"
-        data_field = "results"
-        offset_key = "after"
-        replication_path = ["updatedAt"]
-        params = {"limit": 100, "properties": MANDATORY_PROPERTIES["contacts"]}
-        yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
-        )
 
     def get_engagements(self):
         path = "/engagements/v1/engagements/paged"
