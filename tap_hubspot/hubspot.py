@@ -14,50 +14,6 @@ class RetryAfterReauth(Exception):
 
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-MANDATORY_PROPERTIES = {
-    "companies": [
-        "name",
-        "country",
-        "domain",
-        "website",
-        "numberofemployees",
-        "industry",
-        "hs_user_ids_of_all_owners",
-        "owneremail",
-        "ownername",
-        "hubspot_owner_id",
-        "hs_all_owner_ids",
-        "industrynaics",
-        "industrysic",
-        "what_industry_company_",
-        "industry",
-        "number_of_employees_company",
-        "numberofemployees",
-        "employeesinalllocations",
-        "employeesinalllocationsnum",
-        "annualrevenue",
-        "currency",
-        "salesannual",
-        "salesannualnum",
-        "total_revenue",
-        "type",
-        "hs_merged_object_ids",
-        "lifecyclestage",
-        "hs_date_entered_salesqualifiedlead",  # trengo custom field
-        "became_a_lead_date",  # trengo custom field
-        "became_a_mql_date",  # trengo custom field
-        "became_a_sql_date",  # trengo custom field
-        "became_a_opportunity_date",  # trengo custom field
-        "class",  # trengo custom field
-        "hs_additional_domains",
-        "marketing_pipeline_value_in__",  # capmo
-        "recent_conversion_date",  # capmo
-        "recent_conversion_event_name",  # capmo
-        "first_conversion_date",  # capmo
-        "first_conversion_event_name",  # capmo
-        "company__target_market__tiers_",  # capmo
-    ]
-}
 
 def chunker(iter: Iterable[Dict], size: int) -> Iterable[List[Dict]]:
     i = 0
@@ -95,7 +51,7 @@ class Hubspot:
         if self.tap_stream_id == "owners":
             yield from self.get_owners()
         elif self.tap_stream_id == "companies":
-            yield from self.get_companies_v2(start_date=start_date, end_date=end_date)
+            yield from self.get_companies(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
@@ -339,21 +295,7 @@ class Hubspot:
             offset_key=offset_key,
         )
 
-    def get_companies(self):
-        path = "/crm/v3/objects/companies"
-        data_field = "results"
-        replication_path = ["updatedAt"]
-        params = {"limit": 100, "properties": MANDATORY_PROPERTIES["companies"]}
-        offset_key = "after"
-        yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
-        )
-
-    def get_companies_v2(
+    def get_companies(
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
