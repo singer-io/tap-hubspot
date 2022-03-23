@@ -55,7 +55,8 @@ class Hubspot:
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
-            yield from self.get_engagements()
+            yield from self.get_engagements_v2(start_date=start_date, end_date=end_date)
+            #yield from self.get_engagements()
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
@@ -360,6 +361,41 @@ class Hubspot:
 
                 yield contact, parser.isoparse(
                     self.get_value(contact, ["properties", filter_key])
+                )
+
+
+    def get_engagements_v2(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "hs_lastmodifieddate"
+        obj_type = "engagements"
+        properties = self.get_object_properties(obj_type)
+
+        gen = self.search(
+            obj_type,
+            filter_key,
+            start_date,
+            end_date,
+            properties,
+        )
+
+        for chunk in chunker(gen, 100):
+            ids: List[str] = [engagement["id"] for engagement in chunk]
+
+            companies_associations = self.get_associations(obj_type, "companies", ids)
+            contacts_associations = self.get_associations(obj_type, "contacts", ids)
+
+            for i, engagement_id in enumerate(ids):
+                engagement = chunk[i]
+
+                companies = companies_associations.get(engagement_id, [])
+                contacts = contacts_associations.get(engagement_id, [])
+
+                engagement["associations"] = {
+                    "companies": {"results": companies},
+                    "contacts": {"results": contacts},
+                }
+
+                yield engagement, parser.isoparse(
+                    self.get_value(engagement, ["properties", filter_key])
                 )
 
     def get_engagements(self):
