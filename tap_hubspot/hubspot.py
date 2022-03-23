@@ -312,19 +312,7 @@ class Hubspot:
         )
 
         for chunk in chunker(gen, 100):
-            ids: List[str] = [company["id"] for company in chunk]
-
-            engagements_associations = self.get_associations(obj_type, "engagements", ids)
-
-            for i, company_id in enumerate(ids):
-                company = chunk[i]
-
-                engagements = engagements_associations.get(company_id, [])
-
-                company["associations"] = {
-                    "engagements": {"results": engagements},
-                }
-
+            for company in chunk:
                 yield company, parser.isoparse(
                     self.get_value(company, ["properties", filter_key])
                 )
