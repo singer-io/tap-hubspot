@@ -55,8 +55,7 @@ class Hubspot:
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
-            yield from self.get_engagements_v2(start_date=start_date, end_date=end_date)
-            #yield from self.get_engagements()
+            yield from self.get_engagements(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
@@ -364,7 +363,7 @@ class Hubspot:
                 )
 
 
-    def get_engagements_v2(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
+    def get_engagements(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "engagements"
         properties = self.get_object_properties(obj_type)
@@ -397,20 +396,6 @@ class Hubspot:
                 yield engagement, parser.isoparse(
                     self.get_value(engagement, ["properties", filter_key])
                 )
-
-    def get_engagements(self):
-        path = "/engagements/v1/engagements/paged"
-        data_field = "results"
-        replication_path = ["engagement", "lastUpdated"]
-        params = {"limit": self.limit}
-        offset_key = "offset"
-        yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
-        )
 
     def get_deal_pipelines(self):
         path = "/crm/v3/pipelines/deals"
