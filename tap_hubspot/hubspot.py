@@ -346,6 +346,7 @@ class Hubspot:
                     "companies": {"results": companies},
                 }
 
+                self.store_ids_submissions(contact)
                 yield contact, parser.isoparse(
                     self.get_value(contact, ["properties", filter_key])
                 )
@@ -584,8 +585,6 @@ class Hubspot:
                 replication_value = self.milliseconds_to_datetime(
                     self.get_value(record, replication_path)
                 )
-            if self.tap_stream_id == "contacts":
-                self.store_ids_submissions(record)
             if self.tap_stream_id == "submissions":
                 record["form_id"] = guid
 
