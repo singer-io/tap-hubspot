@@ -176,10 +176,7 @@ class Hubspot:
         limit=100,
     ) -> Iterable[Dict]:
         path = f"/crm/v3/objects/{object_type}/search"
-        max_ts: Optional[datetime] = None
         after: int = 0
-        records_total: int = 0
-        records_count: int = 0
         while True:
             try:
                 body = self.build_search_body(
@@ -209,22 +206,6 @@ class Hubspot:
             for record in records:
                 yield record
 
-            last_record = records[-1]
-            ts_str = self.get_value(last_record, ["properties", filter_key])
-            max_ts = parser.isoparse(ts_str)
-
-            records_count += len(records)
-
-            # all search-endpoints will fail with a 400 after 10,000 records returned
-            # (not pages). We use the last record in the last page to filter on.
-            if records_count == 10000:
-                records_total += records_count
-                # reset all pagination values
-                after = 0
-                start_date = max_ts
-                records = 0
-                continue
-
             # pagination
             page_after: Optional[str] = (
                 data.get("paging", {}).get("next", {}).get("after", None)
@@ -235,7 +216,19 @@ class Hubspot:
             if page_after is None:
                 return
 
+            # all search-endpoints will fail with a 400 after 10,000 records returned
+            # (not pages). We use the last record in the last page to filter on.
+            if int(page_after) >= 10000:
+                # reset all pagination values
+                after = 0
+
+                ts_str = self.get_value(records[-1], ["properties", filter_key])
+                start_date = parser.isoparse(ts_str)
+
+                continue
+
             after = int(page_after)
+
 
     def build_search_body(
         self,
