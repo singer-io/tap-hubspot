@@ -78,6 +78,8 @@ class Hubspot:
             yield from self.get_archived("contacts")
         elif self.tap_stream_id == "archived_companies":
             yield from self.get_archived("companies")
+        elif self.tap_stream_id == "archived_deals":
+            yield from self.get_archived("deals")
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
     
@@ -579,6 +581,7 @@ class Hubspot:
                 "company_properties",
                 "archived_contacts",
                 "archived_companies",
+                "archived_deals",
             ]:
 
                 replication_value = self.get_value(record, replication_path)
