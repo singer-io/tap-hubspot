@@ -74,6 +74,8 @@ class Hubspot:
             yield from self.get_properties("contacts")
         elif self.tap_stream_id == "company_properties":
             yield from self.get_properties("companies")
+        elif self.tap_stream_id == "archived_contacts":
+            yield from self.get_archived("contacts")
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
     
@@ -286,6 +288,20 @@ class Hubspot:
             params=params,
             data_field=data_field,
             offset_key=offset_key,
+        )
+    
+    def get_archived(self, object_type: str):
+        path = f"/crm/v3/objects/{object_type}"
+        data_field = "results"
+        replication_path = ["archivedAt"]
+        offset_key = "after"
+        params = {"limit": 100, "archived": True}
+        yield from self.get_records(
+            path,
+            replication_path,
+            data_field=data_field,
+            offset_key=offset_key,
+            params=params
         )
 
     def get_companies(
@@ -559,6 +575,7 @@ class Hubspot:
                 "deal_properties",
                 "contact_properties",
                 "company_properties",
+                "archived_contacts"
             ]:
 
                 replication_value = self.get_value(record, replication_path)
