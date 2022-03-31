@@ -75,11 +75,11 @@ class Hubspot:
         elif self.tap_stream_id == "company_properties":
             yield from self.get_properties("companies")
         elif self.tap_stream_id == "archived_contacts":
-            yield from self.get_archived("contacts")
+            yield from self.get_archived_contacts()
         elif self.tap_stream_id == "archived_companies":
-            yield from self.get_archived("companies")
+            yield from self.get_archived_companies()
         elif self.tap_stream_id == "archived_deals":
-            yield from self.get_archived("deals")
+            yield from self.get_archived_deals()
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
     
@@ -307,6 +307,18 @@ class Hubspot:
             offset_key=offset_key,
             params=params
         )
+
+    def get_archived_contacts(self):
+        object_type="contacts"
+        yield from self.get_archived(object_type=object_type)
+
+    def get_archived_companies(self):
+        object_type="companies"
+        yield from self.get_archived(object_type=object_type)
+
+    def get_archived_deals(self):
+        object_type="deals"
+        yield from self.get_archived(object_type=object_type)
 
     def get_companies(
         self, start_date: datetime, end_date: datetime
