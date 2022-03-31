@@ -297,9 +297,10 @@ class Hubspot:
     def get_archived(self, object_type: str):
         path = f"/crm/v3/objects/{object_type}"
         data_field = "results"
-        replication_path = ["archivedAt"]
+        filter_key = "archivedAt"
+        replication_path = [filter_key]
         offset_key = "after"
-        params = {"limit": 100, "archived": True}
+        params = {"limit": 100, "archived": True, "properties": filter_key}
         yield from self.get_records(
             path,
             replication_path,
