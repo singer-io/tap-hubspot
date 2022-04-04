@@ -19,7 +19,7 @@ STREAMS = {
     "contacts_events": {"bookmark_key": "lastSynced"},
     "deal_pipelines": {"bookmark_key": "updatedAt"},
     "engagements": {"bookmark_key": "lastUpdated"},
-    "submissions": {},
+    "submissions": {"bookmark_key": "submittedAt"},
     "email_events": {"bookmark_key": "created"},
     "deals": {"bookmark_key": "updatedAt"},
     "deal_properties": {"bookmark_key": "updatedAt"},
