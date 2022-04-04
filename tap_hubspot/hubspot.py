@@ -420,6 +420,7 @@ class Hubspot:
         # and hs_calculated_form_submissions field in contacts endpoint
         data_field = "results"
         offset_key = "after"
+        replication_key = "submittedAt"
         params = {"limit": 50}  # maxmimum limit is 50
         guids_from_contacts = self.event_state["hs_calculated_form_submissions_guids"]
         guids_from_endpoint = self.get_guids_from_endpoint()
@@ -443,6 +444,7 @@ class Hubspot:
             yield from self.get_records(
                 path,
                 params=params,
+                replication_path=[replication_key],
                 data_field=data_field,
                 offset_key=offset_key,
                 guid=guid,
