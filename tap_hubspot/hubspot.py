@@ -15,6 +15,7 @@ class RetryAfterReauth(Exception):
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
+
 def chunker(iter: Iterable[Dict], size: int) -> Iterable[List[Dict]]:
     i = 0
     chunk = []
@@ -76,7 +77,7 @@ class Hubspot:
             yield from self.get_properties("companies")
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
-    
+
     def get_deals(
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
@@ -229,7 +230,6 @@ class Hubspot:
 
             after = int(page_after)
 
-
     def build_search_body(
         self,
         start_date: datetime,
@@ -307,7 +307,9 @@ class Hubspot:
         for chunk in chunker(gen, 100):
             ids: List[str] = [company["id"] for company in chunk]
 
-            engagements_associations = self.get_associations(obj_type, "engagements", ids)
+            engagements_associations = self.get_associations(
+                obj_type, "engagements", ids
+            )
 
             for i, company_id in enumerate(ids):
                 company = chunk[i]
@@ -321,8 +323,10 @@ class Hubspot:
                 yield company, parser.isoparse(
                     self.get_value(company, ["properties", filter_key])
                 )
-    
-    def get_contacts(self, start_date: datetime, end_date: datetime) -> Iterable[Tuple[Dict, datetime]]:
+
+    def get_contacts(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
         self.event_state["contacts_start_date"] = start_date
         self.event_state["contacts_end_date"] = end_date
         filter_key = "lastmodifieddate"
