@@ -296,7 +296,7 @@ class Hubspot:
 
         properties = self.get_object_properties(obj_type)
 
-        gen = self.search(
+        companies = self.search(
             obj_type,
             filter_key,
             start_date,
@@ -304,25 +304,10 @@ class Hubspot:
             properties,
         )
 
-        for chunk in chunker(gen, 100):
-            ids: List[str] = [company["id"] for company in chunk]
-
-            engagements_associations = self.get_associations(
-                obj_type, "engagements", ids
+        for company in companies:
+            yield company, parser.isoparse(
+                self.get_value(company, ["properties", filter_key])
             )
-
-            for i, company_id in enumerate(ids):
-                company = chunk[i]
-
-                engagements = engagements_associations.get(company_id, [])
-
-                company["associations"] = {
-                    "engagements": {"results": engagements},
-                }
-
-                yield company, parser.isoparse(
-                    self.get_value(company, ["properties", filter_key])
-                )
 
     def get_contacts(
         self, start_date: datetime, end_date: datetime
