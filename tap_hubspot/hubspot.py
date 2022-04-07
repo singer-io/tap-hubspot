@@ -75,6 +75,12 @@ class Hubspot:
             yield from self.get_properties("contacts")
         elif self.tap_stream_id == "company_properties":
             yield from self.get_properties("companies")
+        elif self.tap_stream_id == "archived_contacts":
+            yield from self.get_archived_contacts()
+        elif self.tap_stream_id == "archived_companies":
+            yield from self.get_archived_companies()
+        elif self.tap_stream_id == "archived_deals":
+            yield from self.get_archived_deals()
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -287,6 +293,34 @@ class Hubspot:
             data_field=data_field,
             offset_key=offset_key,
         )
+    
+    def get_archived(self, object_type: str):
+        path = f"/crm/v3/objects/{object_type}"
+        data_field = "results"
+        replication_path = ["archivedAt"]
+        # "the properties we need are already there, but by adding a single property, we are preventing the api from returning too many default properties that we do not need"
+        properties = ["hs_object_id"]
+        offset_key = "after"
+        params = {"limit": 100, "archived": True, "properties": properties}
+        yield from self.get_records(
+            path,
+            replication_path,
+            data_field=data_field,
+            offset_key=offset_key,
+            params=params
+        )
+
+    def get_archived_contacts(self):
+        object_type="contacts"
+        yield from self.get_archived(object_type=object_type)
+
+    def get_archived_companies(self):
+        object_type="companies"
+        yield from self.get_archived(object_type=object_type)
+
+    def get_archived_deals(self):
+        object_type="deals"
+        yield from self.get_archived(object_type=object_type)
 
     def get_companies(
         self, start_date: datetime, end_date: datetime
@@ -572,6 +606,9 @@ class Hubspot:
                 "deal_properties",
                 "contact_properties",
                 "company_properties",
+                "archived_contacts",
+                "archived_companies",
+                "archived_deals",
             ]:
 
                 replication_value = self.get_value(record, replication_path)

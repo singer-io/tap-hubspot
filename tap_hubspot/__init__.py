@@ -25,6 +25,9 @@ STREAMS = {
     "deal_properties": {"bookmark_key": "updatedAt"},
     "contact_properties": {"bookmark_key": "updatedAt"},
     "company_properties": {"bookmark_key": "updatedAt"},
+    "archived_contacts": {"bookmark_key": "archivedAt"},
+    "archived_companies": {"bookmark_key": "archivedAt"},
+    "archived_deals": {"bookmark_key": "archivedAt"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
