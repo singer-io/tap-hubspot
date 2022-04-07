@@ -298,6 +298,7 @@ class Hubspot:
         path = f"/crm/v3/objects/{object_type}"
         data_field = "results"
         replication_path = ["archivedAt"]
+        # "the properties we need are already there, but by adding a single property, we are preventing the api from returning too many default properties that we do not need"
         properties = ["hs_object_id"]
         offset_key = "after"
         params = {"limit": 100, "archived": True, "properties": properties}
