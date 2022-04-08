@@ -15,7 +15,6 @@ class RetryAfterReauth(Exception):
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-
 def chunker(iter: Iterable[Dict], size: int) -> Iterable[List[Dict]]:
     i = 0
     chunk = []
@@ -52,7 +51,7 @@ class Hubspot:
         if self.tap_stream_id == "owners":
             yield from self.get_owners()
         elif self.tap_stream_id == "companies":
-            yield from self.get_companies(start_date=start_date, end_date=end_date)
+            yield from self.get_companies_legacy()
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "engagements":
@@ -321,6 +320,21 @@ class Hubspot:
     def get_archived_deals(self):
         object_type="deals"
         yield from self.get_archived(object_type=object_type)
+
+    def get_companies_legacy(self):
+        path = "/crm/v3/objects/companies"
+        data_field = "results"
+        properties = self.get_object_properties("companies")
+        replication_path = ["updatedAt"]
+        params = {"limit": 100, "properties": properties}
+        offset_key = "after"
+        yield from self.get_records(
+            path,
+            replication_path,
+            params=params,
+            data_field=data_field,
+            offset_key=offset_key,
+        )
 
     def get_companies(
         self, start_date: datetime, end_date: datetime
