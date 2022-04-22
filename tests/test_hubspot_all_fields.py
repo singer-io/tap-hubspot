@@ -91,6 +91,10 @@ KNOWN_MISSING_FIELDS = {
         'stateChanges',
         'isDeleted',
         'additionalDomains',
+        'property_hs_analytics_latest_source',
+        'property_hs_analytics_latest_source_data_2',
+        'property_hs_analytics_latest_source_data_1',
+        'property_hs_analytics_latest_source_timestamp',
     },
     'campaigns': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'lastProcessingStateChangeAt',
