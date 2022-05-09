@@ -405,6 +405,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     with metrics.record_counter(tap_stream_id) as counter:
         while True:
             data = request(url, params).json()
+            LOGGER.info("V3_FIELDS: " + str(v3_fields))
 
             if data.get(path) is None:
                 raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
