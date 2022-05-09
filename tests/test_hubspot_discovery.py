@@ -11,7 +11,7 @@ class DiscoveryTest(HubspotBaseTest):
 
     @staticmethod
     def name():
-        return "tap_tester_hubspot_discovery_test"
+        return "tt_hubspot_discovery"
 
     def test_run(self):
         """
@@ -75,7 +75,7 @@ class DiscoveryTest(HubspotBaseTest):
                                     #set(stream_properties[0].get('metadata', {self.PRIMARY_KEYS: None}).get(self.PRIMARY_KEYS, [])))}"
 
                         )
-                 # actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
+                # actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
                 # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
                 # # verify the actual replication matches our expected replication method
                 # self.assertEqual(
@@ -90,8 +90,8 @@ class DiscoveryTest(HubspotBaseTest):
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-                    # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full table
-                    pass  # TODO Remove me when bug is addressed
+                    # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 all streams are set to full table
+                    pass  # BUG TDL-9939 REMOVE ME WHEN BUG IS ADDRESSED
                     # self.assertTrue(actual_replication_method == self.INCREMENTAL,
                     #                 msg="Expected INCREMENTAL replication "
                     #                     "since there is a replication key")

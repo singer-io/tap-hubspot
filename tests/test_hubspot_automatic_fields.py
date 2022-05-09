@@ -5,19 +5,15 @@ import re
 
 from base import HubspotBaseTest
 
+STATIC_DATA_STREAMS = {'owners'}
+
 class TestHubspotAutomaticFields(HubspotBaseTest):
     def name(self):
-        return "tap_tester_hubspot_automatic_fields_test"
+        return "tt_hubspot_automatic"
 
-    def get_properties(self):
-        return {
-            'start_date' : '2021-05-02T00:00:00Z',
-        }
-
-    def expected_streams(self):
+    def streams_to_test(self):
         """streams to test"""
-        return self.expected_check_streams()
-
+        return self.expected_streams() - STATIC_DATA_STREAMS
 
     def test_run(self):
         """
@@ -28,13 +24,14 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # Select only the expected streams tables
-        expected_streams = self.expected_streams()
+        expected_streams = self.streams_to_test()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries, select_all_fields=False)
 
+        # Include the following step in this test if/when hubspot conforms to the standards of metadata
+        # See bugs BUG_TDL-9939 and BUG_TDL-14938
 
-        # TODO | Include the following step in this test if/when hubspot conforms to the standards of metadata
-        # # Verify our selection worked as expected
+        # # Verify our selection resulted in no fields selected except for those with inclusion of 'automatic'
         # catalogs_selection = menagerie.get_catalogs(conn_id)
         # for cat in catalogs_selection:
         #     with self.subTest(cat=cat):
@@ -55,31 +52,17 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         #         # remove replication keys
         #         self.assertEqual(expected_automatic_fields, selected_fields)
 
-        # setting state for companies stream in order to decrease row count and run time
-        state = {
-            'bookmarks': {
-                'companies': {
-                    'current_sync_start': None,
-                    'hs_lastmodifieddate': '2021-08-01T00:00:00.000000Z',
-                    'offset': {}
-                },
-            },
-            'currently_syncing': None
-        }
-
-        menagerie.set_state(conn_id, state)
-
         # Run a sync job using orchestrator
         sync_record_count = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
         # Assert the records for each stream
-        for stream in self.expected_streams():
+        for stream in expected_streams:
             with self.subTest(stream=stream):
 
                 # Verify that data is present
                 record_count = sync_record_count.get(stream, 0)
-                self.assertLessEqual(1, record_count, msg=f"record count: {record_count}")
+                self.assertGreater(record_count, 0)
 
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
@@ -108,3 +91,17 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                     pk = self.expected_primary_keys()[stream]
                     pks_values = [tuple([message['data'][p] for p in pk]) for message in data['messages']]
                     self.assertEqual(len(pks_values), len(set(pks_values)))
+
+
+class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
+    def streams_to_test(self):
+        """streams to test"""
+        return STATIC_DATA_STREAMS
+
+    def name(self):
+        return "tt_hubspot_automatic_static"
+
+    def get_properties(self):
+        return {
+            'start_date' : '2021-08-19T00:00:00Z',
+        }

@@ -2,24 +2,46 @@ version: 2.1
 orbs:
   slack: circleci/slack@3.4.2
 
-jobs:
-  build:
+executors:
+  tap_tester:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+jobs:
+  ensure_env:
+    executor: tap_tester
     steps:
       - checkout
       - run:
           name: 'Setup virtual env'
           command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /usr/local/share/virtualenvs/dev_env.sh
             python3 -m venv /usr/local/share/virtualenvs/tap-hubspot/
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
+      - persist_to_workspace:
+          root: /usr/local/share/virtualenvs/
+          paths:
+            - tap-hubspot
+            - dev_env.sh
+  build:
+    executor: tap_tester
+    steps:
+      - run: echo "Tests have passed."
+  run_pylint_and_unittests:
+    executor: tap_tester
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /usr/local/share/virtualenvs
       - run:
           name: 'pylint'
           command: |
+            source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            pylint tap_hubspot -d C,R,W
+            # BUG https://jira.talendforge.org/browse/TDL-15447
+            echo "Disabling the following $PYLINT_DISABLE_LIST"
+            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,consider-using-from-import,logging-format-interpolation,unused-variable,singleton-comparison,useless-object-inheritance,unnecessary-pass,wrong-import-order,global-statement,unused-argument,unused-import,wildcard-import,unused-wildcard-import,import-error,use-list-literal,no-self-use,duplicate-code,bad-whitespace,bad-continuation"
       - run:
           name: 'Unit Tests'
           command: |
@@ -30,37 +52,146 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json tap_hubspot/schemas/*.json
-      - add_ssh_keys
+  integration_test:
+    parameters:
+      test_command:
+        type: string
+    executor: tap_tester
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /usr/local/share/virtualenvs
       - run:
           name: 'Integration Tests'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
+            source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-hubspot \
-                     --target=target-stitch \
-                     --orchestrator=stitch-orchestrator \
-                     --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$SANDBOX_PASSWORD \
-                     --client-id=50 \
-                     tests
+            << parameters.test_command >>
       - slack/notify-on-failure:
           only_for_branches: master
 
 workflows:
   version: 2
-  commit:
+  commit: &commit_jobs
     jobs:
+      - ensure_env:
+          context:
+            - circleci-user
+            - tier-1-tap-user
+      - run_pylint_and_unittests:
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Discovery Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Automatic Fields Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Child Streams Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Start Date Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "All Fields Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
+          requires:
+            - "Child Streams Test"
+            - "Start Date Test"
+            - "Automatic Fields Test"
+            - "Discovery Test"
+      - integration_test:
+          name: "Bookmarks Test CRUD"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+          requires:
+            - "All Fields Test"
+      - integration_test:
+          name: "Bookmarks Test Static Data"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
+          requires:
+            - "All Fields Test"
+      - integration_test:
+          name: "Interrupted State Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
+      - integration_test:
+          name: "Interrupted State with Offset Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
+      - integration_test:
+          name: "Pagination Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
+          requires:
+            - "Interrupted State with Offset Test"
+            - "Interrupted State Test"
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          requires:
+            - "Pagination Test"
   build_daily:
+    <<: *commit_jobs
     triggers:
       - schedule:
-          cron: "0 6 * * *"
+          cron: "0 1 * * *"
           filters:
             branches:
               only:
                 - master
-    jobs:
-      - build:
-          context: circleci-user

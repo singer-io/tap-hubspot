@@ -9,14 +9,20 @@ import tap_tester.runner      as runner
 
 
 class HubspotBaseTest(unittest.TestCase):
+
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
-    API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
+
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
+    BASIC_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    EXPECTED_PAGE_SIZE = "expected-page-size"
+    OBEYS_START_DATE = "obey-start-date"
+    PARENT_STREAM = "parent-stream"
 
     #######################################
     #  Tap Configurable Metadata Methods  #
@@ -41,7 +47,10 @@ class HubspotBaseTest(unittest.TestCase):
         return "tap-hubspot"
 
     def get_properties(self):
-        return {'start_date' : '2021-05-02T00:00:00Z'} # '2017-05-01T00:00:00Z' used by OG tests
+        start_date = dt.today() - timedelta(days=1)
+        start_date_with_fmt = dt.strftime(start_date, self.START_DATE_FORMAT)
+
+        return {'start_date' : start_date_with_fmt}
 
     def get_credentials(self):
         return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),
@@ -58,64 +67,85 @@ class HubspotBaseTest(unittest.TestCase):
             "campaigns": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: False
             },
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.EXPECTED_PAGE_SIZE: 250,
+                self.OBEYS_START_DATE: True
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 250,
+                self.OBEYS_START_DATE: True
             },
             "contacts": {
-                self.PRIMARY_KEYS: {"vid"},  # DOCS_BUG listed in stitch docs as 'canonical-vid'
+                self.PRIMARY_KEYS: {"vid"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"versionTimestamp"},  # DOCS_BUG  was commented out in OG tests
+                self.REPLICATION_KEYS: {"versionTimestamp"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
-                self.REPLICATION_METHOD: self.FULL,
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True,
+                self.PARENT_STREAM: 'companies'
             },
             "deal_pipelines": {
                 self.PRIMARY_KEYS: {"pipelineId"},
                 self.REPLICATION_METHOD: self.FULL,
+                self.OBEYS_START_DATE: True
             },
             "deals": {
-                self.PRIMARY_KEYS: {"dealId"},  # DOCS_BUG docs list 'dealId' and 'portalId
+                self.PRIMARY_KEYS: {"dealId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.OBEYS_START_DATE: True
             },
             "email_events": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'id' but OG tests use
+                self.REPLICATION_KEYS: {"startTimestamp"},
+                self.EXPECTED_PAGE_SIZE: 1000,
+                self.OBEYS_START_DATE: True
             },
             "engagements": {
-                self.PRIMARY_KEYS: {"engagement_id"},  # DOCS_BUG docs list 'id'
+                self.PRIMARY_KEYS: {"engagement_id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
+                self.EXPECTED_PAGE_SIZE: 250,
+                self.OBEYS_START_DATE: True
             },
             "forms": {
                 self.PRIMARY_KEYS: {"guid"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.OBEYS_START_DATE: True
             },
             "owners": {
-                self.PRIMARY_KEYS: {"ownerId"},  # DOCS_BUG docs list 'portalId'
+                self.PRIMARY_KEYS: {"ownerId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.OBEYS_START_DATE: True  # TODO is this a BUG?
             },
             "subscription_changes": {
                 self.PRIMARY_KEYS: {"timestamp", "portalId", "recipient"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"startTimestamp"},  # DOCS_BUG docs list 'timestamp'
+                self.REPLICATION_KEYS: {"startTimestamp"},
+                self.EXPECTED_PAGE_SIZE: 1000,
+                self.OBEYS_START_DATE: True
             },
             "workflows": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.OBEYS_START_DATE: True
             }
         }
 
@@ -154,13 +184,17 @@ class HubspotBaseTest(unittest.TestCase):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
 
-
     def expected_replication_keys(self):
         """
         return a dictionary with key of table name
         and value as a set of replication key fields
         """
         return {table: properties.get(self.REPLICATION_KEYS, set())
+                for table, properties
+                in self.expected_metadata().items()}
+
+    def expected_page_limits(self):
+        return {table: properties.get(self.EXPECTED_PAGE_SIZE, set())
                 for table, properties
                 in self.expected_metadata().items()}
 
@@ -317,15 +351,31 @@ class HubspotBaseTest(unittest.TestCase):
             connections.select_catalog_and_fields_via_metadata(
                 conn_id, catalog, schema, [], non_selected_properties)
 
-    def perform_field_selection(self, conn_id, catalog):
-        schema = menagerie.select_catalog(conn_id, catalog)
+    def timedelta_formatted(self, dtime, days=0, str_format="%Y-%m-%dT00:00:00Z"):
+        date_stripped = dt.strptime(dtime, str_format)
+        return_date = date_stripped + timedelta(days=days)
 
-        return {'key_properties' :     catalog.get('key_properties'),
-                'schema' :             schema,
-                'tap_stream_id':       catalog.get('tap_stream_id'),
-                'replication_method' : catalog.get('replication_method'),
-                'replication_key'    : catalog.get('replication_key')}
+        return dt.strftime(return_date, str_format)
 
     ################################
     #  Tap Specific Test Actions   #
     ################################
+
+    def datetime_from_timestamp(self, value, str_format="%Y-%m-%dT00:00:00Z"):
+        """
+        Takes in a unix timestamp in milliseconds.
+        Returns a string formatted python datetime
+        """
+        try:
+            datetime_value = dt.fromtimestamp(value)
+            datetime_str = dt.strftime(datetime_value, str_format)
+        except ValueError as err:
+            raise NotImplementedError(
+                f"Invalid argument 'value':  {value}  "
+                "This method was designed to accept unix timestamps in milliseconds."
+            )
+        return datetime_str
+
+    def is_child(self, stream):
+        """return true if this stream is a child stream"""
+        return self.expected_metadata()[stream].get(self.PARENT_STREAM) is not None
