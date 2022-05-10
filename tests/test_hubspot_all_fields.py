@@ -108,7 +108,13 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_is_deal_split',
         'stateChanges',
         'property_hs_num_associated_active_deal_registrations',
-        'property_hs_num_associated_deal_registrations'
+        'property_hs_num_associated_deal_registrations',
+        'property_hs_analytics_latest_source',
+        'property_hs_analytics_latest_source_timestamp_contact',
+        'property_hs_analytics_latest_source_data_1_contact',
+        'property_hs_analytics_latest_source_timestamp',
+        'property_hs_analytics_latest_source_data_1',
+        'property_hs_analytics_latest_source_contact',
     },
     'subscription_changes':{
         'normalizedEmailId'
