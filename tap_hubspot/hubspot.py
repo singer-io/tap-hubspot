@@ -56,6 +56,7 @@ MANDATORY_PROPERTIES = {
         "first_conversion_date",  # capmo
         "first_conversion_event_name",  # capmo
         "company__target_market__tiers_",  # capmo
+        "plan_price_ex_tax_",  # ably_com
     ]
 }
 
