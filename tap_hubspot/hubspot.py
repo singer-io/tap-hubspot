@@ -207,12 +207,8 @@ class Hubspot:
 
         resp = self.do("POST", path, json=body)
 
-        data = resp.json()
-
-        associations = data.get("results", [])
-
         result: Dict[str, List[Any]] = {}
-        for ass in associations:
+        for ass in resp.json().get("results", []):
             ass_id = ass["from"]["id"]
             result[ass_id] = ass["to"]
 
