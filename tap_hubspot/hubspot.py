@@ -200,9 +200,9 @@ class Hubspot:
         from_obj: str,
         to_obj: str,
         ids: List[str],
-    ) -> Dict[str, List[Dict[str, str]]]:
+    ) -> Dict[str, List[Any]]:
         body = {"inputs": [{"id": id} for id in ids]}
-        path = f"/crm/v3/associations/{from_obj}/{to_obj}/batch/read"
+        path = f"/crm/v4/associations/{from_obj}/{to_obj}/batch/read"
 
         resp = self.do("POST", path, json=body)
 
@@ -210,10 +210,10 @@ class Hubspot:
 
         associations = data.get("results", [])
 
-        result: Dict[str, List[Dict[str, str]]] = {}
+        result: Dict[str, List[Any]] = {}
         for ass in associations:
             ass_id = ass["from"]["id"]
-            result[ass_id] = [{"id": o["id"]} for o in ass["to"]]
+            result[ass_id] = ass["to"]
 
         return result
 
