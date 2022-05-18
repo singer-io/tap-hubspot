@@ -60,6 +60,7 @@ MANDATORY_PROPERTIES = {
     ]
 }
 
+
 def chunker(iter: Iterable[Dict], size: int) -> Iterable[List[Dict]]:
     i = 0
     chunk = []
@@ -200,20 +201,16 @@ class Hubspot:
         from_obj: str,
         to_obj: str,
         ids: List[str],
-    ) -> Dict[str, List[Dict[str, str]]]:
+    ) -> Dict[str, List[Any]]:
         body = {"inputs": [{"id": id} for id in ids]}
-        path = f"/crm/v3/associations/{from_obj}/{to_obj}/batch/read"
+        path = f"/crm/v4/associations/{from_obj}/{to_obj}/batch/read"
 
         resp = self.do("POST", path, json=body)
 
-        data = resp.json()
-
-        associations = data.get("results", [])
-
-        result: Dict[str, List[Dict[str, str]]] = {}
-        for ass in associations:
+        result: Dict[str, List[Any]] = {}
+        for ass in resp.json().get("results", []):
             ass_id = ass["from"]["id"]
-            result[ass_id] = [{"id": o["id"]} for o in ass["to"]]
+            result[ass_id] = ass["to"]
 
         return result
 
@@ -337,7 +334,7 @@ class Hubspot:
             data_field=data_field,
             offset_key=offset_key,
         )
-    
+
     def get_archived(self, object_type: str):
         path = f"/crm/v3/objects/{object_type}"
         data_field = "results"
@@ -351,19 +348,19 @@ class Hubspot:
             replication_path,
             data_field=data_field,
             offset_key=offset_key,
-            params=params
+            params=params,
         )
 
     def get_archived_contacts(self):
-        object_type="contacts"
+        object_type = "contacts"
         yield from self.get_archived(object_type=object_type)
 
     def get_archived_companies(self):
-        object_type="companies"
+        object_type = "companies"
         yield from self.get_archived(object_type=object_type)
 
     def get_archived_deals(self):
-        object_type="deals"
+        object_type = "deals"
         yield from self.get_archived(object_type=object_type)
 
     def get_companies_legacy(self):
