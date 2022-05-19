@@ -27,7 +27,10 @@ STREAMS = {
     "archived_contacts": {"bookmark_key": "archivedAt"},
     "archived_companies": {"bookmark_key": "archivedAt"},
     "archived_deals": {"bookmark_key": "archivedAt"},
-    "engagements": {"bookmark_key": "lastUpdated"},
+    "calls": {"bookmark_key": "lastUpdated"},
+    "meetings": {"bookmark_key": "lastUpdated"},
+    "notes": {"bookmark_key": "lastUpdated"},
+    "tasks": {"bookmark_key": "lastUpdated"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
