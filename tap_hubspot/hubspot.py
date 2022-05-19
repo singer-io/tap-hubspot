@@ -101,8 +101,6 @@ class Hubspot:
             yield from self.get_companies_legacy()
         elif self.tap_stream_id == "contacts":
             yield from self.get_contacts(start_date=start_date, end_date=end_date)
-        elif self.tap_stream_id == "engagements":
-            yield from self.get_engagements(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
@@ -127,6 +125,8 @@ class Hubspot:
             yield from self.get_archived_companies()
         elif self.tap_stream_id == "archived_deals":
             yield from self.get_archived_deals()
+        elif self.tap_stream_id == "calls":
+            yield from self.get_calls(start_date=start_date, end_date=end_date)
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -435,11 +435,11 @@ class Hubspot:
                     self.get_value(contact, ["properties", filter_key])
                 )
 
-    def get_engagements(
+    def get_calls(
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
-        obj_type = "engagements"
+        obj_type = "calls"
         properties = self.get_object_properties(obj_type)
 
         gen = self.search(
