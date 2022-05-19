@@ -18,7 +18,6 @@ STREAMS = {
     },
     "contacts_events": {"bookmark_key": "lastSynced"},
     "deal_pipelines": {"bookmark_key": "updatedAt"},
-    "engagements": {"bookmark_key": "lastUpdated"},
     "submissions": {"bookmark_key": "submittedAt"},
     "email_events": {"bookmark_key": "created"},
     "deals": {"bookmark_key": "updatedAt"},
@@ -28,6 +27,7 @@ STREAMS = {
     "archived_contacts": {"bookmark_key": "archivedAt"},
     "archived_companies": {"bookmark_key": "archivedAt"},
     "archived_deals": {"bookmark_key": "archivedAt"},
+    "engagements": {"bookmark_key": "lastUpdated"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
