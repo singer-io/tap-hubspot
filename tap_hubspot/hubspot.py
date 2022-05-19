@@ -131,6 +131,8 @@ class Hubspot:
             yield from self.get_notes(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "meetings":
             yield from self.get_meetings(start_date=start_date, end_date=end_date)
+        elif self.tap_stream_id == "tasks":
+            yield from self.get_tasks(start_date=start_date, end_date=end_date)
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -516,6 +518,42 @@ class Hubspot:
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "notes"
+        properties = self.get_object_properties(obj_type)
+
+        gen = self.search(
+            obj_type,
+            filter_key,
+            start_date,
+            end_date,
+            properties,
+        )
+
+        for chunk in chunker(gen, 100):
+            ids: List[str] = [engagement["id"] for engagement in chunk]
+
+            companies_associations = self.get_associations(obj_type, "companies", ids)
+            contacts_associations = self.get_associations(obj_type, "contacts", ids)
+
+            for i, engagement_id in enumerate(ids):
+                engagement = chunk[i]
+
+                companies = companies_associations.get(engagement_id, [])
+                contacts = contacts_associations.get(engagement_id, [])
+
+                engagement["associations"] = {
+                    "companies": {"results": companies},
+                    "contacts": {"results": contacts},
+                }
+
+                yield engagement, parser.isoparse(
+                    self.get_value(engagement, ["properties", filter_key])
+                )
+
+    def get_tasks(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "hs_lastmodifieddate"
+        obj_type = "tasks"
         properties = self.get_object_properties(obj_type)
 
         gen = self.search(
