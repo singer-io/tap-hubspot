@@ -28,6 +28,7 @@ STREAMS = {
     "archived_companies": {"bookmark_key": "archivedAt"},
     "archived_deals": {"bookmark_key": "archivedAt"},
     "calls": {"bookmark_key": "lastUpdated"},
+    "meetings": {"bookmark_key": "lastUpdated"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
