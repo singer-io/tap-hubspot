@@ -6,6 +6,7 @@ import backoff
 from datetime import datetime, timezone
 from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any, Tuple
 from dateutil import parser
+import simplejson
 
 
 class RetryAfterReauth(Exception):
@@ -866,7 +867,13 @@ class Hubspot:
                 raise RetryAfterReauth
             LOGGER.debug(response.url)
             response.raise_for_status()
-            return response.json()
+            try:
+                return response.json()
+            except simplejson.scanner.JSONDecodeError:
+                LOGGER.exception(
+                    f"Failed to decode the response to json: '{response.text}'"
+                )
+                raise
 
     @backoff.on_exception(
         backoff.expo,
