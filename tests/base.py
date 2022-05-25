@@ -100,7 +100,7 @@ class HubspotBaseTest(unittest.TestCase):
             "deal_pipelines": {
                 self.PRIMARY_KEYS: {"pipelineId"},
                 self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: True
+                self.OBEYS_START_DATE: False,
             },
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},

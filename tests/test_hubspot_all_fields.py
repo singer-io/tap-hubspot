@@ -115,6 +115,11 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_analytics_latest_source_timestamp',
         'property_hs_analytics_latest_source_data_1',
         'property_hs_analytics_latest_source_contact',
+        'property_hs_analytics_latest_source_company',
+        'property_hs_analytics_latest_source_data_1_company',
+        'property_hs_analytics_latest_source_data_2_company',
+        'property_hs_analytics_latest_source_data_2',
+
     },
     'subscription_changes':{
         'normalizedEmailId'

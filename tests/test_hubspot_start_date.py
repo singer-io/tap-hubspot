@@ -35,14 +35,14 @@ class TestHubspotStartDate(HubspotBaseTest):
                 self.test_client.create(stream)
 
     def expected_streams(self):
-
-        # If any streams cannot have data generated programmatically,
-        #      hardcode start_dates for these streams and run the test twice.
-        # streams tested in TestHubspotStartDateStatic should be removed
+        """
+        If any streams cannot have data generated programmatically,
+        hardcode start_dates for these streams and run the test twice.
+        streams tested in TestHubspotStartDateStatic should be removed.
+        """
         return self.expected_check_streams().difference({
-            'deal_pipelines',
-            'owners',
-            'campaigns',
+            'owners', # static test data, covered in separate test
+            'campaigns', # static test data, covered in separate test
         })
 
 
@@ -53,7 +53,7 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         if original:
             return {
-                'start_date' : self.timedelta_formatted(utc_today, days=-7)
+                'start_date' : self.timedelta_formatted(utc_today, days=-2)
             }
         else:
             return {
@@ -85,50 +85,62 @@ class TestHubspotStartDate(HubspotBaseTest):
         # Test by stream
         for stream in self.expected_streams():
             with self.subTest(stream=stream):
-                # record counts
-                first_sync_count = first_record_count_by_stream.get(stream, 0)
-                second_sync_count = second_record_count_by_stream.get(stream, 0)
 
-                # record messages
-                first_sync_messages = first_sync_records.get(stream, {'messages': []}).get('messages')
-                second_sync_messages = second_sync_records.get(stream, {'messages': []}).get('messages')
-
-                # start dates
+                # gather expectations
                 start_date_1 = self.get_properties()['start_date']
                 start_date_2 = self.get_properties(original=False)['start_date']
-                self.assertGreater(first_sync_count, 0)
-                if first_sync_messages and second_sync_messages:
+                primary_keys = self.expected_primary_keys()[stream]
+                replication_key = list(self.expected_replication_keys()[stream])
 
-                    primary_keys = self.expected_primary_keys()[stream]
+                # gather results
+                first_sync_count = first_record_count_by_stream.get(stream, 0)
+                second_sync_count = second_record_count_by_stream.get(stream, 0)
+                first_sync_messages = first_sync_records.get(stream, {'messages': []}).get('messages')
+                second_sync_messages = second_sync_records.get(stream, {'messages': []}).get('messages')
+                first_sync_primary_keys = set(tuple([record['data'][pk] for pk in primary_keys])
+                                              for record in first_sync_messages)
+                second_sync_primary_keys = set(tuple([record['data'][pk] for pk in primary_keys])
+                                               for record in second_sync_messages)
 
-                    # Get all primary keys for the first sync
-                    first_sync_primary_keys = []
-                    for message in first_sync_messages:
-                        record = message['data']
-                        primary_key = tuple([record[pk] for pk in primary_keys])
-                        first_sync_primary_keys.append(primary_key)
-
-                    # Get all primary keys for the second sync
-                    second_sync_primary_keys = []
-                    for message in second_sync_messages:
-                        record = message['data']
-                        primary_key = tuple([record[pk] for pk in primary_keys])
-                        second_sync_primary_keys.append(primary_key)
-
-                    # Verify everthing in sync 2 is in sync 1
-                    for tupled_primary_key_value in (second_sync_primary_keys):
-                        self.assertIn(tupled_primary_key_value, first_sync_primary_keys)
                 if self.expected_metadata()[stream][self.OBEYS_START_DATE]:
-                    # Log out WARNING if there is no data in sync 2 for a stream
-                    if second_sync_count == 0:
-                        print(f"WARNING | Sync 2 did not catch any data for {stream}-- check if the POSTs are working. "
-                              "This test is likely to fail if sync 2 continues to have 0 records.")
+
+                    # Verify sync 2 overlaps with sync 1
+                    self.assertFalse(first_sync_primary_keys.isdisjoint(second_sync_primary_keys),
+                                     msg='There should be a shared set of data from start date 2 through sync execution time.')
+
                     # Verify the second sync has less data
                     self.assertGreater(first_sync_count, second_sync_count)
+
+                    # for incrmental streams we can compare records agains the start date
+                    if replication_key:
+                        # BUG_TDL-9939 replication key is not listed correctly
+                        first_sync_replication_key_values = [record['data'][f'property_{replication_key[0]}']['value']
+                                                             for record in first_sync_messages]
+                        second_sync_replication_key_values = [record['data'][f'property_{replication_key[0]}']['value']
+                                                              for record in second_sync_messages]
+                        formatted_start_date_1 = start_date_1.replace('Z', '.000000Z')
+                        formatted_start_date_2 = start_date_2.replace('Z', '.000000Z')
+
+                        # Verify the replication key values are greater than or equal to the start date
+                        # for sync 1
+                        for value in first_sync_replication_key_values:
+                            self.assertGreaterEqual(value, formatted_start_date_1)
+                        # and for sync 2
+                        for value in second_sync_replication_key_values:
+                            self.assertGreaterEqual(value, formatted_start_date_2)
                 else:
+
                     # If Start date is not obeyed then verify the syncs are equal
                     self.assertEqual(first_sync_count, second_sync_count)
                     self.assertEqual(first_sync_primary_keys, second_sync_primary_keys)
+
+                # Verify records are replicated for both syncs
+                self.assertGreater(first_sync_count, 0,
+                                   msg='start date usage is not confirmed when no records are replicated')
+                self.assertGreater(second_sync_count, 0,
+                                   msg='start date usage is not confirmed when no records are replicated')
+
+
 class TestHubspotStartDateStatic(TestHubspotStartDate):
     def name(self):
         return "tt_hubspot_start_date_static"
