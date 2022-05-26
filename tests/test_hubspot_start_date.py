@@ -116,10 +116,13 @@ class TestHubspotStartDate(HubspotBaseTest):
                         # BUG_TDL-9939 replication key is not listed correctly
                         if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
                             replication_key = [f'property_{replication_key[0]}']
-                        first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
-                                                             for record in first_sync_messages]
-                        second_sync_replication_key_values = [record['data'][replication_key[0]]['value']
-                                                              for record in second_sync_messages]
+                            first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
+                                                                 for record in first_sync_messages]
+                            second_sync_replication_key_values = [record['data'][replication_key[0]]['value']
+                                                                  for record in second_sync_messages]
+                        else:
+                            first_sync_replication_key_values = [record['data'][replication_key[0]] for record in first_sync_messages]
+                            second_sync_replication_key_values = [record['data'][replication_key[0]] for record in second_sync_messages]
                         formatted_start_date_1 = start_date_1.replace('Z', '.000000Z')
                         formatted_start_date_2 = start_date_2.replace('Z', '.000000Z')
 
