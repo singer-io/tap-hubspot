@@ -4,7 +4,7 @@ import ratelimit
 import singer
 import backoff
 from datetime import datetime, timezone
-from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any, Tuple
+from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any, Tuple, TypeVar
 from dateutil import parser
 import simplejson
 
@@ -122,8 +122,10 @@ MANDATORY_PROPERTIES = {
     ],
 }
 
+T = TypeVar("T")
 
-def chunker(iter: Iterable, size: int) -> Iterable:
+
+def chunker(iter: Iterable[T], size: int) -> Iterable[List[T]]:
     i = 0
     chunk = []
     for o in iter:
@@ -161,7 +163,10 @@ class Hubspot:
         elif self.tap_stream_id == "companies":
             yield from self.get_companies_legacy()
         elif self.tap_stream_id == "contacts":
-            yield from self.get_contacts(start_date=start_date, end_date=end_date)
+            self.event_state["contacts_start_date"] = start_date
+            self.event_state["contacts_end_date"] = end_date
+
+            yield from self.get_contacts()
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
@@ -466,27 +471,21 @@ class Hubspot:
                 self.get_value(company, ["properties", filter_key])
             )
 
-    def get_contacts(
-        self, start_date: datetime, end_date: datetime
-    ) -> Iterable[Tuple[Dict, datetime]]:
-        self.event_state["contacts_start_date"] = start_date
-        self.event_state["contacts_end_date"] = end_date
-        filter_key = "lastmodifieddate"
-        obj_type = "contacts"
-        properties = self.get_object_properties(obj_type)
+    def get_contacts(self) -> Iterable[Tuple[Dict, datetime]]:
+        replication_path = ["updatedAt"]
 
-        gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+        gen = self.get_records(
+            "/crm/v3/objects/contacts",
+            replication_path,
+            params={"limit": 100, "properties": MANDATORY_PROPERTIES["contacts"]},
+            data_field="results",
+            offset_key="after",
         )
 
         for chunk in chunker(gen, 100):
             ids: List[str] = [contact["id"] for contact in chunk]
 
-            companies_associations = self.get_associations(obj_type, "companies", ids)
+            companies_associations = self.get_associations("contacts", "companies", ids)
 
             for i, contact_id in enumerate(ids):
                 contact = chunk[i]
@@ -499,7 +498,7 @@ class Hubspot:
 
                 self.store_ids_submissions(contact)
                 yield contact, parser.isoparse(
-                    self.get_value(contact, ["properties", filter_key])
+                    self.get_value(contact, replication_path)
                 )
 
     def get_calls(
