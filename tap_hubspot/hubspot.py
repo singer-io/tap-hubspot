@@ -483,23 +483,19 @@ class Hubspot:
         )
 
         for chunk in chunker(gen, 100):
-            ids: List[str] = [contact["id"] for contact in chunk]
-
+            ids: List[str] = [contact["id"] for contact, _ in chunk]
             companies_associations = self.get_associations("contacts", "companies", ids)
 
-            for i, contact_id in enumerate(ids):
-                contact = chunk[i]
-
-                companies = companies_associations.get(contact_id, [])
-
+            for contact, replication_value in chunk:
                 contact["associations"] = {
-                    "companies": {"results": companies},
+                    "companies": {
+                        "results": companies_associations.get(contact["id"], [])
+                    },
                 }
 
                 self.store_ids_submissions(contact)
-                yield contact, parser.isoparse(
-                    self.get_value(contact, replication_path)
-                )
+
+                yield contact, replication_value
 
     def get_calls(
         self, start_date: datetime, end_date: datetime
