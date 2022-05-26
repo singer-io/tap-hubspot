@@ -112,7 +112,8 @@ class TestHubspotStartDate(HubspotBaseTest):
                     self.assertGreater(first_sync_count, second_sync_count)
 
                     # for incrmental streams we can compare records agains the start date
-                    if replication_key:
+                    if replication_key and stream not in {'contacts', 'subscription_changes', 'email_events'}:  # BUG_TDL-9939
+
                         # BUG_TDL-9939 replication key is not listed correctly
                         if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
                             replication_key = [f'property_{replication_key[0]}']
