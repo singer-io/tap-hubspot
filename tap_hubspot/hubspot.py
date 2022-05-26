@@ -63,7 +63,7 @@ MANDATORY_PROPERTIES = {
 }
 
 
-def chunker(iter: Iterable[Dict], size: int) -> Iterable[List[Dict]]:
+def chunker(iter: Iterable, size: int) -> Iterable:
     i = 0
     chunk = []
     for o in iter:
