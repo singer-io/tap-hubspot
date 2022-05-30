@@ -119,6 +119,7 @@ MANDATORY_PROPERTIES = {
         "original_mql_date_before_reset",
         "converting_touch",
         "mql_date",
+        "most_recent_source",  # ably_com
     ],
 }
 
