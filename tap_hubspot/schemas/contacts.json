@@ -4,6 +4,10 @@
     "vid": {
       "type": ["null", "integer"]
     },
+    "versionTimestamp": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
     "canonical-vid": {
       "type": ["null", "integer"]
     },

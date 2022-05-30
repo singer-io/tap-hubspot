@@ -433,7 +433,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     singer.write_state(STATE)
 
 
-def _sync_contact_vids(catalog, vids, schema, bumble_bee):
+def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key):
     if len(vids) == 0:
         return
 
@@ -442,6 +442,8 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     mdata = metadata.to_map(catalog.get('metadata'))
 
     for record in data.values():
+        # Explicitly adding bookmark value from bookmark dictionary
+        record[bookmark_key] = bookmark_values.get(record.get("vid"))
         record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
         singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
@@ -465,6 +467,8 @@ def sync_contacts(STATE, ctx):
     url = get_url("contacts_all")
 
     vids = []
+    # Dict to store replication key value for each contact record
+    bookmark_values = {}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
@@ -476,15 +480,18 @@ def sync_contacts(STATE, ctx):
 
             if not modified_time or modified_time >= start:
                 vids.append(row['vid'])
+                # Adding replication key value in `bookmark_values` dict
+                # Here, key is vid(primary key) and value is replication key value.
+                bookmark_values[row['vid']] = utils.strftime(modified_time)
 
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
             if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
                 vids = []
 
-        _sync_contact_vids(catalog, vids, schema, bumble_bee)
+        _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
 
     STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
