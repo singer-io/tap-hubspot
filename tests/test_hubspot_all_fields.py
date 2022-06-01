@@ -20,8 +20,12 @@ def get_matching_actual_record_by_pk(expected_primary_key_dict, actual_records):
     return ret_records
 
 FIELDS_ADDED_BY_TAP = {
-    # In 'contacts' streams 'versionTimeStamp' was not available in response to the second call.
-    # It was added separately from the first call.
+    # In 'contacts' streams 'versionTimeStamp' is not available in response of the second call.
+    # In the 1st call, Tap retrieves records of all contacts and from those records, it collects vids(id of contact).
+    # These records contain the versionTimestamp field.
+    # In the 2nd call, vids collected from the 1st call will be used to retrieve the whole contact record.
+    # Here, the records collected for detailed contact information do not contain the versionTimestamp field.
+    # So, we add the versionTimestamp field(fetched from 1st call records) explicitly in the record of 2nd call.
     "contacts": { "versionTimestamp" }  
 }
 

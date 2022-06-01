@@ -442,7 +442,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookm
     mdata = metadata.to_map(catalog.get('metadata'))
 
     for record in data.values():
-        # Explicitly adding bookmark value from bookmark dictionary
+        # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
         record[bookmark_key] = bookmark_values.get(record.get("vid"))
         record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
         singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
