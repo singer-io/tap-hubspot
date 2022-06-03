@@ -170,6 +170,8 @@ class Hubspot:
             yield from self.get_contacts()
         elif self.tap_stream_id == "contact_lists":
             yield from self.get_contact_lists()
+        elif self.tap_stream_id == "contacts_in_contact_lists":
+            yield from self.get_contacts_in_contact_lists()
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
@@ -514,6 +516,21 @@ class Hubspot:
             data_field="lists",
             offset_key="offset",
         )
+
+    def get_contacts_in_contact_lists(self) -> Iterable:
+        for contact_list, _ in self.get_contact_lists():
+            list_id = contact_list["listId"]
+            for contact, _ in self.get_records(
+                f"/contacts/v1/lists/{list_id}/contacts/all",
+                params={
+                    "count": 500,
+                    "formSubmissionMode": "none",
+                },
+                data_field="contacts",
+                offset_key="vidOffset",
+            ):
+                contact["list_id"] = list_id
+                yield contact, None
 
     def get_calls(
         self, start_date: datetime, end_date: datetime
@@ -908,6 +925,10 @@ class Hubspot:
             if offset_key:
                 if "paging" in data:
                     offset_value = self.get_value(data, ["paging", "next", "after"])
+                if "vid-offset" in data:
+                    offset_value = data.get("vid-offset")
+                    if data.get("has-more") == False:
+                        return
                 else:
                     offset_value = data.get(offset_key)
             if not offset_value:
