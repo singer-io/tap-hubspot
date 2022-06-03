@@ -168,6 +168,8 @@ class Hubspot:
             self.event_state["contacts_end_date"] = end_date
 
             yield from self.get_contacts()
+        elif self.tap_stream_id == "contact_lists":
+            yield from self.get_contact_lists()
         elif self.tap_stream_id == "deal_pipelines":
             yield from self.get_deal_pipelines()
         elif self.tap_stream_id == "deals":
@@ -497,6 +499,21 @@ class Hubspot:
                 self.store_ids_submissions(contact)
 
                 yield contact, replication_value
+
+    def get_contact_lists(self) -> Iterable:
+        try:
+            self.test_endpoint("/contacts/v1/lists")
+        except requests.HTTPError:
+            # We assume the current token doesn't have the proper permissions
+            return []
+
+        yield from self.get_records(
+            "/contacts/v1/lists",
+            ["updatedAt"],
+            params={"count": 250},
+            data_field="lists",
+            offset_key="offset",
+        )
 
     def get_calls(
         self, start_date: datetime, end_date: datetime
