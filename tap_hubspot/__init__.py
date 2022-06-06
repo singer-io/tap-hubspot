@@ -22,6 +22,7 @@ from singer import (transform,
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
+REQUEST_TIMEOUT = 300
 class InvalidAuthException(Exception):
     pass
 
@@ -228,7 +229,7 @@ def acquire_access_token_from_refresh_token():
     }
 
 
-    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload, timeout=get_request_timeout())
     if resp.status_code == 403:
         raise InvalidAuthException(resp.content)
 
@@ -288,6 +289,8 @@ def get_params_and_headers(params):
     return params, headers
 
 
+# backoff for Timeout error is already included in "requests.exceptions.RequestException"
+# as it is a parent class of "Timeout" error
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
@@ -303,7 +306,7 @@ def request(url, params=None):
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     LOGGER.info("GET %s", req.url)
     with metrics.http_request_timer(parse_source_from_url(url)) as timer:
-        resp = SESSION.send(req)
+        resp = SESSION.send(req, timeout=get_request_timeout())
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
@@ -331,6 +334,8 @@ def lift_properties_and_versions(record):
             record['properties_versions'] += versions
     return record
 
+# backoff for Timeout error is already included in "requests.exceptions.RequestException"
+# as it is a parent class of "Timeout" error
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
@@ -349,6 +354,7 @@ def post_search_endpoint(url, data, params=None):
             url=url,
             json=data,
             params=params,
+            timeout=get_request_timeout(),
             headers=headers
         )
 
@@ -1087,6 +1093,17 @@ def discover_schemas():
 def do_discover():
     LOGGER.info('Loading schemas')
     json.dump(discover_schemas(), sys.stdout, indent=4)
+
+def get_request_timeout():
+    # Get `request_timeout` value from config.
+    config_request_timeout = CONFIG.get('request_timeout')
+    # if config request_timeout is other than 0, "0" or "" then use request_timeout
+    if config_request_timeout and float(config_request_timeout):
+        request_timeout = float(config_request_timeout)
+    else:
+        # If value is 0, "0", "" or not passed then it set default to 300 seconds.
+        request_timeout = REQUEST_TIMEOUT
+    return request_timeout
 
 def main_impl():
     args = utils.parse_args(
