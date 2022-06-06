@@ -95,6 +95,7 @@ KNOWN_MISSING_FIELDS = {
         'customUid',
         'isPublished',
         'paymentSessionTemplateIds',
+        'selectedExternalOptions'
     },
     'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',
