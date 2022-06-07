@@ -12,6 +12,15 @@
       "args": ["-c", "config.json"],
       "console": "integratedTerminal",
       "justMyCode": true
+    },
+    {
+      "name": "Python: Statefull",
+      "type": "python",
+      "request": "launch",
+      "program": "main.py",
+      "args": ["-c", "config.json", "-s", "state.json"],
+      "console": "integratedTerminal",
+      "justMyCode": true
     }
   ]
 }
