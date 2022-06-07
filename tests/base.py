@@ -105,7 +105,7 @@ class HubspotBaseTest(unittest.TestCase):
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
                 self.OBEYS_START_DATE: True
             },
             "email_events": {

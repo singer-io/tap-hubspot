@@ -599,14 +599,23 @@ def sync_companies(STATE, ctx):
 def has_selected_custom_field(mdata):
     top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
     for prop in top_level_custom_props:
-        if mdata.get(prop, {}).get('selected') == True:
+        if (mdata.get(prop, {}).get('selected') == True) or (mdata.get(prop, {}).get('inclusion') == "automatic"):
             return True
     return False
 
 def sync_deals(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
-    bookmark_key = 'hs_lastmodifieddate'
+    bookmark_key = 'property_hs_lastmodifieddate'
+    # The Bookmark field('hs_lastmodifieddate') available in the record is different from
+    # the tap's bookmark key(property_hs_lastmodifieddate).
+    # `hs_lastmodifieddate` is available in the properties field at the nested level.
+    # As `hs_lastmodifieddate` is not available at the 1st level it can not be marked as automatic inclusion.
+    # tap includes all nested fields of the properties field as custom fields in the schema by appending the
+    # prefix property_ along with each field.
+    # That's why bookmark_key is `property_hs_lastmodifieddate` so that we can mark it as automatic inclusion.
+
+    bookmark_field_in_record = 'hs_lastmodifieddate'
     start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
@@ -648,9 +657,9 @@ def sync_deals(STATE, ctx):
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
-            if bookmark_key in row_properties:
+            if bookmark_field_in_record in row_properties:
                 # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_key]['timestamp'] / 1000.0
+                timestamp_millis = row_properties[bookmark_field_in_record]['timestamp'] / 1000.0
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
             elif 'createdate' in row_properties:
                 # Hubspot returns timestamps in millis
@@ -963,7 +972,7 @@ STREAMS = [
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
     Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]

@@ -69,7 +69,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                 expected_keys = self.expected_automatic_fields().get(stream)
 
                 # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 Replication keys are not included as an automatic field for these streams
-                if stream in {'companies', 'deals', 'subscription_changes', 'email_events'}:
+                if stream in {'companies', 'subscription_changes', 'email_events'}:
                     # replication keys not in the expected_keys
                     remove_keys = self.expected_metadata()[stream].get(self.REPLICATION_KEYS)
                     expected_keys = expected_keys.difference(remove_keys)
