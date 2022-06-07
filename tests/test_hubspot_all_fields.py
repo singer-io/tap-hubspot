@@ -95,6 +95,7 @@ KNOWN_MISSING_FIELDS = {
         'customUid',
         'isPublished',
         'paymentSessionTemplateIds',
+        'selectedExternalOptions',
     },
     'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',
@@ -135,6 +136,7 @@ KNOWN_MISSING_FIELDS = {
         'normalizedEmailId'
     }
 }
+
 
 class TestHubspotAllFields(HubspotBaseTest):
     """Test that with all fields selected for a stream we replicate data as expected"""
