@@ -3,8 +3,9 @@ from ratelimit import limits
 import ratelimit
 import singer
 import backoff
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Iterable, Optional, DefaultDict, Set, List, Any, Tuple, TypeVar
+
 from dateutil import parser
 import simplejson
 
@@ -152,13 +153,13 @@ class Hubspot:
         self.SESSION = requests.Session()
         self.limit = limit
         self.access_token = None
+        self.access_token_ttl = None
         self.config = config
         self.tap_stream_id = tap_stream_id
         self.event_state = event_state
         self.timeout = timeout
 
     def streams(self, start_date: datetime, end_date: datetime):
-        self.refresh_access_token()
         if self.tap_stream_id == "owners":
             yield from self.get_owners()
         elif self.tap_stream_id == "companies":
@@ -950,6 +951,10 @@ class Hubspot:
     def call_api(self, url, params=None):
         params = params or {}
         url = f"{self.BASE_URL}{url}"
+
+        # access_token is cached
+        self.refresh_access_token()
+
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         with self.SESSION.get(
@@ -957,7 +962,6 @@ class Hubspot:
         ) as response:
             if response.status_code == 401:
                 # attempt to refresh access token
-                self.refresh_access_token()
                 raise RetryAfterReauth
             LOGGER.debug(response.url)
             response.raise_for_status()
@@ -994,6 +998,9 @@ class Hubspot:
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
+        # access_token is cached
+        self.refresh_access_token()
+
         with self.SESSION.request(
             method,
             url,
@@ -1004,8 +1011,6 @@ class Hubspot:
             data=data,
         ) as response:
             if response.status_code == 401:
-                # attempt to refresh access token
-                self.refresh_access_token()
                 raise RetryAfterReauth
 
             LOGGER.debug(response.url)
@@ -1021,6 +1026,9 @@ class Hubspot:
             response.raise_for_status()
 
     def refresh_access_token(self):
+        if self.access_token_ttl and datetime.utcnow() < self.access_token_ttl:
+            return
+
         payload = {
             "grant_type": "refresh_token",
             "refresh_token": self.config["refresh_token"],
@@ -1030,6 +1038,16 @@ class Hubspot:
 
         resp = requests.post(self.BASE_URL + "/oauth/v1/token", data=payload)
         resp.raise_for_status()
+
         if not resp:
             raise Exception(resp.text)
-        self.access_token = resp.json()["access_token"]
+
+        data = resp.json()
+
+        # cache the access_token for ttl (default is 1800 seconds)
+        # subtract 5 minutes just to be super sure.
+        expires_in_seconds = data["expires_in"]
+        self.access_token_ttl = datetime.utcnow() + timedelta(
+            seconds=expires_in_seconds - 60 * 5
+        )
+        self.access_token = data["access_token"]
