@@ -599,6 +599,7 @@ def sync_companies(STATE, ctx):
 def has_selected_custom_field(mdata):
     top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
     for prop in top_level_custom_props:
+        # Return 'True' if the custom field is automatic.
         if (mdata.get(prop, {}).get('selected') == True) or (mdata.get(prop, {}).get('inclusion') == "automatic"):
             return True
     return False
@@ -612,7 +613,7 @@ def sync_deals(STATE, ctx):
     # `hs_lastmodifieddate` is available in the properties field at the nested level.
     # As `hs_lastmodifieddate` is not available at the 1st level it can not be marked as automatic inclusion.
     # tap includes all nested fields of the properties field as custom fields in the schema by appending the
-    # prefix property_ along with each field.
+    # prefix `property_` along with each field.
     # That's why bookmark_key is `property_hs_lastmodifieddate` so that we can mark it as automatic inclusion.
 
     bookmark_field_in_record = 'hs_lastmodifieddate'
@@ -964,6 +965,7 @@ STREAMS = [
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
+    Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -972,7 +974,6 @@ STREAMS = [
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
     Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
