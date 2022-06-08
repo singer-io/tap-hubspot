@@ -950,7 +950,7 @@ class Hubspot:
             RetryAfterReauth,
         ),
         jitter=backoff.full_jitter,
-        max_tries=10,
+        max_tries=20,
     )
     @limits(calls=100, period=10)
     def call_api(self, url, params=None):
@@ -989,7 +989,7 @@ class Hubspot:
             RetryAfterReauth,
         ),
         jitter=backoff.full_jitter,
-        max_tries=10,
+        max_tries=20,
     )
     @limits(calls=100, period=10)
     def do(
