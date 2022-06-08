@@ -949,6 +949,7 @@ class Hubspot:
             ratelimit.exception.RateLimitException,
             RetryAfterReauth,
         ),
+        jitter=backoff.full_jitter,
         max_tries=10,
     )
     @limits(calls=100, period=10)
@@ -987,6 +988,7 @@ class Hubspot:
             ratelimit.exception.RateLimitException,
             RetryAfterReauth,
         ),
+        jitter=backoff.full_jitter,
         max_tries=10,
     )
     @limits(calls=100, period=10)
