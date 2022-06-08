@@ -14,6 +14,10 @@ class RetryAfterReauth(Exception):
     pass
 
 
+def backoff_with_offset(backoff, offset=10):
+    return lambda: (n + offset for n in backoff)
+
+
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 MANDATORY_PROPERTIES = {
@@ -936,7 +940,7 @@ class Hubspot:
                 break
 
     @backoff.on_exception(
-        backoff.expo,
+        backoff_with_offset(backoff.expo(), 300),
         (
             requests.exceptions.RequestException,
             requests.exceptions.ReadTimeout,
@@ -974,7 +978,7 @@ class Hubspot:
                 raise
 
     @backoff.on_exception(
-        backoff.expo,
+        backoff_with_offset(backoff.expo(), 300),
         (
             requests.exceptions.RequestException,
             requests.exceptions.ReadTimeout,
