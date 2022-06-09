@@ -673,6 +673,9 @@ def sync_deals(STATE, ctx):
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
+    # Clear bookmark for existing connections that are using `hs_lastmodifieddate` as replication key.
+    STATE = singer.clear_bookmark(STATE, 'deals', 'hs_lastmodifieddate')
+
     STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
