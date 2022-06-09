@@ -125,6 +125,8 @@ MANDATORY_PROPERTIES = {
         "converting_touch",
         "mql_date",
         "most_recent_source",  # ably_com
+        "become_a_customer___phadmin", # cloudtalk_io
+        "customer_canceled_an_account___phadmin" # cloudtalk_io
     ],
 }
 
