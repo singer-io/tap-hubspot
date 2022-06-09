@@ -930,7 +930,7 @@ class Hubspot:
             if offset_key:
                 if "paging" in data:
                     offset_value = self.get_value(data, ["paging", "next", "after"])
-                if "vid-offset" in data:
+                elif "vid-offset" in data:
                     offset_value = data.get("vid-offset")
                     if data.get("has-more") == False:
                         return
