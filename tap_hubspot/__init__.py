@@ -98,9 +98,19 @@ ENDPOINTS = {
     "owners":               "/owners/v2/owners",
 }
 
-def get_start(state, tap_stream_id, bookmark_key):
+def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
+    """
+    If the current bookmark_key is available in the state, then return the bookmark_key value.
+    If it is not available then check and return the older_bookmark_key in the state for the existing connection.
+    If non of the key available in the state for a particular stream, then return start_date.
+    """
     current_bookmark = singer.get_bookmark(state, tap_stream_id, bookmark_key)
     if current_bookmark is None:
+        if older_bookmark_key:
+            previous_bookmark = singer.get_bookmark(state, tap_stream_id, older_bookmark_key)
+            if previous_bookmark:
+                return previous_bookmark
+
         return CONFIG['start_date']
     return current_bookmark
 
@@ -617,7 +627,12 @@ def sync_deals(STATE, ctx):
     # That's why bookmark_key is `property_hs_lastmodifieddate` so that we can mark it as automatic inclusion.
 
     bookmark_field_in_record = 'hs_lastmodifieddate'
-    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
+
+    # Tap was used to write bookmark using replication key `hs_lastmodifieddate`. 
+    # Now, as the replication key gets changed to "property_hs_lastmodifieddate", `get_start` function would return 
+    # bookmark value of older bookmark key(`hs_lastmodifieddate`) if it is available. 
+
+    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key, older_bookmark_key=bookmark_field_in_record))
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
@@ -673,7 +688,6 @@ def sync_deals(STATE, ctx):
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
-    # Clear bookmark for existing connections that are using `hs_lastmodifieddate` as replication key.
     STATE = singer.clear_bookmark(STATE, 'deals', 'hs_lastmodifieddate')
 
     STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
