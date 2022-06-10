@@ -628,9 +628,11 @@ def sync_deals(STATE, ctx):
 
     bookmark_field_in_record = 'hs_lastmodifieddate'
 
-    # Tap was used to write bookmark using replication key `hs_lastmodifieddate`. 
-    # Now, as the replication key gets changed to "property_hs_lastmodifieddate", `get_start` function would return 
-    # bookmark value of older bookmark key(`hs_lastmodifieddate`) if it is available. 
+    # Tap was used to write bookmark using replication key `hs_lastmodifieddate`.
+    # Now, as the replication key gets changed to "property_hs_lastmodifieddate", `get_start` function would return
+    # bookmark value of older bookmark key(`hs_lastmodifieddate`) if it is available.
+    # So, here `older_bookmark_key` is the previous bookmark key that may be available in the state of
+    # the existing connection.
 
     start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key, older_bookmark_key=bookmark_field_in_record))
     max_bk_value = start
@@ -687,8 +689,6 @@ def sync_deals(STATE, ctx):
             if not modified_time or modified_time >= start:
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
-
-    STATE = singer.clear_bookmark(STATE, 'deals', 'hs_lastmodifieddate')
 
     STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
