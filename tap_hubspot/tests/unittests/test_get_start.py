@@ -45,20 +45,20 @@ class TestGetStart(unittest.TestCase):
         # Verify that returned value is old_bookmark_value
         self.assertEqual(returned_value, expected_value)
 
-    def test_get_start_with_current_bookmark(self):
+    def test_get_start_with_current_bookmark_and_no_old_bookmark(self):
         """
         This test verifies that the `get_start` function returns current_bookmark from the state
-        if current_bookmark is available in the state.
+        if current_bookmark is available in the state and old_bookmark is not given.
         """
         mock_state = get_state("current_bookmark", "CURR_BOOKMARK_VALUE")
         expected_value = "CURR_BOOKMARK_VALUE"
 
-        returned_value = get_start(mock_state, "stream_id_1", "current_bookmark", "old_bookmark")
+        returned_value = get_start(mock_state, "stream_id_1", "current_bookmark")
 
         # Verify that returned value is current bookmark
         self.assertEqual(returned_value, expected_value)
 
-    def test_get_start_with_no_old_bookmark(self):
+    def test_get_start_with_empty_start__no_old_bookmark(self):
         """
         This test verifies that the `get_start` function returns start_date from CONFIG
         if an empty state is passed and old_bookamrk is not given.
