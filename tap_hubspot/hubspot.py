@@ -126,7 +126,14 @@ MANDATORY_PROPERTIES = {
         "mql_date",
         "most_recent_source",  # ably_com
         "become_a_customer___phadmin", # cloudtalk_io
-        "customer_canceled_an_account___phadmin" # cloudtalk_io
+        "customer_canceled_an_account___phadmin", # cloudtalk_io
+        "lead_source", # cloudtalk_io
+        "closedate", # getmagic_com
+        "lifecyclestage", # getmagic_com
+        "contact_type", # getmagic_com
+        "discovery_call_attended", # getmagic_com
+        "stage", # getmagic_com
+        "dw_client_total_billed_revenue", # getmagic_com
     ],
 }
 
