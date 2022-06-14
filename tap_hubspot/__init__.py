@@ -22,6 +22,7 @@ from singer import (transform,
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
+REQUEST_TIMEOUT = 300
 class InvalidAuthException(Exception):
     pass
 
@@ -228,7 +229,7 @@ def acquire_access_token_from_refresh_token():
     }
 
 
-    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload, timeout=get_request_timeout())
     if resp.status_code == 403:
         raise InvalidAuthException(resp.content)
 
@@ -288,6 +289,8 @@ def get_params_and_headers(params):
     return params, headers
 
 
+# backoff for Timeout error is already included in "requests.exceptions.RequestException"
+# as it is a parent class of "Timeout" error
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
@@ -303,7 +306,7 @@ def request(url, params=None):
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
     LOGGER.info("GET %s", req.url)
     with metrics.http_request_timer(parse_source_from_url(url)) as timer:
-        resp = SESSION.send(req)
+        resp = SESSION.send(req, timeout=get_request_timeout())
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
@@ -331,6 +334,8 @@ def lift_properties_and_versions(record):
             record['properties_versions'] += versions
     return record
 
+# backoff for Timeout error is already included in "requests.exceptions.RequestException"
+# as it is a parent class of "Timeout" error
 @backoff.on_exception(backoff.constant,
                       (requests.exceptions.RequestException,
                        requests.exceptions.HTTPError),
@@ -349,6 +354,7 @@ def post_search_endpoint(url, data, params=None):
             url=url,
             json=data,
             params=params,
+            timeout=get_request_timeout(),
             headers=headers
         )
 
@@ -433,7 +439,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     singer.write_state(STATE)
 
 
-def _sync_contact_vids(catalog, vids, schema, bumble_bee):
+def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key):
     if len(vids) == 0:
         return
 
@@ -442,6 +448,8 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     mdata = metadata.to_map(catalog.get('metadata'))
 
     for record in data.values():
+        # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
+        record[bookmark_key] = bookmark_values.get(record.get("vid"))
         record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
         singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
@@ -465,6 +473,8 @@ def sync_contacts(STATE, ctx):
     url = get_url("contacts_all")
 
     vids = []
+    # Dict to store replication key value for each contact record
+    bookmark_values = {}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
@@ -476,15 +486,18 @@ def sync_contacts(STATE, ctx):
 
             if not modified_time or modified_time >= start:
                 vids.append(row['vid'])
+                # Adding replication key value in `bookmark_values` dict
+                # Here, key is vid(primary key) and value is replication key value.
+                bookmark_values[row['vid']] = utils.strftime(modified_time)
 
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
             if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
                 vids = []
 
-        _sync_contact_vids(catalog, vids, schema, bumble_bee)
+        _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
 
     STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
@@ -941,6 +954,7 @@ STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
+    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -948,7 +962,6 @@ STREAMS = [
     Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
-    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'FULL_TABLE'),
     Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
@@ -1080,6 +1093,17 @@ def discover_schemas():
 def do_discover():
     LOGGER.info('Loading schemas')
     json.dump(discover_schemas(), sys.stdout, indent=4)
+
+def get_request_timeout():
+    # Get `request_timeout` value from config.
+    config_request_timeout = CONFIG.get('request_timeout')
+    # if config request_timeout is other than 0, "0" or "" then use request_timeout
+    if config_request_timeout and float(config_request_timeout):
+        request_timeout = float(config_request_timeout)
+    else:
+        # If value is 0, "0", "" or not passed then it set default to 300 seconds.
+        request_timeout = REQUEST_TIMEOUT
+    return request_timeout
 
 def main_impl():
     args = utils.parse_args(

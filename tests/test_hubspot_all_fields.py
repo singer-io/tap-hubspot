@@ -19,6 +19,16 @@ def get_matching_actual_record_by_pk(expected_primary_key_dict, actual_records):
         can_save = True
     return ret_records
 
+FIELDS_ADDED_BY_TAP = {
+    # In 'contacts' streams 'versionTimeStamp' is not available in response of the second call.
+    # In the 1st call, Tap retrieves records of all contacts and from those records, it collects vids(id of contact).
+    # These records contain the versionTimestamp field.
+    # In the 2nd call, vids collected from the 1st call will be used to retrieve the whole contact record.
+    # Here, the records collected for detailed contact information do not contain the versionTimestamp field.
+    # So, we add the versionTimestamp field(fetched from 1st call records) explicitly in the record of 2nd call.
+    "contacts": { "versionTimestamp" }  
+}
+
 KNOWN_EXTRA_FIELDS = {
     'deals': {
         # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
@@ -228,7 +238,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                             continue # skip this expected record if it isn't replicated
                         actual_record = matching_actual_records_by_pk[0]
 
-                        expected_keys = set(expected_record.keys())
+                        expected_keys = set(expected_record.keys()).union(FIELDS_ADDED_BY_TAP.get(stream, {}))
                         actual_keys = set(actual_record.keys())
 
                         # NB: KNOWN_MISSING_FIELDS is a dictionary of streams to aggregated missing fields.

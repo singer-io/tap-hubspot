@@ -186,6 +186,20 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     expected_record_count = 1 if stream not in STREAMS_WITHOUT_UPDATES else 2
                     expected_records_2 = self.expected_records[stream][-expected_record_count:]
 
+                    # Given streams does not contain proper replication-key value in the response.
+                    if stream not in {"companies","deals","contacts_by_company","email_events"}:
+                        # verify first sync bookmark value is max bookmark value
+                        for record in actual_records_1:
+                            replication_key_value = record.get(stream_replication_key)
+                            self.assertLessEqual(replication_key_value,bookmark_1,
+                                                msg="First sync bookmark was incorrect, A record with greater replication-key value was found.")
+
+                        # verify second sync bookmark value is max bookmark value
+                        for record in actual_records_2:
+                            replication_key_value = record.get(stream_replication_key)
+                            self.assertLessEqual(replication_key_value,bookmark_2,
+                                                msg="Second sync bookmark was incorrect, A record with greater replication-key value was found.")
+
                     # verify only the new and updated records are captured  checking record countx
                     self.assertGreater(actual_record_count_1, actual_record_count_2)
 
@@ -216,8 +230,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
                 # verify that at least 1 record from the first sync is replicated in the 2nd sync
                 # to prove that the bookmarking is inclusive
-                if stream in {'contacts', # BUG | https://jira.talendforge.org/browse/TDL-15502
-                              'companies', # BUG | https://jira.talendforge.org/browse/TDL-15503
+                if stream in {'companies', # BUG | https://jira.talendforge.org/browse/TDL-15503
                               'email_events'}: # BUG | https://jira.talendforge.org/browse/TDL-15706
                     continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))

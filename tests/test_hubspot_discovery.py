@@ -75,26 +75,31 @@ class DiscoveryTest(HubspotBaseTest):
                                     #set(stream_properties[0].get('metadata', {self.PRIMARY_KEYS: None}).get(self.PRIMARY_KEYS, [])))}"
 
                         )
-                # actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
+                actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
                 # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
-                # # verify the actual replication matches our expected replication method
-                # self.assertEqual(
-                #     self.expected_replication_method().get(stream, None),
-                #     actual_replication_method,
-                #     msg="The actual replication method {} doesn't match the expected {}".format(
-                #         actual_replication_method,
-                #         self.expected_replication_method().get(stream, None)))
+                # verify the actual replication matches our expected replication method
+                if stream == "contacts":
+                    self.assertEqual(
+                        self.expected_replication_method().get(stream, None),
+                        actual_replication_method,
+                        msg="The actual replication method {} doesn't match the expected {}".format(
+                            actual_replication_method,
+                            self.expected_replication_method().get(stream, None)))
 
                 # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
                 actual_replication_method = stream_properties[0].get(
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-                    # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 all streams are set to full table
-                    pass  # BUG TDL-9939 REMOVE ME WHEN BUG IS ADDRESSED
-                    # self.assertTrue(actual_replication_method == self.INCREMENTAL,
-                    #                 msg="Expected INCREMENTAL replication "
-                    #                     "since there is a replication key")
+              
+                    if stream == "contacts":
+                        self.assertTrue(actual_replication_method == self.INCREMENTAL,
+                                    msg="Expected INCREMENTAL replication "
+                                    "since there is a replication key")
+                    else:
+                        # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 all streams are set to full table
+                        pass  # BUG TDL-9939 REMOVE ME WHEN BUG IS ADDRESSED
+
                 else:
                     self.assertTrue(actual_replication_method == self.FULL,
                                     msg="Expected FULL replication "
@@ -109,10 +114,11 @@ class DiscoveryTest(HubspotBaseTest):
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
-                # self.assertEqual(expected_automatic_fields,
-                #                  actual_automatic_fields,
-                #                  msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields}"
-                #                  )
+                if stream == "contacts":
+                    self.assertEqual(expected_automatic_fields,
+                                    actual_automatic_fields,
+                                    msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields}"
+                                    )
 
                 # verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources
