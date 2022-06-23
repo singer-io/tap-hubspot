@@ -147,7 +147,7 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "string"]}
 
 def get_field_schema(field_type, extras=False):
-    if extras:
+    if False and extras:
         return {
             "type": "object",
             "properties": {
