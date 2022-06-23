@@ -41,3 +41,24 @@ To use an API key, include a `hapikey` configuration variable in your `config.js
 ---
 
 Copyright &copy; 2017 Stitch
+
+
+## Generating and uploading distribution archives
+
+```bash
+› python3 -m build
+```
+
+This command should generate 2 files in directory dist :
+
+```
+dist/
+  example_package-0.0.1-py3-none-any.whl
+  example_package-0.0.1.tar.gz
+```
+
+To upload package execute :
+
+```bash
+› python3 -m twine upload dist/*
+```
