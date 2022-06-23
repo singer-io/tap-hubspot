@@ -13,7 +13,9 @@
                 "-c",
                 "data/config/hubspot.json",
                 "--properties",
-                "data/catalog/hubspot.json"
+                "data/catalog/hubspot.json",
+                ">",
+                "data_hubspot.json"
             ]
         }
     ]
