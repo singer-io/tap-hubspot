@@ -519,8 +519,9 @@ class Hubspot:
     def get_contact_lists(self) -> Iterable:
         try:
             self.test_endpoint("/contacts/v1/lists")
-        except requests.HTTPError:
+        except requests.HTTPError as e:
             # We assume the current token doesn't have the proper permissions
+            LOGGER.warn("insufficient permissions to get contact lists, skipping")
             return []
 
         yield from self.get_records(
