@@ -1034,6 +1034,8 @@ class Hubspot:
             return response
 
     def test_endpoint(self, url, params={}):
+        self.refresh_access_token()
+
         url = f"{self.BASE_URL}{url}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
         with self.SESSION.get(
