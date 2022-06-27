@@ -526,7 +526,7 @@ class Hubspot:
 
         yield from self.get_records(
             "/contacts/v1/lists",
-            ["metaData", "lastSizeChangeAt"],
+            replication_path=["metaData", "lastSizeChangeAt"],
             params={"count": 250},
             data_field="lists",
             offset_key="offset",
