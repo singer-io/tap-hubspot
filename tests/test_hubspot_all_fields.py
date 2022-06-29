@@ -130,7 +130,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_analytics_latest_source_data_1_company',
         'property_hs_analytics_latest_source_data_2_company',
         'property_hs_analytics_latest_source_data_2',
-
+        'property_hs_analytics_latest_source_data_2_contact',
     },
     'subscription_changes':{
         'normalizedEmailId'
