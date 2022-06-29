@@ -128,6 +128,7 @@ MANDATORY_PROPERTIES = {
         "become_a_customer___phadmin", # cloudtalk_io
         "customer_canceled_an_account___phadmin", # cloudtalk_io
         "lead_source", # cloudtalk_io
+        "approved_trial", # cloudtalk_io
         "closedate", # getmagic_com
         "lifecyclestage", # getmagic_com
         "contact_type", # getmagic_com
