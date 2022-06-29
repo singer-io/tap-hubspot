@@ -8,7 +8,7 @@ from tap_hubspot import CONFIG
 from tap_hubspot import gen_request
 from tap_hubspot import get_url
 from tap_hubspot import merge_responses
-from tap_hubspot import process_v3_deals_records
+from tap_hubspot import process_and_filter_v3_records
 
 
 class TestDeals(unittest.TestCase):
@@ -51,7 +51,7 @@ class TestDeals(unittest.TestCase):
                          'in {}').format(record)
             self.assertIsNotNone(value, msg=error_msg)
 
-    def test_process_v3_deals_records(self):
+    def test_process_v3_records(self):
         self.maxDiff = None
         data = [
             {'properties': {'field1': 'value1',
@@ -65,7 +65,7 @@ class TestDeals(unittest.TestCase):
                             'hs_date_exited_field4':  {'value': 'value4'},}},
         ]
 
-        actual = process_v3_deals_records(data)
+        actual = process_and_filter_v3_records(data)
 
         self.assertDictEqual(expected[0]['properties'], actual[0]['properties'])
 
@@ -93,7 +93,7 @@ class TestDeals(unittest.TestCase):
                             'field4': 'value4',}},
         ]
 
-        merge_responses(v1_resp, v3_resp)
+        merge_responses(v1_resp, v3_resp, 'dealId')
 
         for expected_record in expected:
             for actual_record in v1_resp:

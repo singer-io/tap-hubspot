@@ -2,8 +2,8 @@
 
 from setuptools import setup
 
-setup(name='tap-hubspot',
-      version='2.9.6',
+setup(name='singer-tap-hubspot-cv',
+      version='2.9.8',
       description='Singer.io tap for extracting data from the HubSpot API',
       author='Stitch',
       url='http://singer.io',
@@ -24,7 +24,7 @@ setup(name='tap-hubspot',
       },
       entry_points='''
           [console_scripts]
-          tap-hubspot=tap_hubspot:main
+          singer-tap-hubspot=tap_hubspot:main
       ''',
       packages=['tap_hubspot'],
       package_data = {
