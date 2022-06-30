@@ -1,6 +1,12 @@
 {
     "type": "object",
     "properties": {
+        "portalId": {
+            "type": ["null", "integer"]
+          },
+          "objectId": {
+            "type": ["null", "integer"]
+          },      
         "properties": {
             "type": "object",
             "properties": {

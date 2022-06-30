@@ -1004,7 +1004,7 @@ def sync_tickets(STATE, ctx):
     
     schema = load_schema("tickets")
 
-    singer.write_schema("tickets", schema, ["ticketId"], [bookmark_key], catalog.get('stream_alias'))
+    singer.write_schema("tickets", schema, ["objectId"], [bookmark_key], catalog.get('stream_alias'))
     # Check if we should  include associations
     for key in mdata.keys():
         if 'associations' in key:
@@ -1078,7 +1078,7 @@ STREAMS = [
     Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE'),
-    Stream('tickets', sync_tickets, ["ticketId"], 'lastUpdated', 'FULL_TABLE')
+    Stream('tickets', sync_tickets, ["objectId"], 'lastUpdated', 'FULL_TABLE')
 ]
 
 def get_streams_to_sync(streams, state):
