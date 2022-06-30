@@ -830,15 +830,14 @@ class TestClient():
                     if contact['vid'] not in [record['contact-id'] for record in records]:
                         contact_id = contact['vid']
                         data = {
-                            "fromObjectId": company['companyId'], # company_id,
+                            "fromObjectId": company_id,
                             "toObjectId": contact_id,
                             "category": "HUBSPOT_DEFINED",
                             "definitionId": 2
                         }
                         # generate a record
                         self.put(url, data)
-                        # record = {'company-id': company_id, 'contact-id': contact_id}
-                        record = {'company-id': company['companyId'], 'contact-id': contact_id}
+                        record = {'company-id': company_id, 'contact-id': contact_id}
                         records.append(record)
                         break
 
