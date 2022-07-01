@@ -26,7 +26,7 @@ FIELDS_ADDED_BY_TAP = {
     # In the 2nd call, vids collected from the 1st call will be used to retrieve the whole contact record.
     # Here, the records collected for detailed contact information do not contain the versionTimestamp field.
     # So, we add the versionTimestamp field(fetched from 1st call records) explicitly in the record of 2nd call.
-    "contacts": { "versionTimestamp" }  
+    "contacts": { "versionTimestamp" }
 }
 
 KNOWN_EXTRA_FIELDS = {
@@ -130,7 +130,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_analytics_latest_source_data_1_company',
         'property_hs_analytics_latest_source_data_2_company',
         'property_hs_analytics_latest_source_data_2',
-
+        'property_hs_analytics_latest_source_data_2_contact',
     },
     'subscription_changes':{
         'normalizedEmailId'
@@ -229,7 +229,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
                     primary_key_dict = {primary_key: expected_record[primary_key] for primary_key in primary_keys}
                     primary_key_values = list(primary_key_dict.values())
-                    
+
                     with self.subTest(expected_record=primary_key_dict):
                         # grab the replicated record that corresponds to expected_record by checking primary keys
                         matching_actual_records_by_pk = get_matching_actual_record_by_pk(primary_key_dict, actual_records)

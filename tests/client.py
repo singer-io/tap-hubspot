@@ -4,10 +4,12 @@ import requests
 import backoff
 import json
 # from json.decoder import JSONDecodeError
-
 import uuid
 import random
-from  tap_tester import menagerie
+
+from tap_tester import menagerie
+from tap_tester.logger import LOGGER
+
 from base import HubspotBaseTest
 
 DEBUG = False
@@ -40,7 +42,7 @@ class TestClient():
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
         response = requests.get(url, params=params, headers=self.HEADERS)
-        print(f"TEST CLIENT | GET {url} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | GET {url} params={params}  STATUS: {response.status_code}")
         response.raise_for_status()
         json_response = response.json()
 
@@ -59,15 +61,15 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.post(url, json=data, params=params, headers=headers)
-        print(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
-            print(response.text)
+            LOGGER.debug(response.text)
 
         response.raise_for_status()
 
         if response.status_code == 204:
 
-            print(f"TEST CLIENT | WARNING Response is empty")
+            LOGGER.warn(f"TEST CLIENT | WARNING Response is empty")
             # NB: There is a simplejson.scanner.JSONDecodeError thrown when we attempt
             #     to do a response.json() on a 204 response. To get around this we just return an empty list
             #     as we assume that a 204 will not have body. A better implementation would be to catch the
@@ -89,9 +91,9 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.put(url, json=data, params=params, headers=headers)
-        print(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
-            print(response.text)
+            LOGGER.debug(response.text)
 
         response.raise_for_status()
 
@@ -107,9 +109,9 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.patch(url, json=data, params=params, headers=headers)
-        print(f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
-            print(response.text)
+            LOGGER.debug(response.text)
 
         response.raise_for_status()
 
@@ -126,9 +128,9 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.delete(url, params=params, headers=headers)
-        print(f"TEST CLIENT | DELETE {url} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | DELETE {url} params={params}  STATUS: {response.status_code}")
         if debug:
-            print(response.text)
+            LOGGER.debug(response.text)
         response.raise_for_status()
 
     def denest_properties(self, stream, records):
@@ -149,7 +151,7 @@ class TestClient():
                     # denest each property to be a top level key
                     record[f'property_{property_key}'] = property_value
 
-        print(f"TEST CLIENT | Transforming (denesting) {len(records)} {stream} records")
+        LOGGER.info(f"TEST CLIENT | Transforming (denesting) {len(records)} {stream} records")
         return records
 
     def datatype_transformations(self, stream, records):
@@ -168,7 +170,7 @@ class TestClient():
                             record[column]/1000, self.BOOKMARK_DATE_FORMAT
                         )
 
-        print(f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
+        LOGGER.info(f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
         return records
 
     ##########################################################################
@@ -664,7 +666,7 @@ class TestClient():
         elif stream == 'contact_lists':
             return self.create_contact_lists()
         elif stream == 'contacts_by_company':
-            return self.create_contacts_by_company(company_ids)
+            return self.create_contacts_by_company(company_ids, times=times)
         elif stream == 'engagements':
             return self.create_engagements()
         elif stream == 'campaigns':
@@ -678,8 +680,8 @@ class TestClient():
         elif stream == 'deal_pipelines':
             return self.create_deal_pipelines()
         elif stream == 'email_events':
-            print(
-                f"TEST CLIENT | WARNING Calling the create_subscription_changes method to generate {stream} records"
+            LOGGER.warn(
+                f"TEST CLIENT | Calling the create_subscription_changes method to generate {stream} records"
             )
             return self.create_subscription_changes()
         elif stream == 'subscription_changes':
@@ -811,7 +813,7 @@ class TestClient():
         records = [response]
         return records
 
-    def create_contacts_by_company(self, company_ids=[], contact_records=[]):
+    def create_contacts_by_company(self, company_ids=[], contact_records=[], times=1):
         """
         https://legacydocs.hubspot.com/docs/methods/crm-associations/associate-objects
         """
@@ -821,28 +823,29 @@ class TestClient():
         if not contact_records:
             contact_records = self.get_contacts()
 
-        contacts_by_company_records = []
-        for company_id in set(company_ids):
-            for contact in contact_records:
-                # look for a contact that is not already in the contacts_by_company list
-                if contact['vid'] not in [record['contact-id'] for record in contacts_by_company_records]:
-                    contact_id = contact['vid']
-                    data = {
-                        "fromObjectId": company_id,
-                        "toObjectId": contact_id,
-                        "category": "HUBSPOT_DEFINED",
-                        "definitionId": 2
-                    }
-                    # generate a record
-                    self.put(url, data)
-                    record = [{'company-id': company_id, 'contact-id': contact_id}]
-                    return record
+        records = []
+        for _ in range(times):
+            for company_id in set(company_ids):
+                for contact in contact_records:
+                    # look for a contact that is not already in the contacts_by_company list
+                    if contact['vid'] not in [record['contact-id'] for record in records]:
+                        contact_id = contact['vid']
+                        data = {
+                            "fromObjectId": company_id,
+                            "toObjectId": contact_id,
+                            "category": "HUBSPOT_DEFINED",
+                            "definitionId": 2
+                        }
+                        # generate a record
+                        self.put(url, data)
+                        record = {'company-id': company_id, 'contact-id': contact_id}
+                        records.append(record)
+                        break
 
-        raise NotImplementedError(
-            "All contacts may already have an associated company. "
-            f"Method was passed {len(company_ids)} companies [:param company_ids:] to check against."
-        )
+                if records:
+                    break
 
+        return records
 
     def create_deal_pipelines(self):
         """
@@ -1130,7 +1133,7 @@ class TestClient():
         count = 0
         email_records = []
         subscription_records = []
-        print(f"creating {times} records")
+        LOGGER.info(f"creating {times} records")
 
         for item in subscription_id_list:
             if count < times:
@@ -1524,7 +1527,7 @@ class TestClient():
         self.CONFIG['token_expires'] = (
             datetime.datetime.utcnow() +
             datetime.timedelta(seconds=auth['expires_in'] - 600))
-        print(f"TEST CLIENT | Token refreshed. Expires at {self.CONFIG['token_expires']}")
+        LOGGER.info(f"TEST CLIENT | Token refreshed. Expires at {self.CONFIG['token_expires']}")
 
     def __init__(self, start_date=''):
         self.BaseTest = HubspotBaseTest()
@@ -1552,4 +1555,4 @@ class TestClient():
             if (max_record_count - pipeline_count) / max_record_count <= 0.1: # at/above 90% of record limit
                 delete_count = int(max_record_count / 2)
                 self.cleanup(stream, records, delete_count)
-                print(f"TEST CLIENT | {delete_count} records deleted from {stream}")
+                LOGGER.info(f"TEST CLIENT | {delete_count} records deleted from {stream}")

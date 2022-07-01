@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.6
+  * Implement Request Timeout [#177](https://github.com/singer-io/tap-hubspot/pull/177)
+  * Add version timestamp in contacts [#191](https://github.com/singer-io/tap-hubspot/pull/191
+
 ## 2.9.5
   * Fixes a bug in sending the fields to the v3 Deals endpoint [#145](https://github.com/singer-io/tap-hubspot/pull/145)
 
