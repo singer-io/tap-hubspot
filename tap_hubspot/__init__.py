@@ -544,7 +544,7 @@ def sync_companies(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
-    bookmark_key = 'hs_lastmodifieddate'
+    bookmark_key = 'property_hs_lastmodifieddate'
     start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
     LOGGER.info("sync_companies from %s", start)
     schema = load_schema('companies')
@@ -560,6 +560,7 @@ def sync_companies(STATE, ctx):
     STATE = write_current_sync_start(STATE, "companies", current_sync_start)
     singer.write_state(STATE)
 
+    bookmark_field_in_record = 'hs_lastmodifieddate'
     url = get_url("companies_all")
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
@@ -570,9 +571,9 @@ def sync_companies(STATE, ctx):
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
             row_properties = row['properties']
             modified_time = None
-            if bookmark_key in row_properties:
+            if bookmark_field_in_record in row_properties:
                 # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_key]['timestamp'] / 1000.0
+                timestamp_millis = row_properties[bookmark_field_in_record]['timestamp'] / 1000.0
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
             elif 'createdate' in row_properties:
                 # Hubspot returns timestamps in millis
@@ -966,6 +967,7 @@ STREAMS = [
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
+    Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -973,7 +975,6 @@ STREAMS = [
     Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
-    Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
