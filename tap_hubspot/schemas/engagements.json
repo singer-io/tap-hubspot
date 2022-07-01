@@ -32,7 +32,7 @@
           "type": ["null", "integer"]
         },
         "type": {
-          "type": "string"
+          "type": ["null", "string"]
         },
         "timestamp": {
           "type": ["null", "string"],
@@ -58,7 +58,7 @@
         "dealIds": {
           "type": ["null", "array"],
           "items": {
-            "type": "integer"
+            "type": ["null", "integer"]
           }
         }
       }
@@ -84,13 +84,13 @@
           "type": ["null", "object"],
           "properties": {
             "email": {
-              "type": "string"
+              "type": ["null", "string"]
             },
             "firstName": {
-              "type": "string"
+              "type": ["null", "string"]
             },
             "lastName": {
-              "type": "string"
+              "type": ["null", "string"]
             }
           }
         },
@@ -100,7 +100,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
@@ -111,7 +111,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
@@ -122,7 +122,7 @@
             "type": "object",
             "properties": {
               "email": {
-                "type": "string"
+                "type": ["null", "string"]
               }
             }
           }
