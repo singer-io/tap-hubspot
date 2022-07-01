@@ -72,7 +72,7 @@ class HubspotBaseTest(unittest.TestCase):
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
                 self.EXPECTED_PAGE_SIZE: 250,
                 self.OBEYS_START_DATE: True
             },
