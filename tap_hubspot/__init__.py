@@ -967,7 +967,7 @@ STREAMS = [
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
-    Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'FULL_TABLE'),
+    Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
