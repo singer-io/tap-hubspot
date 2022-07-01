@@ -91,7 +91,7 @@ class DiscoveryTest(HubspotBaseTest):
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-                    
+            
                     if stream in ["contacts", "companies", "deals"]:
                         self.assertTrue(actual_replication_method == self.INCREMENTAL,
                                     msg="Expected INCREMENTAL replication "
