@@ -63,6 +63,8 @@ MANDATORY_PROPERTIES = {
         "first_conversion_event_name",  # capmo
         "company__target_market__tiers_",  # capmo
         "plan_price_ex_tax_",  # ably_com
+        "plan", # ably_com
+        "first_paid_invoice", # ably_com
         "monthly_recurring_revenue",  # sleekflow_io
     ],
     "contacts": [
