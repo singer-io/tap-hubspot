@@ -978,6 +978,7 @@ class Hubspot:
         ),
         jitter=backoff.full_jitter,
         max_tries=20,
+        max_time=5 * 60,
     )
     @limits(calls=100, period=10)
     def do(
