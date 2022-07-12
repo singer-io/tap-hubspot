@@ -214,10 +214,6 @@ def load_schema(entity_name):
                         custom_schema[key] = value
         else:
             custom_schema = get_v3_schema(entity_name, "tickets_v3_properties")
-            schema['properties']['properties'] = {
-                "type": "object",
-                "properties": custom_schema,
-            }
         # Move properties to top level
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
         schema['properties'].update(custom_schema_top_level)
