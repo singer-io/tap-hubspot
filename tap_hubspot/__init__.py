@@ -6,6 +6,7 @@ import singer
 import sys
 from singer import utils
 from tap_hubspot.stream import Stream
+from tap_hubspot.hubspot import InvalidCredentials
 from collections import defaultdict
 from typing import DefaultDict, Set
 
@@ -66,7 +67,9 @@ def sync(config, state=None):
                     stream_config=stream_config,
                 )
                 state, event_state = stream.do_sync(state, event_state)
-
+            except InvalidCredentials:
+                LOGGER.exception(f"Invalid credentials")
+                sys.exit(1)
             except Exception:
                 LOGGER.exception(f"{tap_stream_id} failed")
                 sys.exit(1)
