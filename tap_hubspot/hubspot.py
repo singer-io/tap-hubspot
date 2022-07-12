@@ -971,7 +971,7 @@ class Hubspot:
             requests.exceptions.ReadTimeout,
             requests.exceptions.Timeout,
             requests.exceptions.HTTPError,
-            ratelimit.exception.RateLimitException,
+            ratelimit.RateLimitException,
             RetryAfterReauth,
         ),
         jitter=backoff.full_jitter,
