@@ -14,6 +14,10 @@ class RetryAfterReauth(Exception):
     pass
 
 
+class InvalidCredentials(Exception):
+    pass
+
+
 def backoff_with_offset(backoff, offset=10):
     return lambda: (n + offset for n in backoff)
 
@@ -989,7 +993,19 @@ class Hubspot:
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         # access_token is cached
-        self.refresh_access_token()
+        try:
+            self.refresh_access_token()
+        except requests.HTTPError as err:
+            if err.response.status_code == 400:
+                try:
+                    err_data: Dict = err.response.json()
+                    msg = err_data.get("message")
+                    if msg is None:
+                        msg = "invalid credentials"
+                    raise InvalidCredentials(msg)
+                except Exception:
+                    raise InvalidCredentials(err.response.text)
+            raise
 
         with self.SESSION.request(
             method,
