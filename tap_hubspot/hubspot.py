@@ -930,7 +930,14 @@ class Hubspot:
             if offset_value:
                 params[offset_key] = offset_value
 
-            data = self.call_api(path, params=params)
+            resp = self.do("GET", path, params=params)
+            try:
+                data = resp.json()
+            except simplejson.JSONDecodeError:
+                LOGGER.exception(
+                    f"Failed to decode the response to json: '{resp.text}'"
+                )
+                raise
             params[offset_key] = None
 
             if not data_field:
@@ -955,44 +962,7 @@ class Hubspot:
             if not offset_value:
                 break
 
-    @backoff.on_exception(
-        backoff_with_offset(backoff.expo(), 300),
-        (
-            requests.exceptions.RequestException,
-            requests.exceptions.ReadTimeout,
-            requests.exceptions.Timeout,
-            requests.exceptions.HTTPError,
-            ratelimit.exception.RateLimitException,
-            RetryAfterReauth,
-        ),
-        jitter=backoff.full_jitter,
-        max_tries=20,
-    )
-    @limits(calls=100, period=10)
-    def call_api(self, url, params=None):
-        params = params or {}
-        url = f"{self.BASE_URL}{url}"
 
-        # access_token is cached
-        self.refresh_access_token()
-
-        headers = {"Authorization": f"Bearer {self.access_token}"}
-
-        with self.SESSION.get(
-            url, headers=headers, params=params, timeout=self.timeout
-        ) as response:
-            if response.status_code == 401:
-                # attempt to refresh access token
-                raise RetryAfterReauth
-            LOGGER.debug(response.url)
-            response.raise_for_status()
-            try:
-                return response.json()
-            except simplejson.scanner.JSONDecodeError:
-                LOGGER.exception(
-                    f"Failed to decode the response to json: '{response.text}'"
-                )
-                raise
 
     @backoff.on_exception(
         backoff_with_offset(backoff.expo(), 300),
