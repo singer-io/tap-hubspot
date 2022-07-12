@@ -63,10 +63,10 @@ MANDATORY_PROPERTIES = {
         "first_conversion_event_name",  # capmo
         "company__target_market__tiers_",  # capmo
         "plan_price_ex_tax_",  # ably_com
-        "plan", # ably_com
-        "first_paid_invoice", # ably_com
+        "plan",  # ably_com
+        "first_paid_invoice",  # ably_com
         "monthly_recurring_revenue",  # sleekflow_io
-        "mrr", # cloudtalk_io
+        "mrr",  # cloudtalk_io
     ],
     "contacts": [
         "email",
@@ -128,18 +128,18 @@ MANDATORY_PROPERTIES = {
         "converting_touch",
         "mql_date",
         "most_recent_source",  # ably_com
-        "ably_id", # ably_com
-        "become_a_customer___phadmin", # cloudtalk_io
-        "customer_canceled_an_account___phadmin", # cloudtalk_io
-        "lead_source", # cloudtalk_io
-        "approved_trial", # cloudtalk_io
-        "mrr", # cloudtalk_io
-        "closedate", # getmagic_com
-        "lifecyclestage", # getmagic_com
-        "contact_type", # getmagic_com
-        "discovery_call_attended", # getmagic_com
-        "stage", # getmagic_com
-        "dw_client_total_billed_revenue", # getmagic_com
+        "ably_id",  # ably_com
+        "become_a_customer___phadmin",  # cloudtalk_io
+        "customer_canceled_an_account___phadmin",  # cloudtalk_io
+        "lead_source",  # cloudtalk_io
+        "approved_trial",  # cloudtalk_io
+        "mrr",  # cloudtalk_io
+        "closedate",  # getmagic_com
+        "lifecyclestage",  # getmagic_com
+        "contact_type",  # getmagic_com
+        "discovery_call_attended",  # getmagic_com
+        "stage",  # getmagic_com
+        "dw_client_total_billed_revenue",  # getmagic_com
     ],
 }
 
@@ -961,8 +961,6 @@ class Hubspot:
                     offset_value = data.get(offset_key)
             if not offset_value:
                 break
-
-
 
     @backoff.on_exception(
         backoff_with_offset(backoff.expo(), 300),
