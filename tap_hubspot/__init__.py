@@ -653,6 +653,12 @@ def has_selected_custom_field(mdata):
             return True
     return False
 
+
+def is_custom_field_selected(field, mdata):
+    if mdata.get(field, {}).get('selected') == True:
+            return True
+    return False
+
 def sync_deals(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -1022,9 +1028,9 @@ def sync_tickets(STATE, ctx):
 
         # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
         v3_fields = [breadcrumb[1].replace('property_', '')
-                     for breadcrumb, mdata_map in mdata.items()
+                     for breadcrumb, _ in mdata.items()
                      if breadcrumb
-                     and (mdata_map.get('selected') == True or has_selected_properties or has_selected_custom_field(mdata))
+                     and is_custom_field_selected(breadcrumb, mdata)
                     #  and not any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
         ]
 
