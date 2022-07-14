@@ -27,6 +27,16 @@ def giveup_http_codes(e: Exception):
         status_code = e.response.status_code
         if status_code in {404, 400}:
             return True
+
+    if isinstance(e, (requests.Timeout, requests.ConnectionError)):
+        # retry on connection and timeout errors
+        return False
+
+    if isinstance(e, (ValueError, requests.URLRequired)):
+        # catch invalid/missing requests due to schema, invalid url etc.
+        return True
+
+    # backoff on all remaining requests.RequestException subclasses
     return False
 
 
