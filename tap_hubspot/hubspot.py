@@ -18,8 +18,26 @@ class InvalidCredentials(Exception):
     pass
 
 
-def backoff_with_offset(backoff, offset=10):
-    return lambda: (n + offset for n in backoff)
+def giveup_http_codes(e: Exception):
+    if not isinstance(e, requests.RequestException):
+        return False
+
+    if isinstance(e, requests.HTTPError):
+        # raised by response.raise_for_status()
+        status_code = e.response.status_code
+        if status_code in {404, 400}:
+            return True
+
+    if isinstance(e, (requests.Timeout, requests.ConnectionError)):
+        # retry on connection and timeout errors
+        return False
+
+    if isinstance(e, (ValueError, requests.URLRequired)):
+        # catch invalid/missing requests due to schema, invalid url etc.
+        return True
+
+    # backoff on all remaining requests.RequestException subclasses
+    return False
 
 
 LOGGER = singer.get_logger()
@@ -967,17 +985,15 @@ class Hubspot:
                 break
 
     @backoff.on_exception(
-        backoff_with_offset(backoff.expo(), 300),
+        backoff.expo(2, 1),
         (
             requests.exceptions.RequestException,
-            requests.exceptions.ReadTimeout,
-            requests.exceptions.Timeout,
-            requests.exceptions.HTTPError,
             ratelimit.RateLimitException,
             RetryAfterReauth,
         ),
+        giveup=giveup_http_codes,
         jitter=backoff.full_jitter,
-        max_tries=20,
+        max_tries=10,
         max_time=5 * 60,
     )
     @limits(calls=100, period=10)
