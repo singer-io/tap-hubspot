@@ -18,6 +18,18 @@ class InvalidCredentials(Exception):
     pass
 
 
+def giveup_http_codes(e: Exception):
+    if not isinstance(e, requests.RequestException):
+        return False
+
+    if isinstance(e, requests.HTTPError):
+        # raised by response.raise_for_status()
+        status_code = e.response.status_code
+        if status_code in {404, 400}:
+            return True
+    return False
+
+
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 MANDATORY_PROPERTIES = {
@@ -966,12 +978,10 @@ class Hubspot:
         backoff.expo(2, 1),
         (
             requests.exceptions.RequestException,
-            requests.exceptions.ReadTimeout,
-            requests.exceptions.Timeout,
-            requests.exceptions.HTTPError,
             ratelimit.RateLimitException,
             RetryAfterReauth,
         ),
+        giveup=giveup_http_codes,
         jitter=backoff.full_jitter,
         max_tries=10,
         max_time=5 * 60,
