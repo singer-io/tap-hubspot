@@ -985,7 +985,7 @@ class Hubspot:
                 break
 
     @backoff.on_exception(
-        backoff.expo(2, 1),
+        backoff.expo,
         (
             requests.exceptions.RequestException,
             ratelimit.RateLimitException,
