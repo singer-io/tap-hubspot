@@ -41,3 +41,45 @@ To use an API key, include a `hapikey` configuration variable in your `config.js
 ---
 
 Copyright &copy; 2017 Stitch
+
+
+## Generating and uploading distribution archives
+
+```bash
+› python3 -m build
+```
+
+This command should generate 2 files in directory dist :
+
+```
+dist/
+  example_package-0.0.1-py3-none-any.whl
+  example_package-0.0.1.tar.gz
+```
+
+To upload package execute :
+
+```bash
+› python3 -m twine upload dist/*
+```
+
+## Catalogue configuration
+
+Is it necessary to add parameter ``` "selected" : true ``` in metadata of a stream/field :
+
+Object | metadata general selected | metadata field selected
+--- | --- | ---
+campaigns | true | false
+companies | true | false
+contact_lists | true | false
+contacts_by_company | true | false
+contacts | true | false
+deal_pipelines | true | false
+deals | true | true (*properties*)
+email_events | true | false
+engagements | true | false
+forms | true | false
+owners | true | false
+subscription_changes | true | false
+tickets | true | true (*properties*)
+workflows | true | false
