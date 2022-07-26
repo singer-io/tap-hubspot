@@ -162,6 +162,7 @@ MANDATORY_PROPERTIES = {
         "discovery_call_attended",  # getmagic_com
         "stage",  # getmagic_com
         "dw_client_total_billed_revenue",  # getmagic_com
+        "offline_source_drill_down_2", # qmarkets_net
     ],
 }
 
