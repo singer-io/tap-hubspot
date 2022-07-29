@@ -98,9 +98,23 @@ ENDPOINTS = {
     "owners":               "/owners/v2/owners",
 }
 
-def get_start(state, tap_stream_id, bookmark_key):
+def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
+    """
+    If the current bookmark_key is available in the state, then return the bookmark_key value.
+    If it is not available then check and return the older_bookmark_key in the state for the existing connection.
+    If none of the keys are available in the state for a particular stream, then return start_date.
+
+    We have made this change because of an update in the replication key of the deals stream.
+    So, if any existing connections have only older_bookmark_key in the state then tap should utilize that bookmark value.
+    Then next time, the tap should use the current bookmark value.
+    """
     current_bookmark = singer.get_bookmark(state, tap_stream_id, bookmark_key)
     if current_bookmark is None:
+        if older_bookmark_key:
+            previous_bookmark = singer.get_bookmark(state, tap_stream_id, older_bookmark_key)
+            if previous_bookmark:
+                return previous_bookmark
+
         return CONFIG['start_date']
     return current_bookmark
 
@@ -617,8 +631,15 @@ def sync_deals(STATE, ctx):
     # prefix `property_` along with each field.
     # That's why bookmark_key is `property_hs_lastmodifieddate` so that we can mark it as automatic inclusion.
 
-    bookmark_field_in_record = 'hs_lastmodifieddate'
-    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
+    last_modified_date = 'hs_lastmodifieddate'
+
+    # Tap was used to write bookmark using replication key `hs_lastmodifieddate`.
+    # Now, as the replication key gets changed to "property_hs_lastmodifieddate", `get_start` function would return
+    # bookmark value of older bookmark key(`hs_lastmodifieddate`) if it is available.
+    # So, here `older_bookmark_key` is the previous bookmark key that may be available in the state of
+    # the existing connection.
+
+    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key, older_bookmark_key=last_modified_date))
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
     most_recent_modified_time = start
@@ -659,9 +680,9 @@ def sync_deals(STATE, ctx):
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
-            if bookmark_field_in_record in row_properties:
+            if last_modified_date in row_properties:
                 # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_field_in_record]['timestamp'] / 1000.0
+                timestamp_millis = row_properties[last_modified_date]['timestamp'] / 1000.0
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
             elif 'createdate' in row_properties:
                 # Hubspot returns timestamps in millis
