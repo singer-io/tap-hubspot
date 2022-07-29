@@ -4,7 +4,12 @@ from client import TestClient
 from base import HubspotBaseTest
 
 class TestHubspotTestClient(HubspotBaseTest):
-    """Test the basic functionality of our Test Client. This is a tool for sanity checks, nothing more."""
+    """
+    Test the basic functionality of our Test Client. This is a tool for sanity checks, nothing more.
+
+    To check an individual crud method, uncomment the corresponding test case below, and execute this file
+    as if it is a normal tap-tester test via bin/run-test.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.test_client = TestClient(self.get_properties()['start_date'])
@@ -73,14 +78,14 @@ class TestHubspotTestClient(HubspotBaseTest):
     #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
 
-    def test_deal_pipelines_create(self):
-        # Testing deal_pipelines POST
+    # def test_deal_pipelines_create(self):
+    #     # Testing deal_pipelines POST
 
-        old_records = self.test_client.get_deal_pipelines()
-        our_record = self.test_client.create_deal_pipelines()
-        new_records = self.test_client.get_deal_pipelines()
-        assert len(old_records) < len(new_records), \
-            f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
+    #     old_records = self.test_client.get_deal_pipelines()
+    #     our_record = self.test_client.create_deal_pipelines()
+    #     new_records = self.test_client.get_deal_pipelines()
+    #     assert len(old_records) < len(new_records), \
+    #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
 
     # def test_deal_pipelines_deletes(self):
     #     # Testing deal_pipelines DELETE

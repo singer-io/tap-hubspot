@@ -7,8 +7,7 @@ import json
 import uuid
 import random
 
-from tap_tester import menagerie
-from tap_tester.logger import LOGGER
+from tap_tester import menagerie, LOGGER
 
 from base import HubspotBaseTest
 
@@ -69,7 +68,7 @@ class TestClient():
 
         if response.status_code == 204:
 
-            LOGGER.warn(f"TEST CLIENT | WARNING Response is empty")
+            LOGGER.warn(f"TEST CLIENT Response is empty")
             # NB: There is a simplejson.scanner.JSONDecodeError thrown when we attempt
             #     to do a response.json() on a 204 response. To get around this we just return an empty list
             #     as we assume that a 204 will not have body. A better implementation would be to catch the
@@ -955,10 +954,17 @@ class TestClient():
     def create_engagements(self):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/engagements/create_engagement
-        NB: Dependent on valid (currently hardcoded) contactId, companyId, and ownerId.
+        NB: Dependent on valid (currently hardcoded) companyId, and ownerId.
             THIS IS A POTENTIAL POINT OF INSTABILITY FOR THE TESTS
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
+
+        # gather all contacts and randomly choose one that has not hit the limit
+        contact_records = self.get_contacts()
+        contact_ids = [contact['vid']
+                       for contact in contact_records
+                       if contact['vid'] != 2304] # contact 2304 has hit the 10,000 assoc limit
+        contact_id = random.choice(contact_ids)
 
         url = f"{BASE_URL}/engagements/v1/engagements"
         data = {
@@ -969,7 +975,7 @@ class TestClient():
                 "timestamp": 1409172644778
             },
             "associations": {
-                "contactIds": [2304],
+                "contactIds": [contact_id],
                 "companyIds": [6804176293],
                 "dealIds": [ ],
                 "ownerIds": [ ],
