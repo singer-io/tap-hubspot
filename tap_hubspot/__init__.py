@@ -559,7 +559,9 @@ def sync_companies(STATE, ctx):
     mdata = metadata.to_map(catalog.get('metadata'))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
     bookmark_key = 'property_hs_lastmodifieddate'
-    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
+    bookmark_field_in_record = 'hs_lastmodifieddate'
+
+    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key, older_bookmark_key=bookmark_field_in_record))
     LOGGER.info("sync_companies from %s", start)
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], [bookmark_key], catalog.get('stream_alias'))
@@ -574,7 +576,6 @@ def sync_companies(STATE, ctx):
     STATE = write_current_sync_start(STATE, "companies", current_sync_start)
     singer.write_state(STATE)
 
-    bookmark_field_in_record = 'hs_lastmodifieddate'
     url = get_url("companies_all")
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
