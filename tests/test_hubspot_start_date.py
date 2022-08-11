@@ -3,6 +3,7 @@ import datetime
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
+from tap_tester import LOGGER
 
 from base import HubspotBaseTest
 from client import TestClient
@@ -22,7 +23,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         (of start_date_1 -> now) than there are in the sync 2 time bin (of start_date_2 -> now).
         """
 
-        print("running streams with creates")
+        LOGGER.info("running streams with creates")
         streams_under_test = self.expected_streams() - {'email_events'} # we get this for free with subscription_changes
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
@@ -172,4 +173,4 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
             }
 
     def setUp(self):
-        print("running streams with no creates")
+        LOGGER.info("running streams with no creates")

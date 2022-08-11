@@ -72,10 +72,14 @@ jobs:
           name: 'Integration Tests'
           command: |
             source /usr/local/share/virtualenvs/dev_env.sh
+            mkdir /tmp/${CIRCLE_PROJECT_REPONAME}
+            export STITCH_CONFIG_DIR=/tmp/${CIRCLE_PROJECT_REPONAME}
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             << parameters.test_command >>
       - slack/notify-on-failure:
           only_for_branches: master
+      - store_artifacts:
+          path: /tmp/tap-hubspot
 
 workflows:
   version: 2
