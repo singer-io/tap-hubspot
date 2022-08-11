@@ -12,8 +12,8 @@ from client import TestClient
 
 class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_interrupt_contact_lists"
 
     def streams_to_test(self):
@@ -100,8 +100,8 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
 
 class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_interrupt_contacts"
 
     def get_properties(self):
@@ -118,8 +118,8 @@ class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetC
 
 class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetContactLists):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_interrupt_deals"
 
     def get_properties(self):

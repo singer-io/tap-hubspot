@@ -24,8 +24,8 @@ class TestHubspotBookmarks(HubspotBaseTest):
      - Verify the bookmark is the max value sent to the target for the a given replication key.
      - Verify 2nd sync respects the bookmark.
     """
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_bookmarks"
 
     def streams_to_test(self):

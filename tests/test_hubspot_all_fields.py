@@ -143,8 +143,8 @@ KNOWN_MISSING_FIELDS = {
 
 class TestHubspotAllFields(HubspotBaseTest):
     """Test that with all fields selected for a stream we replicate data as expected"""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_all_fields_dynamic"
 
     def streams_under_test(self):
@@ -305,7 +305,8 @@ class TestHubspotAllFields(HubspotBaseTest):
 
 
 class TestHubspotAllFieldsStatic(TestHubspotAllFields):
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_all_fields_static"
 
     def streams_under_test(self):

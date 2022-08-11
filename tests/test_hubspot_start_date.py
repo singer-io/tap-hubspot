@@ -13,7 +13,8 @@ STATIC_DATA_STREAMS = {'owners', 'campaigns'}
 
 class TestHubspotStartDate(HubspotBaseTest):
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_start_date"
 
     def setUp(self):
@@ -149,7 +150,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
 
 class TestHubspotStartDateStatic(TestHubspotStartDate):
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_start_date_static"
 
     def expected_streams(self):
