@@ -8,7 +8,8 @@ from base import HubspotBaseTest
 STATIC_DATA_STREAMS = {'owners'}
 
 class TestHubspotAutomaticFields(HubspotBaseTest):
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_automatic"
 
     def streams_to_test(self):
@@ -98,7 +99,8 @@ class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
         """streams to test"""
         return STATIC_DATA_STREAMS
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_automatic_static"
 
     def get_properties(self):

@@ -15,8 +15,8 @@ STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
 
 class TestHubspotBookmarks(HubspotBaseTest):
     """Test basic bookmarking and replication for streams that do not have CRUD capability."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_bookmarks_static"
 
     def streams_to_test(self):
