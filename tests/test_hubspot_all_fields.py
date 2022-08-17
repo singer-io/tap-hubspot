@@ -50,7 +50,9 @@ KNOWN_MISSING_FIELDS = {
     },
     'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
         'authorId',
-        'teamIds'
+        'teamIds',
+        'internal',
+        'ilsFilterBranch',
     },
     'email_events': {  # BUG https://jira.talendforge.org/browse/TDL-14997
         'portalSubscriptionStatus',
