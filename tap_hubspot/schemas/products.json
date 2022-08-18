@@ -1,0 +1,43 @@
+{
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "description": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "price": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        },
+        "createdate": {
+            "type": [
+                "null",
+                "string"
+            ],
+            "format": "date-time"
+        },
+        "hs_lastmodifieddate": {
+            "type": [
+                "null",
+                "string"
+            ],
+            "format": "date-time"
+        },
+        "hs_object_id": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        }
+    }
+}

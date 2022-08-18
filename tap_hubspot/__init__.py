@@ -46,7 +46,7 @@ CONTACTS_BY_COMPANY = "contacts_by_company"
 DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
 
 V3_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
-
+V3_PREFIXES_PRODUCTS = {'hs_date_entered', 'hs_date_exited', 'hs_time_in', 'hs_lastmodifieddate', 'hs_object_id'}
 CONFIG = {
     "access_token": None,
     "token_expires": None,
@@ -64,6 +64,11 @@ CONFIG = {
 }
 
 ENDPOINTS = {
+    "products_all":             "/crm-objects/v1/objects/products/paged",
+    "products_properties":      "/properties/v1/products/properties",
+    "products_v3_properties":   "/crm/v3/properties/products",
+    "products_v3_batch_reads":  "/crm/v3/objects/products/batch/read",
+
     "contacts_properties":  "/properties/v1/contacts/properties",
     "contacts_all":         "/contacts/v1/lists/all/contacts/all",
     "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
@@ -176,7 +181,10 @@ def get_custom_schema(entity_name):
     return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
 
 def get_v3_schema(entity_name):
-    url = get_url("deals_v3_properties")
+    if entity_name == 'deals':
+        url = get_url("deals_v3_properties")
+    else:
+        url = get_url("products_v3_properties")
     return parse_custom_schema(entity_name, request(url).json()['results'])
 
 def get_abs_path(path):
@@ -191,7 +199,7 @@ def load_associated_company_schema():
 
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
+    if entity_name in ["contacts", "companies", "deals", "products"]:
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
@@ -199,7 +207,7 @@ def load_schema(entity_name):
             "properties": custom_schema,
         }
 
-        if entity_name in ["deals"]:
+        if entity_name in ["deals", "products"]:
             v3_schema = get_v3_schema(entity_name)
             for key, value in v3_schema.items():
                 if any(prefix in key for prefix in V3_PREFIXES):
@@ -371,6 +379,22 @@ def merge_responses(v1_data, v3_data):
                 v1_record['properties'] = {**v1_record['properties'],
                                            **v3_record['properties']}
 
+def process_v3_products_records(v3_data):
+    """
+    This function:
+    1. filters out fields that don't contain 'hs_date_entered_*', 'hs_date_exited_*',
+    'hs_time_in_*', 'hs_lastmodifieddate_*', 'hs_object_id_*'
+    2. changes a key value pair in `properties` to a key paired to an
+       object with a key 'value' and the original value
+    """
+    transformed_v3_data = []
+    for record in v3_data:
+        new_properties = {field_name : {'value': field_value}
+                          for field_name, field_value in record['properties'].items()
+                          if any(prefix in field_name for prefix in V3_PREFIXES_PRODUCTS)}
+        transformed_v3_data.append({**record, 'properties' : new_properties})
+    return transformed_v3_data
+
 def process_v3_deals_records(v3_data):
     """
     This function:
@@ -386,6 +410,16 @@ def process_v3_deals_records(v3_data):
                           if any(prefix in field_name for prefix in V3_PREFIXES)}
         transformed_v3_data.append({**record, 'properties' : new_properties})
     return transformed_v3_data
+
+def get_v3_products(v3_fields, v1_data):
+    v1_ids = [{'id': str(record['objectId'])} for record in v1_data]
+
+    # Sending the first v3_field is enough to get them all
+    v3_body = {'inputs': v1_ids,
+               'properties': [v3_fields[0]],}
+    v3_url = get_url('products_v3_batch_reads')        
+    v3_resp = post_search_endpoint(v3_url, v3_body)    
+    return v3_resp.json()['results']
 
 def get_v3_deals(v3_fields, v1_data):
     v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
@@ -413,12 +447,18 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                 raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
 
             if v3_fields:
-                v3_data = get_v3_deals(v3_fields, data[path])
-
-                # The shape of v3_data is different than the V1 response,
-                # so we transform v3 to look like v1
-                transformed_v3_data = process_v3_deals_records(v3_data)
-                merge_responses(data[path], transformed_v3_data)
+                if tap_stream_id == 'products':
+                    v3_data = get_v3_products(v3_fields, data[path])
+                    # The shape of v3_data is different than the V1 response,
+                    # so we transform v3 to look like v1
+                    transformed_v3_data = process_v3_products_records(v3_data)
+                    merge_responses(data[path], transformed_v3_data)
+                else:
+                    v3_data = get_v3_deals(v3_fields, data[path])
+                    # The shape of v3_data is different than the V1 response,
+                    # so we transform v3 to look like v1
+                    transformed_v3_data = process_v3_deals_records(v3_data)
+                    merge_responses(data[path], transformed_v3_data)
 
             for row in data[path]:
                 counter.increment()
@@ -942,6 +982,74 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def sync_products(STATE, ctx):
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    bookmark_key = 'hs_lastmodifieddate'    
+    start = utils.strptime_with_tz(get_start(STATE, "products", bookmark_key)) # datetime.datetime
+    max_bk_value = start    
+    LOGGER.info("sync_products from %s", start)
+    most_recent_modified_time = start
+    params = {'limit': 100,
+              'includeAssociations': False,
+              'properties': ['name', 'description', 'price']}
+    
+    schema = load_schema("products")
+    singer.write_schema("products", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
+
+    # Check if we should  include associations
+    for key in mdata.keys():
+        if 'associations' in key:
+            assoc_mdata = mdata.get(key)
+            if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
+                params['includeAssociations'] = True
+    
+
+    v3_fields = None
+    has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
+    if has_selected_properties or has_selected_custom_field(mdata):
+        # On 2/12/20, hubspot added a lot of additional properties for
+        # deals, and appending all of them to requests ended up leading to
+        # 414 (url-too-long) errors. Hubspot recommended we use the
+        # `includeAllProperties` and `allpropertiesFetchMode` params
+        # instead.
+        params['includeAllProperties'] = True
+        params['allPropertiesFetchMode'] = 'latest_version'
+
+        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
+        v3_fields = [breadcrumb[1].replace('property_', '')
+                     for breadcrumb, mdata_map in mdata.items()
+                     if breadcrumb
+                     and (mdata_map.get('selected') == True or has_selected_properties)
+                     and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
+    
+    
+
+    url = get_url('products_all')
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request(STATE, 'products', url, params, 'objects', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
+            row_properties = row['properties']
+            modified_time = None
+                 
+            if bookmark_key in row_properties:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row_properties[bookmark_key]['timestamp'] / 1000.0
+                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
+            elif 'createdate' in row_properties:
+                # Hubspot returns timestamps in millis
+                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
+                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+            if not modified_time or modified_time >= start:                
+                record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                singer.write_record("products", record, catalog.get('stream_alias'), time_extracted=utils.now())
+
+    STATE = singer.write_bookmark(STATE, 'products', bookmark_key, utils.strftime(max_bk_value))
+    singer.write_state(STATE)
+    return STATE
+
 @attr.s
 class Stream(object):
     tap_stream_id = attr.ib()
@@ -957,6 +1065,7 @@ STREAMS = [
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
 
     # Do these last as they are full table
+    Stream('products', sync_products, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
     Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
