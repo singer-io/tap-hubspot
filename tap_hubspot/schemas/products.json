@@ -1,6 +1,21 @@
 {
     "type": "object",
     "properties": {
+        "objectId": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        },
+        "objectType": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "isDeleted": {
+            "type": ["null", "boolean"]
+          },
         "name": {
             "type": [
                 "null",

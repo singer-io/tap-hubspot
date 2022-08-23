@@ -370,6 +370,15 @@ def post_search_endpoint(url, data, params=None):
 
     return resp
 
+def merge_responses_products(v1_data, v3_data):
+    for v1_record in v1_data:
+        v1_id = v1_record.get('objectId')
+        for v3_record in v3_data:
+            v3_id = v3_record.get('id')
+            if str(v1_id) == v3_id:
+                v1_record['properties'] = {**v1_record['properties'],
+                                           **v3_record['properties']}
+
 def merge_responses(v1_data, v3_data):
     for v1_record in v1_data:
         v1_id = v1_record.get('dealId')
@@ -452,7 +461,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
                     # The shape of v3_data is different than the V1 response,
                     # so we transform v3 to look like v1
                     transformed_v3_data = process_v3_products_records(v3_data)
-                    merge_responses(data[path], transformed_v3_data)
+                    merge_responses_products(data[path], transformed_v3_data)
                 else:
                     v3_data = get_v3_deals(v3_fields, data[path])
                     # The shape of v3_data is different than the V1 response,
@@ -992,7 +1001,7 @@ def sync_products(STATE, ctx):
     most_recent_modified_time = start
     params = {'limit': 100,
               'includeAssociations': False,
-              'properties': ['name', 'description', 'price']}
+              'properties': ['name', 'description', 'price', 'hs_lastmodifieddate']}
     
     schema = load_schema("products")
     singer.write_schema("products", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
