@@ -89,6 +89,7 @@ MANDATORY_PROPERTIES = {
         "first_paid_invoice",  # ably_com
         "monthly_recurring_revenue",  # sleekflow_io
         "mrr",  # cloudtalk_io
+        "mrr_software_only", # cloudtalk_io
     ],
     "contacts": [
         "email",
