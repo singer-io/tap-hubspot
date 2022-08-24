@@ -5,7 +5,7 @@
       "type": ["null", "integer"]
     },
     "companyId": {
-      "type": ["null", "integer"]
+      "type": ["null", "string"]
     }
   }
 }

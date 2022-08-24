@@ -52,7 +52,7 @@
         "companyIds": {
           "type": ["null", "array"],
           "items": {
-            "type": "integer"
+            "type": "string"
           }
         },
         "dealIds": {

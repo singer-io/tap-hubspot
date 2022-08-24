@@ -5,7 +5,7 @@
             "type": ["integer"]
         },
         "company-id": {
-            "type": ["integer"]
+            "type": ["string"]
         }
     },
     "additionalProperties": false
