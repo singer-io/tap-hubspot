@@ -1,0 +1,42 @@
+{
+    "type": "object",
+    "properties": {
+        "objectType": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "portalId": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        },
+        "objectId": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        },
+        "isDeleted": {
+            "type": [
+                "null",
+                "boolean"
+            ]
+        },
+        "hs_product_id": {
+            "type": [
+                "null",
+                "integer"
+            ]
+        },
+        "hs_lastmodifieddate": {
+            "type": [
+                "null",
+                "string"
+            ],
+            "format": "date-time"
+        }
+    }
+}
