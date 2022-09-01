@@ -53,6 +53,7 @@ KNOWN_MISSING_FIELDS = {
         'teamIds',
         'internal',
         'ilsFilterBranch',
+        'limitExempt',
     },
     'email_events': {  # BUG https://jira.talendforge.org/browse/TDL-14997
         'portalSubscriptionStatus',
