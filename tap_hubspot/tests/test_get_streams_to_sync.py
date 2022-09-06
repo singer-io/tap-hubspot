@@ -1,12 +1,6 @@
-from contextlib import contextmanager
-from io import StringIO
-from singer import utils
-from tap_hubspot import *
-import time
-import datetime
-import json
-import requests_mock
 import unittest
+from tap_hubspot import get_streams_to_sync, parse_source_from_url, Stream
+
 
 class TestGetStreamsToSync(unittest.TestCase):
 

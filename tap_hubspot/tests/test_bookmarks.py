@@ -2,8 +2,6 @@ import unittest
 import singer.bookmarks
 import singer.messages
 import tap_hubspot
-import pprint
-import os
 from tap_hubspot.tests import utils
 
 LOGGER = singer.get_logger()

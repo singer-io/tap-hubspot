@@ -1,5 +1,4 @@
 import unittest
-import logging
 import singer
 import tap_hubspot
 import singer.bookmarks
@@ -8,7 +7,7 @@ from tap_hubspot.tests import utils
 LOGGER = singer.get_logger()
 
 def set_offset_with_exception(state, tap_stream_id, offset_key, offset_value):
-    LOGGER.info("set_offset_with_exception: {}".format(utils.caught_state))
+    LOGGER.info("set_offset_with_exception: %s", utils.caught_state)
     utils.caught_state = singer.bookmarks.set_offset(state, tap_stream_id, offset_key, offset_value)
     raise Exception("simulated")
 
@@ -47,7 +46,7 @@ class Offsets(unittest.TestCase):
         self.assertGreater(len(utils.caught_records['hubspot_contacts_by_company']), 0)
 
         #offset should be set in state
-        LOGGER.info("utils.caught_state: {}".format(utils.caught_state))
+        LOGGER.info("utils.caught_state: %s", utils.caught_state)
         self.assertNotEqual(utils.caught_state['bookmarks']['companies']['offset'], {})
 
         #no bookmark though
