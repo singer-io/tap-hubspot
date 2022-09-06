@@ -61,6 +61,7 @@ def our_write_schema(table_name, schema, pks):
     caught_schema[table_name] = schema
 
 def our_write_state(state):
+    # pylint: disable=global-statement
     LOGGER.info("our_write_state: %s", state)
     global caught_state
     caught_state = state
