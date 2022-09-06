@@ -57,7 +57,7 @@ class Bookmarks(unittest.TestCase):
         self.assertGreater(len(utils.caught_records), 0)
         self.assertEqual(set(utils.caught_records.keys()), {'companies', 'hubspot_contacts_by_company'})
 
-        self.assertEqual(utils.caught_pks,  {'companies': ['companyId'], 'hubspot_contacts_by_company': ['company-id', 'contact-id']})
+        self.assertEqual(utils.caught_pks, {'companies': ['companyId'], 'hubspot_contacts_by_company': ['company-id', 'contact-id']})
 
         utils.caught_records = []
         STATE = tap_hubspot.sync_companies(STATE, catalog)

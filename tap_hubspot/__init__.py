@@ -741,7 +741,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                         STATE = singer.clear_offset(STATE, entity_name)
                         singer.write_state(STATE)
                         break
-            STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.fromtimestamp((start_ts / 1000), datetime.timezone.utc ))) # pylint: disable=line-too-long
+            STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.fromtimestamp((start_ts / 1000), datetime.timezone.utc)))  # pylint: disable=line-too-long
             singer.write_state(STATE)
             start_ts = end_ts
 
@@ -1024,9 +1024,8 @@ class Context:
 
         self.catalog = catalog
 
-    def get_catalog_from_id(self,tap_stream_id):
-        return [c for c in self.catalog.get('streams')
-               if c.get('stream') == tap_stream_id][0]
+    def get_catalog_from_id(self, tap_stream_id):
+        return [c for c in self.catalog.get('streams') if c.get('stream') == tap_stream_id][0]
 
 # stream a is dependent on stream STREAM_DEPENDENCIES[a]
 STREAM_DEPENDENCIES = {
@@ -1038,7 +1037,7 @@ def validate_dependencies(ctx):
     msg_tmpl = ("Unable to extract {0} data. "
                 "To receive {0} data, you also need to select {1}.")
 
-    for k,v in STREAM_DEPENDENCIES.items():
+    for k, v in STREAM_DEPENDENCIES.items():
         if k in ctx.selected_stream_ids and v not in ctx.selected_stream_ids:
             errs.append(msg_tmpl.format(k, v))
     if errs:
