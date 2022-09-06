@@ -11,14 +11,14 @@ class Bookmarks(unittest.TestCase):
         utils.verify_environment_vars()
         utils.seed_tap_hubspot_config()
         singer.write_bookmark = utils.our_write_bookmark
-        singer.write_state    = utils.our_write_state
-        singer.write_record   = utils.our_write_record
-        singer.write_schema   = utils.our_write_schema
+        singer.write_state = utils.our_write_state
+        singer.write_record = utils.our_write_record
+        singer.write_schema = utils.our_write_schema
 
     #NB> test account must have > 2 contacts for this to work
     def sync_contacts(self):
         STATE = utils.get_clear_state()
-        catalog = {'stream_alias' : 'hubspot_contacts'}
+        catalog = {'stream_alias': 'hubspot_contacts'}
 
         tap_hubspot.default_contact_params['count'] = 1
 
@@ -31,7 +31,7 @@ class Bookmarks(unittest.TestCase):
 
         #should sync some contacts
         # LOGGER.info('A caught record: {}'.format(utils.caught_records['contacts'][0]))
-        self.assertGreater(len(utils.caught_records['contacts']),1)
+        self.assertGreater(len(utils.caught_records['contacts']), 1)
         self.assertEqual(set(utils.caught_records.keys()), {'contacts'})
         self.assertEqual(utils.caught_pks, {'contacts': ['vid']})
 
@@ -39,12 +39,12 @@ class Bookmarks(unittest.TestCase):
         STATE = tap_hubspot.sync_contacts(STATE, catalog)
 
         #no new records thanks to bookmark
-        self.assertEqual(len(utils.caught_records),0)
+        self.assertEqual(len(utils.caught_records), 0)
 
     def sync_companies(self):
         STATE = utils.get_clear_state()
 
-        catalog = {'stream_alias' : 'hubspot_companies'}
+        catalog = {'stream_alias': 'hubspot_companies'}
         STATE = tap_hubspot.sync_companies(STATE, catalog)
 
         #offset has been cleared
@@ -63,4 +63,4 @@ class Bookmarks(unittest.TestCase):
         STATE = tap_hubspot.sync_companies(STATE, catalog)
 
         #no new records thanks to bookmark
-        self.assertEqual(len(utils.caught_records),0)
+        self.assertEqual(len(utils.caught_records), 0)

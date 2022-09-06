@@ -16,16 +16,16 @@ class Offsets(unittest.TestCase):
         utils.verify_environment_vars()
         utils.seed_tap_hubspot_config()
         singer.write_bookmark = utils.our_write_bookmark
-        singer.write_state    = utils.our_write_state
-        singer.write_record   = utils.our_write_record
-        singer.write_schema   = utils.our_write_schema
-        singer.set_offset     = set_offset_with_exception
+        singer.write_state = utils.our_write_state
+        singer.write_record = utils.our_write_record
+        singer.write_schema = utils.our_write_schema
+        singer.set_offset = set_offset_with_exception
 
     #NB> test accounts must have > 1 companies for this to work
     def sync_companies(self):
         simulated_exception = None
         STATE = utils.get_clear_state()
-        catalog = {'stream_alias' : 'hubspot_companies'}
+        catalog = {'stream_alias': 'hubspot_companies'}
 
         #change count = 1
         tap_hubspot.default_company_params['limit'] = 1
