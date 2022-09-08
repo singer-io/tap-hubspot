@@ -12,8 +12,8 @@ from client import TestClient
 
 class TestHubspotInterruptedSync1(HubspotBaseTest):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_sync_interrupt_1"
 
     def streams_to_test(self):
