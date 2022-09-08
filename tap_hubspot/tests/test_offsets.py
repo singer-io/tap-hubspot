@@ -1,4 +1,3 @@
-# pylint: disable=duplicate-code
 import unittest
 import singer
 import tap_hubspot
@@ -16,10 +15,7 @@ class Offsets(unittest.TestCase):
     def setUp(self):
         utils.verify_environment_vars()
         utils.seed_tap_hubspot_config()
-        singer.write_bookmark = utils.our_write_bookmark
-        singer.write_state = utils.our_write_state
-        singer.write_record = utils.our_write_record
-        singer.write_schema = utils.our_write_schema
+        utils.write_to_singer()
         singer.set_offset = set_offset_with_exception
 
     #NB> test accounts must have > 1 companies for this to work

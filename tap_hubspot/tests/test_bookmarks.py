@@ -1,6 +1,4 @@
-# pylint: disable=duplicate-code
 import unittest
-import singer.bookmarks
 import singer.messages
 import tap_hubspot
 from tap_hubspot.tests import utils
@@ -11,10 +9,7 @@ class Bookmarks(unittest.TestCase):
     def setUp(self):
         utils.verify_environment_vars()
         utils.seed_tap_hubspot_config()
-        singer.write_bookmark = utils.our_write_bookmark
-        singer.write_state = utils.our_write_state
-        singer.write_record = utils.our_write_record
-        singer.write_schema = utils.our_write_schema
+        utils.write_to_singer()
 
     #NB> test account must have > 2 contacts for this to work
     def sync_contacts(self):

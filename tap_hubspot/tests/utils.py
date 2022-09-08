@@ -72,3 +72,9 @@ def our_write_record(table_name, record):
         caught_records[table_name] = []
 
     caught_records[table_name].append(record)
+
+def write_to_singer():
+    singer.write_bookmark = our_write_bookmark
+    singer.write_state = our_write_state
+    singer.write_record = our_write_record
+    singer.write_schema = our_write_schema
