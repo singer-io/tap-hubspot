@@ -41,7 +41,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             # BUG https://jira.talendforge.org/browse/TDL-15447
             echo "Disabling the following $PYLINT_DISABLE_LIST"
-            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,wrong-import-order"
+            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST"
       - run:
           name: 'Unit Tests'
           command: |
