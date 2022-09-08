@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 import unittest
 import singer
 import tap_hubspot
