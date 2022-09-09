@@ -118,7 +118,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
                         # BUG_TDL-9939 replication key is not listed correctly
                         if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
-                            replication_key = [f'property_{replication_key[0]}']
+                            # For deals stream, the replication key is already prefixed with 'property_'.
+                            replication_key =  [replication_key[0]] if stream in ["deals", "companies"] else [f'property_{replication_key[0]}']
                             first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
                                                                  for record in first_sync_messages]
                             second_sync_replication_key_values = [record['data'][replication_key[0]]['value']

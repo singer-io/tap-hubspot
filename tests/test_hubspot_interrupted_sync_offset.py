@@ -131,5 +131,5 @@ class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetCont
         return 'deals'
 
     def state_to_inject(self):
-        return  {'hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
+        return  {'property_hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
                  'offset': {'offset': 3442973342}}

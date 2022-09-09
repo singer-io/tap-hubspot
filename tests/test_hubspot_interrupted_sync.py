@@ -25,10 +25,10 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         new_state = copy.deepcopy(reference_state)
 
         companies_bookmark = self.timedelta_formatted(
-            reference_state['bookmarks']['companies']['hs_lastmodifieddate'],
+            reference_state['bookmarks']['companies']['property_hs_lastmodifieddate'],
             days=-1, str_format=self.BASIC_DATE_FORMAT
         )
-        new_state['bookmarks']['companies']['hs_lastmodifieddate'] = None
+        new_state['bookmarks']['companies']['property_hs_lastmodifieddate'] = None
         new_state['bookmarks']['companies']['current_sync_start'] = companies_bookmark
 
         engagements_bookmark = self.timedelta_formatted(
