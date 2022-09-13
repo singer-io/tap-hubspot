@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.10.0
+  * Updated replication method as INCREMENTAL and replication key as property_hs_lastmodifieddate for deals and companies streams [#195](https://github.com/singer-io/tap-hubspot/pull/195)
+  * Fixed Pylint errors [#204](https://github.com/singer-io/tap-hubspot/pull/204)
+
 ## 2.9.6
   * Implement Request Timeout [#177](https://github.com/singer-io/tap-hubspot/pull/177)
   * Add version timestamp in contacts [#191](https://github.com/singer-io/tap-hubspot/pull/191
