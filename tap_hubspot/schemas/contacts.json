@@ -192,6 +192,9 @@
           }
         }
       }
+    },
+    "properties":{
+      "type": ["null", "string"]
     }
   }
 }
