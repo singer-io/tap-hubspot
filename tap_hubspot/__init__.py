@@ -62,7 +62,7 @@ CONFIG = {
 
 ENDPOINTS = {
     "contacts_properties":  "/properties/v1/contacts/properties",
-    "contacts_all":         "/crm/v3/objects/contacts",
+    "contacts_all":         "/contacts/v1/lists/all/contacts/all",
     "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
     "contacts_detail":      "/contacts/v1/contact/vids/batch/",
 
