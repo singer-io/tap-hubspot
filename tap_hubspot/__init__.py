@@ -202,8 +202,8 @@ def load_schema(entity_name):
             "properties": custom_schema,
         }
 
-    if entity_name == "contacts":
-        schema['properties']['associated-company'] = load_associated_company_schema()
+    # if entity_name == "contacts":
+    #     schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -347,7 +347,6 @@ default_contact_params = {
 }
 
 def sync_contacts(STATE, ctx):
-    LOGGER.info("DEBUG_OUTPUT: this is the debug version")
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'versionTimestamp'
     start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
