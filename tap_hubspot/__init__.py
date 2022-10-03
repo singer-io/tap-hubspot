@@ -62,7 +62,7 @@ CONFIG = {
 
 ENDPOINTS = {
     "contacts_properties":  "/properties/v1/contacts/properties",
-    "contacts_all":         "/contacts/v1/lists/all/contacts/all",
+    "contacts_all":         "/crm/v3/objects/contacts",
     "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
     "contacts_detail":      "/contacts/v1/contact/vids/batch/",
 
@@ -347,10 +347,12 @@ default_contact_params = {
 }
 
 def sync_contacts(STATE, ctx):
+    LOGGER.info("sync_contacts from %s", start)
+    LOGGER.info("DEBUG_OUTPUT: this is the debug version")
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'versionTimestamp'
     start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
-    LOGGER.info("sync_contacts from %s", start)
+    
 
     max_bk_value = start
     schema = load_schema("contacts")
