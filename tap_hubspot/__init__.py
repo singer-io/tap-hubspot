@@ -201,7 +201,9 @@ def load_schema(entity_name):
             "type": ["null", "string"],
             "properties": custom_schema,
         }
-
+    
+    # TODO commenting this was a fix to resolve errors while uploading to big query 
+    # TODO need to review the contacts stream, potentially migrate to API v3
     # if entity_name == "contacts":
     #     schema['properties']['associated-company'] = load_associated_company_schema()
 
