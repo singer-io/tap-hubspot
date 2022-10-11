@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='singer-tap-hubspot-cv',
-      version='2.9.17',
+      version='2.9.18',
       description='Singer.io tap for extracting data from the HubSpot API',
       author='Stitch',
       url='http://singer.io',
