@@ -90,6 +90,7 @@ MANDATORY_PROPERTIES = {
         "monthly_recurring_revenue",  # sleekflow_io
         "mrr",  # cloudtalk_io
         "mrr_software_only", # cloudtalk_io
+        "industry_ivalua_" # ivalua
     ],
     "contacts": [
         "email",
