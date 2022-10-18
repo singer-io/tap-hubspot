@@ -168,6 +168,9 @@ MANDATORY_PROPERTIES = {
         "dw_client_total_billed_revenue",  # getmagic_com
         "offline_source_drill_down_2", # qmarkets_net,
         "hs_date_entered_marketingqualifiedlead", # vestd_com
+        "became_a_eupry_lead_date", # eupry
+        "became_a_eupry_qualified_lead_date", # eupry
+        "became_a_eupry_sales_qualified_lead_date" # eupry
     ],
 }
 
