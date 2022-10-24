@@ -162,6 +162,7 @@ MANDATORY_PROPERTIES = {
         "mrr",  # cloudtalk_io,
         "new_seat_range_strategy_calculation", # cloudtalk_io
         "calculated_users_range_conservative", # cloudtalk_io
+        "trial_login_date", # cloudtalk_io
         "closedate",  # getmagic_com
         "lifecyclestage",  # getmagic_com
         "contact_type",  # getmagic_com
