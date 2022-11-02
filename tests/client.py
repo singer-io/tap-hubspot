@@ -176,6 +176,12 @@ class TestClient():
     ### GET
     ##########################################################################
     def read(self, stream, parent_ids=[], since=''):
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+            self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
+
         if stream == 'forms':
             return self.get_forms()
         elif stream == 'owners':
@@ -656,6 +662,12 @@ class TestClient():
 
     def create(self, stream, company_ids=[], subscriptions=[], times=1):
         """Dispatch create to make tests clean."""
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+            self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
+
         if stream == 'forms':
             return self.create_forms()
         elif stream == 'owners':
@@ -1221,6 +1233,12 @@ class TestClient():
     ##########################################################################
 
     def update(self, stream, record_id):
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+            self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
+            
         if stream == 'companies':
             return self.update_companies(record_id)
         elif stream == 'contacts':
