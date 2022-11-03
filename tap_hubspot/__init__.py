@@ -69,7 +69,7 @@ def sync(config, state=None):
                 state, event_state = stream.do_sync(state, event_state)
             except InvalidCredentials:
                 LOGGER.exception(f"Invalid credentials")
-                sys.exit(1)
+                sys.exit(5)
             except Exception:
                 LOGGER.exception(f"{tap_stream_id} failed")
                 sys.exit(1)
