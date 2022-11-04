@@ -180,7 +180,6 @@ class TestClient():
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
             self.acquire_access_token_from_refresh_token()
-            self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
 
         if stream == 'forms':
             return self.get_forms()
@@ -666,7 +665,6 @@ class TestClient():
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
             self.acquire_access_token_from_refresh_token()
-            self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
 
         if stream == 'forms':
             return self.create_forms()
@@ -1237,7 +1235,6 @@ class TestClient():
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
             self.acquire_access_token_from_refresh_token()
-            self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
             
         if stream == 'companies':
             return self.update_companies(record_id)
@@ -1551,6 +1548,7 @@ class TestClient():
         self.CONFIG['token_expires'] = (
             datetime.datetime.utcnow() +
             datetime.timedelta(seconds=auth['expires_in'] - 600))
+        self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
         LOGGER.info(f"TEST CLIENT | Token refreshed. Expires at {self.CONFIG['token_expires']}")
 
     def __init__(self, start_date=''):
@@ -1565,8 +1563,6 @@ class TestClient():
         ).timestamp() * 1000
 
         self.acquire_access_token_from_refresh_token()
-        self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
-
 
         contact_lists_records = self.get_contact_lists(since='all')
         deal_pipelines_records = self.get_deal_pipelines()
