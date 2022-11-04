@@ -75,14 +75,14 @@ class HubspotBaseTest(BaseCase):
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
-                self.EXPECTED_PAGE_SIZE: 250,
+                self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True
             },
             "contact_lists": {
                 self.PRIMARY_KEYS: {"listId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
-                self.EXPECTED_PAGE_SIZE: 250,
+                self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True
             },
             "contacts": {
@@ -121,7 +121,7 @@ class HubspotBaseTest(BaseCase):
                 self.PRIMARY_KEYS: {"engagement_id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
-                self.EXPECTED_PAGE_SIZE: 250,
+                self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True
             },
             "forms": {

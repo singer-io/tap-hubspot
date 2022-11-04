@@ -295,7 +295,7 @@ class TestClient():
 
 
         if since == 'all':
-            params = {}
+            params = {'count': 250}
         else:
             if not since:
                 since = self.start_date_strf
@@ -304,7 +304,7 @@ class TestClient():
                 since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
 
             since = str(since.timestamp() * 1000).split(".")[0]
-            params = {'since': since}
+            params = {'since': since, 'count': 250}
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
@@ -553,7 +553,7 @@ class TestClient():
         """
         url = f"{BASE_URL}/engagements/v1/engagements/paged"
         replication_key = list(self.replication_keys['engagements'])[0]
-        params = dict()
+        params = {'limit': 250}
         records = []
 
         has_more = True
