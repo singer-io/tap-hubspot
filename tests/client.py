@@ -176,6 +176,11 @@ class TestClient():
     ### GET
     ##########################################################################
     def read(self, stream, parent_ids=[], since=''):
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+
         if stream == 'forms':
             return self.get_forms()
         elif stream == 'owners':
@@ -289,7 +294,7 @@ class TestClient():
 
 
         if since == 'all':
-            params = {}
+            params = {'count': 250}
         else:
             if not since:
                 since = self.start_date_strf
@@ -298,7 +303,7 @@ class TestClient():
                 since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
 
             since = str(since.timestamp() * 1000).split(".")[0]
-            params = {'since': since}
+            params = {'since': since, 'count': 250}
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
@@ -547,7 +552,7 @@ class TestClient():
         """
         url = f"{BASE_URL}/engagements/v1/engagements/paged"
         replication_key = list(self.replication_keys['engagements'])[0]
-        params = dict()
+        params = {'limit': 250}
         records = []
 
         has_more = True
@@ -656,6 +661,11 @@ class TestClient():
 
     def create(self, stream, company_ids=[], subscriptions=[], times=1):
         """Dispatch create to make tests clean."""
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+
         if stream == 'forms':
             return self.create_forms()
         elif stream == 'owners':
@@ -1221,6 +1231,11 @@ class TestClient():
     ##########################################################################
 
     def update(self, stream, record_id):
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+            
         if stream == 'companies':
             return self.update_companies(record_id)
         elif stream == 'contacts':
@@ -1454,6 +1469,11 @@ class TestClient():
     ### Deletes
     ##########################################################################
     def cleanup(self, stream, records, count=10):
+
+        # Resets the access_token if the expiry time is less than or equal to the current time
+        if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
+            self.acquire_access_token_from_refresh_token()
+            
         if stream == 'deal_pipelines':
             self.delete_deal_pipelines(records, count)
         elif stream == 'contact_lists':
@@ -1533,6 +1553,7 @@ class TestClient():
         self.CONFIG['token_expires'] = (
             datetime.datetime.utcnow() +
             datetime.timedelta(seconds=auth['expires_in'] - 600))
+        self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
         LOGGER.info(f"TEST CLIENT | Token refreshed. Expires at {self.CONFIG['token_expires']}")
 
     def __init__(self, start_date=''):
@@ -1547,8 +1568,6 @@ class TestClient():
         ).timestamp() * 1000
 
         self.acquire_access_token_from_refresh_token()
-        self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
-
 
         contact_lists_records = self.get_contact_lists(since='all')
         deal_pipelines_records = self.get_deal_pipelines()
