@@ -72,6 +72,9 @@ ENDPOINTS = {
     "line_items_v3_batch_reads":  "/crm/v3/objects/line_items/batch/read",
 
     "associations_line_items_deals_v3":  "/crm/v3/objects/line_items",
+    
+    "lead":                      "/crm/v3/objects/p3299491_lead",
+    "lead_properties":           "/crm/v3/properties/p3299491_lead",
 
     "products_all":             "/crm-objects/v1/objects/products/paged",
     "products_properties":      "/properties/v1/products/properties",
@@ -555,6 +558,22 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
 
+
+def get_properties(entity_name):
+    params, http_headers = get_params_and_headers(None)
+    response = requests.get(f"{BASE_URL}/crm/v3/properties/{entity_name}", headers=http_headers)
+    res = response.json()
+    try:
+        return res["results"]
+    except KeyError:
+        raise KeyError(f"Error retrieving the API query results: {res}")
+
+def get_params_from_properties(entity_name):
+    properties_hub = get_properties(entity_name)
+    params = []
+    for prop in properties_hub:
+        params.append(prop['name'])
+    return params
 
 def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key):
     if len(vids) == 0:
@@ -1224,6 +1243,38 @@ def sync_line_items(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+
+def sync_lead(STATE, ctx):
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    schema = load_schema("lead")
+    bookmark_key = 'updatedAt'
+    singer.write_schema("lead", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
+    start = get_start(STATE, "lead", bookmark_key)
+    max_bk_value = start
+
+    STATE = singer.write_bookmark(STATE, 'lead', bookmark_key, max_bk_value)
+    singer.write_state(STATE)
+    LOGGER.info("sync_lead_v3 from %s", start)
+
+    ''' Add params getting from /crm/v3/properties/lead '''    
+    params = {'limit': 100}
+    params["properties"] = ",".join(get_params_from_properties('lead'))
+    
+    url = get_url('lead')
+    with Transformer(NO_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for row in gen_request_v3(STATE, 'lead', url, params, 'results'):
+            modified_time = None            
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+            if not modified_time or modified_time >= start:                
+                record = bumble_bee.transform(row, schema, mdata)
+                singer.write_record("lead", record, catalog.get('stream_alias'), time_extracted=utils.now())
+
+    STATE = singer.write_bookmark(STATE, 'lead', bookmark_key, max_bk_value)
+    singer.write_state(STATE)
+    return STATE
+
 @attr.s
 class Stream(object):
     tap_stream_id = attr.ib()
@@ -1237,6 +1288,7 @@ STREAMS = [
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
+    Stream('lead', sync_lead, ["id"], 'updatedAt', 'INCREMENTAL'),
 
     # # Do these last as they are full table
     Stream('associations_line_items_deals_v3', sync_associations_line_items_deals_v3, ['id'], 'updatedAt', 'FULL_TABLE'),
