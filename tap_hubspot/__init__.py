@@ -34,6 +34,7 @@ STREAMS = {
     "meetings": {"bookmark_key": "lastUpdated"},
     "notes": {"bookmark_key": "lastUpdated"},
     "tasks": {"bookmark_key": "lastUpdated"},
+    "emails": {"bookmark_key": "lastUpdated"},
 }
 REQUIRED_CONFIG_KEYS = [
     "start_date",
