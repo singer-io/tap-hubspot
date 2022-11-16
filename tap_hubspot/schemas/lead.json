@@ -1,0 +1,549 @@
+{  
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": ["null", "string"]
+    },
+    "properties": {
+      "type": "object",
+      "properties": {
+        "account_executive": {
+          "type": ["null", "string"]
+        },
+        "admissao___leadtime__ciclo_entre_abordagem_iniciada_e_reuniao_com_ae": {
+          "type": ["null", "string"]
+        },
+        "admissao__budget": {
+          "type": ["null", "string"]
+        },
+        "admissao__concorrentes": {
+          "type": ["null", "string"]
+        },
+        "admissao__data_da_reuniao_com_ae": {
+          "type": ["null", "string"]
+        },
+        "admissao__data_da_reuniao_realizada_com_ae": {
+          "type": ["null", "string"]
+        },
+        "admissao__dores_do_lead": {
+          "type": ["null", "string"]
+        },
+        "admissao__dores_e_motivos_de_interesse": {
+          "type": ["null", "string"]
+        },
+        "admissao__motivo_da_desqualificacao": {
+          "type": ["null", "string"]
+        },
+        "admissao__persona": {
+          "type": ["null", "string"]
+        },
+        "admissao__quantidade_de_admissoes_ano": {
+          "type": ["null", "string"]
+        },
+        "admissao__sistema_atual": {
+          "type": ["null", "string"]
+        },
+        "canais_de_contato_efetivo_com_o_lead": {
+          "type": ["null", "string"]
+        },
+        "cargos_na_reuniao_do_diagnostico": {
+          "type": ["null", "string"]
+        },
+        "cenario_atual_do_lead": {
+          "type": ["null", "string"]
+        },
+        "cliente_kenoby__bonificacao_do_admissao": {
+          "type": ["null", "string"]
+        },
+        "cliente_kenoby__mrr_r_s_na_gupy": {
+          "type": ["null", "string"]
+        },
+        "cluster_da_fonte_da_qualificacao": {
+          "type": ["null", "string"]
+        },
+        "cnpj": {
+          "type": ["null", "string"]
+        },
+        "como_funciona_a_tomada_de_decisao_": {
+          "type": ["null", "string"]
+        },
+        "crescimento_no_ultimo_ano_baseado_no_linkedin": {
+          "type": ["null", "string"]
+        },
+        "crescimento_nos_ultimos_6_meses__linkedin_": {
+          "type": ["null", "string"]
+        },
+        "criar_novo_lead_a_partir_de_um_lead_aberto": {
+          "type": ["null", "string"]
+        },
+        "crossell__contexto_das_oportunidades": {
+          "type": ["null", "string"]
+        },
+        "crossell__contexto_geral_da_empresa": {
+          "type": ["null", "string"]
+        },
+        "crossell__o_cliente_esta_ciente_de_que_o_time_de_pre_vendas_entrara_em_contato_": {
+          "type": ["null", "string"]
+        },
+        "crossell__observacoes_extras": {
+          "type": ["null", "string"]
+        },
+        "cs_da_empresa__sensedata_": {
+          "type": ["null", "string"]
+        },
+        "data_atual": {
+          "type": ["null", "string"]
+        },
+        "data_da_primeira_abordagem": {
+          "type": ["null", "string"]          
+        },
+        "data_da_primeira_atividade": {
+          "type": ["null", "string"]          
+        },
+        "data_da_ultima_atividade": {
+          "type": ["null", "string"]
+        },
+        "data_de_atualizacao": {
+          "type": ["null", "string"]
+        },
+        "data_de_entrada_na_etapa_abordagem_iniciada": {
+          "type": ["null", "string"]
+        },
+        "data_de_entrada_na_etapa_lead_conectaddo": {
+          "type": ["null", "string"]
+        },
+        "data_de_entrada_na_etapa_lead_desqualificado": {
+          "type": ["null", "string"]
+        },
+        "data_de_entrada_na_etapa_novo_lead": {
+          "type": ["null", "string"]
+        },
+        "data_de_entrada_na_etapa_reuniao_agendada": {
+          "type": ["null", "string"]
+        },
+        "data_de_entrada_na_etapa_reuniao_realizada": {
+          "type": ["null", "string"]
+        },
+        "data_de_fechamento": {
+          "type": ["null", "string"]
+        },
+        "data_que_solicitou_modulo_crm": {
+          "type": ["null", "string"]
+        },
+        "dia_da_cadencia": {
+          "type": ["null", "string"]
+        },
+        "dias_sem_atividade": {
+          "type": ["null", "string"]
+        },
+        "e_mail_do_bdr_sdr": {
+          "type": ["null", "string"]
+        },
+        "e_mail_do_ldr": {
+          "type": ["null", "string"]
+        },
+        "edcorp__concorrentes": {
+          "type": ["null", "string"]
+        },
+        "edcorp__data_da_reuniao_com_ae": {
+          "type": ["null", "string"]
+        },
+        "edcorp__data_da_reuniao_realizada_com_ae": {
+          "type": ["null", "string"]
+        },
+        "edcorp__dores_e_motivos_de_interesse": {
+          "type": ["null", "string"]
+        },
+        "edcorp__motivo_da_desqualificacao": {
+          "type": ["null", "string"]
+        },
+        "edcorp__sistema_atual": {
+          "type": ["null", "string"]
+        },
+        "edcorp__volume_de_colaboradores_que_precisam_ser_treinados": {
+          "type": ["null", "string"]
+        },
+        "esteira_qualificada__data_final_da_sprint": {
+          "type": ["null", "string"]
+        },
+        "esteira_qualificada__data_inicial_da_sprint__clonado_": {
+          "type": ["null", "string"]
+        },
+        "estrategia_de_pre_vendas": {
+          "type": ["null", "string"]
+        },
+        "etapa_anterior_da_atual": {
+          "type": ["null", "string"]
+        },
+        "expectativa_de_inicio_do_projeto": {
+          "type": ["null", "string"]
+        },
+        "fonte_da_levantada_de_mao__canal_": {
+          "type": ["null", "string"]
+        },
+        "fonte_da_levantada_de_mao__conteudo_": {
+          "type": ["null", "string"]
+        },
+        "fonte_da_levantada_de_mao__conteudo_dinamico_": {
+          "type": ["null", "string"]
+        },
+        "fonte_da_qualificacao": {
+          "type": ["null", "string"]
+        },
+        "fonte_do_lead__conteudo_dinamico_": {
+          "type": ["null", "string"]
+        },
+        "fonte_original": {
+          "type": ["null", "string"]
+        },
+        "gupy_id": {
+          "type": ["null", "string"]
+        },
+        "hs_all_accessible_team_ids": {
+          "type": ["null", "string"]
+        },
+        "hs_all_assigned_business_unit_ids": {
+          "type": ["null", "string"]
+        },
+        "hs_all_owner_ids": {
+          "type": ["null", "string"]
+        },
+        "hs_all_team_ids": {
+          "type": ["null", "string"]
+        },
+        "hs_created_by_user_id": {
+          "type": ["null", "string"]
+        },
+        "hs_createdate": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_entered_30795011": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_entered_30795012": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_entered_30795013": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_entered_30799772": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_entered_30799773": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_entered_32132442": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_exited_30795011": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_exited_30795012": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_exited_30795013": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_exited_30799772": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_exited_30799773": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_date_exited_32132442": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_lastmodifieddate": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_merged_object_ids": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_object_id": {
+          "type": ["null", "string"]          
+        },
+        "hs_pinned_engagement_id": {
+          "type": ["null", "string"]
+        },
+        "hs_pipeline": {
+          "type": ["null", "string"]          
+        },
+        "hs_pipeline_stage": {
+          "type": ["null", "string"]
+        },
+        "hs_read_only": {
+          "type": ["null", "string"]
+        },
+        "hs_time_in_30795011": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_time_in_30795012": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_time_in_30795013": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_time_in_30799772": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_time_in_30799773": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_time_in_32132442": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "hs_unique_creation_key": {
+          "type": ["null", "string"]          
+        },
+        "hs_updated_by_user_id": {
+          "type": ["null", "string"]
+        },
+        "hs_user_ids_of_all_notification_followers": {
+          "type": ["null", "string"]
+        },
+        "hs_user_ids_of_all_notification_unfollowers": {
+          "type": ["null", "string"]
+        },
+        "hs_user_ids_of_all_owners": {
+          "type": ["null", "string"]
+        },
+        "hubspot_owner_assigneddate": {
+          "type": ["null", "string"]
+        },
+        "hubspot_owner_id": {
+          "type": ["null", "string"]
+        },
+        "hubspot_team_id": {
+          "type": ["null", "string"]
+        },
+        "impacto_de_ads_em_leads": {
+          "type": ["null", "string"]
+        },
+        "impacto_de_ads_em_mql": {
+          "type": ["null", "string"]
+        },
+        "indicacoes_de_oportunidades_cs": {
+          "type": ["null", "string"]
+        },
+        "interesse_de_compra_com_base_no_linkedin": {
+          "type": ["null", "string"]
+        },
+        "interesse_no_modulo_d_i": {
+          "type": ["null", "string"]
+        },
+        "ldr": {
+          "type": ["null", "string"]
+        },
+        "lead_created": {
+          "type": ["null", "string"]
+        },
+        "lead_time": {
+          "type": ["null", "string"]
+        },
+        "lead_time__sql___oportunidade": {
+          "type": ["null", "string"]
+        },
+        "lead_time_de_primeira_abordagem": {
+          "type": ["null", "string"]
+        },
+        "leadtime___admissao__ciclo_entre_novo_lead_e_reuniao_agendada": {
+          "type": ["null", "string"]
+        },
+        "leadtime___edcorp__ciclo_entre_abordagem_iniciada_e_reuniao_com_ae": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_abordagem_iniciada_e_lead_conectado": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_abordagem_iniciada_e_lead_desqualificado": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_abordagem_iniciada_e_reuniao_agendada": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_lead_conectado_e_reuniao_agendada": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_novo_lead_e_abordagem_iniciada": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_novo_lead_e_lead_conectado": {
+          "type": ["null", "string"]
+        },
+        "leadtime__ciclo_entre_novo_lead_e_primeiro_contato": {
+          "type": ["null", "string"]
+        },
+        "leadtime__data_de_criacao_e_primeira_abordagem": {
+          "type": ["null", "string"]
+        },
+        "leadtime__primeiro_contato": {
+          "type": ["null", "string"]
+        },
+        "material_acessado__conteudo_": {
+          "type": ["null", "string"]
+        },
+        "material_acessado__tipo_": {
+          "type": ["null", "string"]
+        },
+        "material_acessado_antes_de_mql__conteudo_": {
+          "type": ["null", "string"]
+        },
+        "material_acessado_antes_de_mql__tipo_": {
+          "type": ["null", "string"]
+        },
+        "nome_da_empresa": {
+          "type": ["null", "string"]
+        },
+        "nome_lead": {
+          "type": ["null", "string"]
+        },
+        "novas_contratacoes_com_base_no_linkedin__ano_": {
+          "type": ["null", "string"]
+        },
+        "novas_contratacoes_com_base_no_linkedin__mes_": {
+          "type": ["null", "string"]
+        },
+        "numero_de_funcionarios": {
+          "type": ["null", "string"]
+        },
+        "origem_de_criacao": {
+          "type": ["null", "string"]
+        },
+        "paginas_da_empresa_no_linkedin": {
+          "type": ["null", "string"]
+        },
+        "parcerias__empresa_parceira": {
+          "type": ["null", "string"]
+        },
+        "personas_em_cadencia": {
+          "type": ["null", "string"]
+        },
+        "possui_acoes_de_diversidade_e_inclusao_": {
+          "type": ["null", "string"]
+        },
+        "possui_atuacao_internacional_": {
+          "type": ["null", "string"]
+        },
+        "primeiro_contato_corrigido": {
+          "type": ["null", "string"]
+        },
+        "produto_qualificado": {
+          "type": ["null", "string"]
+        },
+        "produtos_de_interesse": {
+          "type": ["null", "string"]
+        },
+        "produtos_qualificados": {
+          "type": ["null", "string"]
+        },
+        "prospect_score": {
+          "type": ["null", "string"]
+        },
+        "prospect_score___leadtime__ciclo_entre_esteira_qualificada_e_negocio": {
+          "type": ["null", "string"]
+        },
+        "prospect_score___leadtime__ciclo_entre_esteira_qualificada_e_reuniao_realizada": {
+          "type": ["null", "string"]
+        },
+        "prospect_score__nivel_de_urgencia___abordagem_bdr": {
+          "type": ["null", "string"]
+        },
+        "quantidade_de_vagas_abertas_ano": {
+          "type": ["null", "string"]
+        },
+        "quantidade_de_vagas_abertas_atual": {
+          "type": ["null", "string"]
+        },
+        "r_s___leadtime__ciclo_entre_abordagem_iniciada_e_reuniao_com_ae": {
+          "type": ["null", "string"]
+        },
+        "r_s__budget": {
+          "type": ["null", "string"]
+        },
+        "r_s__concorrentes": {
+          "type": ["null", "string"]
+        },
+        "r_s__data_da_reuniao_com_ae": {
+          "type": ["null", "string"]
+        },
+        "r_s__data_da_reuniao_realizada_com_ae": {
+          "type": ["null", "string"]
+        },
+        "r_s__dores_do_lead": {
+          "type": ["null", "string"]
+        },
+        "r_s__interesse_no_modulo_de_crm_de_talentos_": {
+          "type": ["null", "string"]
+        },
+        "r_s__job_board_empresa": {
+          "type": ["null", "string"]
+        },
+        "r_s__levantou_a_mao_para_modulo_de_crm_de_talentos_": {
+          "type": ["null", "string"]
+        },
+        "r_s__motivo_da_desqualificacao": {
+          "type": ["null", "string"]
+        },
+        "r_s__persona": {
+          "type": ["null", "string"]
+        },
+        "r_s__sistema_atual": {
+          "type": ["null", "string"]
+        },
+        "razao_social": {
+          "type": ["null", "string"]
+        },
+        "segmento": {
+          "type": ["null", "string"]
+        },
+        "tamanho_da_empresa__letras_": {
+          "type": ["null", "string"]
+        },
+        "temperatura_do_lead": {
+          "type": ["null", "string"]
+        },
+        "tempo_medio_de_permanencia_na_empresa": {
+          "type": ["null", "string"]
+        },
+        "tipo_da_negociacao": {
+          "type": ["null", "string"]
+        },
+        "tipo_do_lead": {
+          "type": ["null", "string"]
+        }
+      }
+    },
+    "createdAt": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "archived": {
+      "type": "boolean"
+    }
+  }
+}
