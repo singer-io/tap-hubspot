@@ -89,10 +89,10 @@ MANDATORY_PROPERTIES = {
         "first_paid_invoice",  # ably_com
         "monthly_recurring_revenue",  # sleekflow_io
         "mrr",  # cloudtalk_io
-        "mrr_software_only", # cloudtalk_io
-        "industry_ivalua_", # ivalua
-        "profitwell_created_on", # logmycare_co_uk
-        "profitwell_activated_on" # logmycare_co_uk
+        "mrr_software_only",  # cloudtalk_io
+        "industry_ivalua_",  # ivalua
+        "profitwell_created_on",  # logmycare_co_uk
+        "profitwell_activated_on",  # logmycare_co_uk
     ],
     "contacts": [
         "email",
@@ -160,21 +160,21 @@ MANDATORY_PROPERTIES = {
         "lead_source",  # cloudtalk_io
         "approved_trial",  # cloudtalk_io
         "mrr",  # cloudtalk_io,
-        "new_seat_range_strategy_calculation", # cloudtalk_io
-        "calculated_users_range_conservative", # cloudtalk_io
-        "trial_login_date", # cloudtalk_io
-        "monthly_recurring_revenue_only_software", # cloudtalk_io
+        "new_seat_range_strategy_calculation",  # cloudtalk_io
+        "calculated_users_range_conservative",  # cloudtalk_io
+        "trial_login_date",  # cloudtalk_io
+        "monthly_recurring_revenue_only_software",  # cloudtalk_io
         "closedate",  # getmagic_com
         "lifecyclestage",  # getmagic_com
         "contact_type",  # getmagic_com
         "discovery_call_attended",  # getmagic_com
         "stage",  # getmagic_com
         "dw_client_total_billed_revenue",  # getmagic_com
-        "offline_source_drill_down_2", # qmarkets_net,
-        "hs_date_entered_marketingqualifiedlead", # vestd_com
-        "became_a_eupry_lead_date", # eupry
-        "became_a_eupry_qualified_lead_date", # eupry
-        "became_a_eupry_sales_qualified_lead_date" # eupry
+        "offline_source_drill_down_2",  # qmarkets_net,
+        "hs_date_entered_marketingqualifiedlead",  # vestd_com
+        "became_a_eupry_lead_date",  # eupry
+        "became_a_eupry_qualified_lead_date",  # eupry
+        "became_a_eupry_sales_qualified_lead_date",  # eupry
     ],
 }
 
