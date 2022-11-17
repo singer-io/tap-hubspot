@@ -89,10 +89,10 @@ MANDATORY_PROPERTIES = {
         "first_paid_invoice",  # ably_com
         "monthly_recurring_revenue",  # sleekflow_io
         "mrr",  # cloudtalk_io
-        "mrr_software_only", # cloudtalk_io
-        "industry_ivalua_", # ivalua
-        "profitwell_created_on", # logmycare_co_uk
-        "profitwell_activated_on" # logmycare_co_uk
+        "mrr_software_only",  # cloudtalk_io
+        "industry_ivalua_",  # ivalua
+        "profitwell_created_on",  # logmycare_co_uk
+        "profitwell_activated_on",  # logmycare_co_uk
     ],
     "contacts": [
         "email",
@@ -160,21 +160,21 @@ MANDATORY_PROPERTIES = {
         "lead_source",  # cloudtalk_io
         "approved_trial",  # cloudtalk_io
         "mrr",  # cloudtalk_io,
-        "new_seat_range_strategy_calculation", # cloudtalk_io
-        "calculated_users_range_conservative", # cloudtalk_io
-        "trial_login_date", # cloudtalk_io
-        "monthly_recurring_revenue_only_software", # cloudtalk_io
+        "new_seat_range_strategy_calculation",  # cloudtalk_io
+        "calculated_users_range_conservative",  # cloudtalk_io
+        "trial_login_date",  # cloudtalk_io
+        "monthly_recurring_revenue_only_software",  # cloudtalk_io
         "closedate",  # getmagic_com
         "lifecyclestage",  # getmagic_com
         "contact_type",  # getmagic_com
         "discovery_call_attended",  # getmagic_com
         "stage",  # getmagic_com
         "dw_client_total_billed_revenue",  # getmagic_com
-        "offline_source_drill_down_2", # qmarkets_net,
-        "hs_date_entered_marketingqualifiedlead", # vestd_com
-        "became_a_eupry_lead_date", # eupry
-        "became_a_eupry_qualified_lead_date", # eupry
-        "became_a_eupry_sales_qualified_lead_date" # eupry
+        "offline_source_drill_down_2",  # qmarkets_net,
+        "hs_date_entered_marketingqualifiedlead",  # vestd_com
+        "became_a_eupry_lead_date",  # eupry
+        "became_a_eupry_qualified_lead_date",  # eupry
+        "became_a_eupry_sales_qualified_lead_date",  # eupry
     ],
 }
 
@@ -259,6 +259,8 @@ class Hubspot:
             yield from self.get_meetings(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "tasks":
             yield from self.get_tasks(start_date=start_date, end_date=end_date)
+        elif self.tap_stream_id == "emails":
+            yield from self.get_engagement_emails(start_date=start_date, end_date=end_date)
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -442,6 +444,31 @@ class Hubspot:
             "after": after,
         }
 
+    def attach_engagement_associations(
+        self, obj_type: str, search_result: Iterable[Dict], replication_path: List[str]
+    ) -> Iterable[Tuple[Dict, datetime]]:
+
+        for chunk in chunker(search_result, 100):
+            ids: List[str] = [engagement["id"] for engagement in chunk]
+
+            companies_associations = self.get_associations(obj_type, "companies", ids)
+            contacts_associations = self.get_associations(obj_type, "contacts", ids)
+
+            for i, engagement_id in enumerate(ids):
+                engagement = chunk[i]
+
+                companies = companies_associations.get(engagement_id, [])
+                contacts = contacts_associations.get(engagement_id, [])
+
+                engagement["associations"] = {
+                    "companies": {"results": companies},
+                    "contacts": {"results": contacts},
+                }
+
+                yield engagement, parser.isoparse(
+                    self.get_value(engagement, replication_path)
+                )
+
     def get_properties(self, object_type: str):
         path = f"/crm/v3/properties/{object_type}"
         data_field = "results"
@@ -602,27 +629,11 @@ class Hubspot:
             end_date,
             properties,
         )
-
-        for chunk in chunker(gen, 100):
-            ids: List[str] = [engagement["id"] for engagement in chunk]
-
-            companies_associations = self.get_associations(obj_type, "companies", ids)
-            contacts_associations = self.get_associations(obj_type, "contacts", ids)
-
-            for i, engagement_id in enumerate(ids):
-                engagement = chunk[i]
-
-                companies = companies_associations.get(engagement_id, [])
-                contacts = contacts_associations.get(engagement_id, [])
-
-                engagement["associations"] = {
-                    "companies": {"results": companies},
-                    "contacts": {"results": contacts},
-                }
-
-                yield engagement, parser.isoparse(
-                    self.get_value(engagement, ["properties", filter_key])
-                )
+        return self.attach_engagement_associations(
+            obj_type=obj_type,
+            search_result=gen,
+            replication_path=["properties", filter_key],
+        )
 
     def get_meetings(
         self, start_date: datetime, end_date: datetime
@@ -639,26 +650,32 @@ class Hubspot:
             properties,
         )
 
-        for chunk in chunker(gen, 100):
-            ids: List[str] = [engagement["id"] for engagement in chunk]
+        return self.attach_engagement_associations(
+            obj_type=obj_type,
+            search_result=gen,
+            replication_path=["properties", filter_key],
+        )
 
-            companies_associations = self.get_associations(obj_type, "companies", ids)
-            contacts_associations = self.get_associations(obj_type, "contacts", ids)
+    def get_engagement_emails(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "hs_lastmodifieddate"
+        obj_type = "emails"
+        properties = self.get_object_properties(obj_type)
 
-            for i, engagement_id in enumerate(ids):
-                engagement = chunk[i]
+        gen = self.search(
+            obj_type,
+            filter_key,
+            start_date,
+            end_date,
+            properties,
+        )
 
-                companies = companies_associations.get(engagement_id, [])
-                contacts = contacts_associations.get(engagement_id, [])
-
-                engagement["associations"] = {
-                    "companies": {"results": companies},
-                    "contacts": {"results": contacts},
-                }
-
-                yield engagement, parser.isoparse(
-                    self.get_value(engagement, ["properties", filter_key])
-                )
+        return self.attach_engagement_associations(
+            obj_type=obj_type,
+            search_result=gen,
+            replication_path=["properties", filter_key],
+        )
 
     def get_notes(
         self, start_date: datetime, end_date: datetime
@@ -675,26 +692,11 @@ class Hubspot:
             properties,
         )
 
-        for chunk in chunker(gen, 100):
-            ids: List[str] = [engagement["id"] for engagement in chunk]
-
-            companies_associations = self.get_associations(obj_type, "companies", ids)
-            contacts_associations = self.get_associations(obj_type, "contacts", ids)
-
-            for i, engagement_id in enumerate(ids):
-                engagement = chunk[i]
-
-                companies = companies_associations.get(engagement_id, [])
-                contacts = contacts_associations.get(engagement_id, [])
-
-                engagement["associations"] = {
-                    "companies": {"results": companies},
-                    "contacts": {"results": contacts},
-                }
-
-                yield engagement, parser.isoparse(
-                    self.get_value(engagement, ["properties", filter_key])
-                )
+        return self.attach_engagement_associations(
+            obj_type=obj_type,
+            search_result=gen,
+            replication_path=["properties", filter_key],
+        )
 
     def get_tasks(
         self, start_date: datetime, end_date: datetime
@@ -711,26 +713,11 @@ class Hubspot:
             properties,
         )
 
-        for chunk in chunker(gen, 100):
-            ids: List[str] = [engagement["id"] for engagement in chunk]
-
-            companies_associations = self.get_associations(obj_type, "companies", ids)
-            contacts_associations = self.get_associations(obj_type, "contacts", ids)
-
-            for i, engagement_id in enumerate(ids):
-                engagement = chunk[i]
-
-                companies = companies_associations.get(engagement_id, [])
-                contacts = contacts_associations.get(engagement_id, [])
-
-                engagement["associations"] = {
-                    "companies": {"results": companies},
-                    "contacts": {"results": contacts},
-                }
-
-                yield engagement, parser.isoparse(
-                    self.get_value(engagement, ["properties", filter_key])
-                )
+        return self.attach_engagement_associations(
+            obj_type=obj_type,
+            search_result=gen,
+            replication_path=["properties", filter_key],
+        )
 
     def get_deal_pipelines(self):
         path = "/crm/v3/pipelines/deals"
