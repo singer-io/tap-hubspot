@@ -11,7 +11,7 @@
           "type": ["null", "string"]
         },
         "admissao___leadtime__ciclo_entre_abordagem_iniciada_e_reuniao_com_ae": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "admissao__budget": {
           "type": ["null", "string"]
@@ -38,7 +38,7 @@
           "type": ["null", "string"]
         },
         "admissao__quantidade_de_admissoes_ano": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "admissao__sistema_atual": {
           "type": ["null", "string"]
@@ -56,13 +56,13 @@
           "type": ["null", "string"]
         },
         "cliente_kenoby__mrr_r_s_na_gupy": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "cluster_da_fonte_da_qualificacao": {
           "type": ["null", "string"]
         },
         "cnpj": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "como_funciona_a_tomada_de_decisao_": {
           "type": ["null", "string"]
@@ -134,7 +134,7 @@
           "type": ["null", "string"]
         },
         "dias_sem_atividade": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "e_mail_do_bdr_sdr": {
           "type": ["null", "string"]
@@ -161,7 +161,7 @@
           "type": ["null", "string"]
         },
         "edcorp__volume_de_colaboradores_que_precisam_ser_treinados": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "esteira_qualificada__data_final_da_sprint": {
           "type": ["null", "string"]
@@ -197,7 +197,7 @@
           "type": ["null", "string"]
         },
         "gupy_id": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "hs_all_accessible_team_ids": {
           "type": ["null", "string"]
@@ -212,7 +212,7 @@
           "type": ["null", "string"]
         },
         "hs_created_by_user_id": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "hs_createdate": {
           "type": ["null", "string"],
@@ -271,14 +271,13 @@
           "format": "date-time"
         },
         "hs_merged_object_ids": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "string"]
         },
         "hs_object_id": {
-          "type": ["null", "string"]          
+          "type": ["null", "number", "string"]          
         },
         "hs_pinned_engagement_id": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "hs_pipeline": {
           "type": ["null", "string"]          
@@ -290,34 +289,28 @@
           "type": ["null", "string"]
         },
         "hs_time_in_30795011": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "number", "string"]
         },
         "hs_time_in_30795012": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "number", "string"]
         },
         "hs_time_in_30795013": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "number", "string"]
         },
         "hs_time_in_30799772": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "number", "string"]
         },
         "hs_time_in_30799773": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "number", "string"]
         },
         "hs_time_in_32132442": {
-          "type": ["null", "string"],
-          "format": "date-time"
+          "type": ["null", "number", "string"]
         },
         "hs_unique_creation_key": {
           "type": ["null", "string"]          
         },
         "hs_updated_by_user_id": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "hs_user_ids_of_all_notification_followers": {
           "type": ["null", "string"]
@@ -359,43 +352,43 @@
           "type": ["null", "string"]
         },
         "lead_time": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "lead_time__sql___oportunidade": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "lead_time_de_primeira_abordagem": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime___admissao__ciclo_entre_novo_lead_e_reuniao_agendada": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime___edcorp__ciclo_entre_abordagem_iniciada_e_reuniao_com_ae": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_abordagem_iniciada_e_lead_conectado": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_abordagem_iniciada_e_lead_desqualificado": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_abordagem_iniciada_e_reuniao_agendada": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_lead_conectado_e_reuniao_agendada": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_novo_lead_e_abordagem_iniciada": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_novo_lead_e_lead_conectado": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__ciclo_entre_novo_lead_e_primeiro_contato": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__data_de_criacao_e_primeira_abordagem": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "leadtime__primeiro_contato": {
           "type": ["null", "string"]
@@ -425,7 +418,7 @@
           "type": ["null", "string"]
         },
         "numero_de_funcionarios": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "origem_de_criacao": {
           "type": ["null", "string"]
@@ -446,7 +439,7 @@
           "type": ["null", "string"]
         },
         "primeiro_contato_corrigido": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "produto_qualificado": {
           "type": ["null", "string"]
@@ -458,25 +451,25 @@
           "type": ["null", "string"]
         },
         "prospect_score": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "prospect_score___leadtime__ciclo_entre_esteira_qualificada_e_negocio": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "prospect_score___leadtime__ciclo_entre_esteira_qualificada_e_reuniao_realizada": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "prospect_score__nivel_de_urgencia___abordagem_bdr": {
           "type": ["null", "string"]
         },
         "quantidade_de_vagas_abertas_ano": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "quantidade_de_vagas_abertas_atual": {
           "type": ["null", "string"]
         },
         "r_s___leadtime__ciclo_entre_abordagem_iniciada_e_reuniao_com_ae": {
-          "type": ["null", "string"]
+          "type": ["null", "number", "string"]
         },
         "r_s__budget": {
           "type": ["null", "string"]
