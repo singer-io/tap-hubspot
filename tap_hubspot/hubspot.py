@@ -18,6 +18,10 @@ class InvalidCredentials(Exception):
     pass
 
 
+class MissingScope(Exception):
+    pass
+
+
 def giveup_http_codes(e: Exception):
     if not isinstance(e, requests.RequestException):
         return False
@@ -260,7 +264,9 @@ class Hubspot:
         elif self.tap_stream_id == "tasks":
             yield from self.get_tasks(start_date=start_date, end_date=end_date)
         elif self.tap_stream_id == "emails":
-            yield from self.get_engagement_emails(start_date=start_date, end_date=end_date)
+            yield from self.get_engagement_emails(
+                start_date=start_date, end_date=end_date
+            )
         else:
             raise NotImplementedError(f"unknown stream_id: {self.tap_stream_id}")
 
@@ -1036,6 +1042,10 @@ class Hubspot:
             if response.status_code == 401:
                 raise RetryAfterReauth
 
+            if response.status_code == 403:
+                err_msg: Dict = response.json()
+                if err_msg.get("category") == "MISSING_SCOPES":
+                    raise MissingScope(err_msg)
             LOGGER.debug(response.url)
             response.raise_for_status()
             return response
