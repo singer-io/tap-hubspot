@@ -179,6 +179,8 @@ MANDATORY_PROPERTIES = {
         "became_a_eupry_lead_date",  # eupry
         "became_a_eupry_qualified_lead_date",  # eupry
         "became_a_eupry_sales_qualified_lead_date",  # eupry
+        "lead_acquisition_group", # coverflex
+        "lead_acquisition_group_date" # coverflex
     ],
 }
 
