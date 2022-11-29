@@ -97,6 +97,16 @@ MANDATORY_PROPERTIES = {
         "industry_ivalua_",  # ivalua
         "profitwell_created_on",  # logmycare_co_uk
         "profitwell_activated_on",  # logmycare_co_uk
+        "hs_date_entered_marketingqualifiedlead", # agencyanalytics_com
+        "hs_date_entered_26057217", # agencyanalytics_com
+        "product_qualified_lead_date", # agencyanalytics_com
+        "hs_date_entered_salesqualifiedlead", # agencyanalytics_com
+        "sales_qualified_lead_date", # agencyanalytics_com
+        "hs_date_entered_opportunity", # agencyanalytics_com
+        "opportunity_date", # agencyanalytics_com
+        "hs_date_entered_customer", # agencyanalytics_com
+        "customer", # agencyanalytics_com
+        "plan_mrr" # agencyanalytics_com
     ],
     "contacts": [
         "email",
