@@ -48,6 +48,7 @@ LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 MANDATORY_PROPERTIES = {
     "companies": [
+        "hs_object_id",
         "name",
         "country",
         "domain",
@@ -109,6 +110,7 @@ MANDATORY_PROPERTIES = {
         "plan_mrr" # agencyanalytics_com
     ],
     "contacts": [
+        "hs_object_id",
         "email",
         "emailadresse",
         "hs_email_domain",
