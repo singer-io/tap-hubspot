@@ -181,6 +181,15 @@ MANDATORY_PROPERTIES = {
         "calculated_users_range_conservative",  # cloudtalk_io
         "trial_login_date",  # cloudtalk_io
         "monthly_recurring_revenue_only_software",  # cloudtalk_io
+        "qual_out_date_stamp", # cloudtalk_io
+        "unqual_date_stamp", # cloudtalk_io
+        "ft_1_2_seats_date_stamp", # cloudtalk_io
+        "ft_3_10_seats_date_stamp", # cloudtalk_io
+        "ft_11_20_seats_date_stamp", # cloudtalk_io
+        "ft_21_50", # cloudtalk_io
+        "ft_51_100_seats_date_stamp", # cloudtalk_io
+        "ft_101_250_seats_date_stamp", # cloudtalk_io
+        "ft_251_more_seats_date_stamp", # cloudtalk_io
         "closedate",  # getmagic_com
         "lifecyclestage",  # getmagic_com
         "contact_type",  # getmagic_com
