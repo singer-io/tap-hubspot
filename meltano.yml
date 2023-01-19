@@ -1,0 +1,18 @@
+version: 1
+send_anonymous_usage_stats: false
+project_id: ea2af8d0-1d93-4bfc-ba1c-e107b1c4c1ca
+plugins:
+  extractors:
+  - name: tap-hubspot
+    variant: singer-io
+    pip_url: -e .
+    config:
+      redirect_uri: http://localhost:5008/spike
+      start_date: '2021-12-01'
+
+  loaders:
+    - name: target-jsonl
+      variant: andyh1203
+      pip_url: target-jsonl
+      config:
+        destination_path: ''

@@ -112,7 +112,7 @@ ENDPOINTS = {
     "contact_lists":        "/contacts/v1/lists",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
-    "owners":               "/owners/v2/owners",
+    "owners":               "/crm/v3/owners/",
 }
 
 def get_start(state, tap_stream_id, bookmark_key):
@@ -989,22 +989,21 @@ def sync_owners(STATE, ctx):
     schema = load_schema("owners")
     bookmark_key = 'updatedAt'
 
-    singer.write_schema("owners", schema, ["ownerId"], [bookmark_key], catalog.get('stream_alias'))
+    singer.write_schema("owners", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
     start = get_start(STATE, "owners", bookmark_key)
     max_bk_value = start
 
     LOGGER.info("sync_owners from %s", start)
 
     params = {}
-    if CONFIG.get('include_inactives'):
-        params['includeInactives'] = "true"
-    data = request(get_url("owners"), params).json()
+
+    data = request(get_url("owners"), params).json()['results']
 
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data:
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+            record = bumble_bee.transform(row, schema, mdata)
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
@@ -1285,24 +1284,24 @@ class Stream(object):
 
 STREAMS = [
     # Do these first as they are incremental
-    Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
-    Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
-    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
-    Stream('lead', sync_lead, ["id"], 'updatedAt', 'INCREMENTAL'),
+    # Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
+    # Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
+    # Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
+    # Stream('lead', sync_lead, ["id"], 'updatedAt', 'INCREMENTAL'),
 
     # # Do these last as they are full table
-    Stream('associations_line_items_deals_v3', sync_associations_line_items_deals_v3, ['id'], 'updatedAt', 'FULL_TABLE'),
-    Stream('line_items', sync_line_items, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('products', sync_products, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
-    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
-    Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
-    Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
-    Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
-    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
+    # Stream('associations_line_items_deals_v3', sync_associations_line_items_deals_v3, ['id'], 'updatedAt', 'FULL_TABLE'),
+    # Stream('line_items', sync_line_items, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    # Stream('products', sync_products, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    # Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
+    # Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
+    Stream('owners', sync_owners, ['id'], 'updatedAt', 'FULL_TABLE'),
+    # Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
+    # Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
+    # Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    # Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    # Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
+    # Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
 def get_streams_to_sync(streams, state):

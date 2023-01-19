@@ -1,0 +1,11 @@
+{
+  "id": "24271488",
+  "email": "dedila.costa@gupy.com.br",
+  "firstName": "Dedila",
+  "lastName": "Costa",
+  "userId": 4217135,
+  "createdAt": "2017-04-25T19:07:49.541000Z",
+  "updatedAt": "2021-11-18T13:16:14.189000Z",
+  "archived": false,
+  "teams": [{ "id": "141743", "name": "CS" }]
+}
