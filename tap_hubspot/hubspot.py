@@ -190,6 +190,7 @@ MANDATORY_PROPERTIES = {
         "ft_51_100_seats_date_stamp", # cloudtalk_io
         "ft_101_250_seats_date_stamp", # cloudtalk_io
         "ft_251_more_seats_date_stamp", # cloudtalk_io
+        "segment__contact_", # cloudtalk_io
         "closedate",  # getmagic_com
         "lifecyclestage",  # getmagic_com
         "contact_type",  # getmagic_com
