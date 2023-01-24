@@ -997,18 +997,17 @@ def sync_owners(STATE, ctx):
 
     params = {}
 
-    data = request(get_url("owners"), params).json()['results']
-
     time_extracted = utils.now()
 
+    url = get_url('owners')
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data:
-            record = bumble_bee.transform(row, schema, mdata)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-            if record[bookmark_key] >= start:
-                singer.write_record("owners", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+        for row in gen_request_v3(STATE, 'owners', url, params, 'results'):
+            modified_time = None            
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+            if not modified_time or modified_time >= start:                
+                record = bumble_bee.transform(row, schema, mdata)
+                singer.write_record("owners", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
     STATE = singer.write_bookmark(STATE, 'owners', bookmark_key, max_bk_value)
     singer.write_state(STATE)

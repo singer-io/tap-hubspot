@@ -38,8 +38,8 @@
                     "name": {
                         "type": ["null", "string"]
                     },
-                    "membership": {
-                        "type": ["null", "string"]
+                    "primary": {
+                        "type": ["null", "boolean"]
                     }
                 }
             }
