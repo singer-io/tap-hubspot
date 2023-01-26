@@ -82,8 +82,8 @@ MANDATORY_PROPERTIES = {
         "became_a_sql_date",  # trengo custom field
         "became_a_opportunity_date",  # trengo custom field
         "class",  # trengo custom field
-        "recent_deal_amount", # trengo
-        "initial_deal_size", # trengo
+        "recent_deal_amount",  # trengo
+        "initial_deal_size",  # trengo
         "hs_additional_domains",
         "marketing_pipeline_value_in__",  # capmo
         "recent_conversion_date",  # capmo
@@ -100,16 +100,16 @@ MANDATORY_PROPERTIES = {
         "industry_ivalua_",  # ivalua
         "profitwell_created_on",  # logmycare_co_uk
         "profitwell_activated_on",  # logmycare_co_uk
-        "hs_date_entered_marketingqualifiedlead", # agencyanalytics_com
-        "hs_date_entered_26057217", # agencyanalytics_com
-        "product_qualified_lead_date", # agencyanalytics_com
-        "hs_date_entered_salesqualifiedlead", # agencyanalytics_com
-        "sales_qualified_lead_date", # agencyanalytics_com
-        "hs_date_entered_opportunity", # agencyanalytics_com
-        "opportunity_date", # agencyanalytics_com
-        "hs_date_entered_customer", # agencyanalytics_com
-        "customer", # agencyanalytics_com
-        "plan_mrr" # agencyanalytics_com
+        "hs_date_entered_marketingqualifiedlead",  # agencyanalytics_com
+        "hs_date_entered_26057217",  # agencyanalytics_com
+        "product_qualified_lead_date",  # agencyanalytics_com
+        "hs_date_entered_salesqualifiedlead",  # agencyanalytics_com
+        "sales_qualified_lead_date",  # agencyanalytics_com
+        "hs_date_entered_opportunity",  # agencyanalytics_com
+        "opportunity_date",  # agencyanalytics_com
+        "hs_date_entered_customer",  # agencyanalytics_com
+        "customer",  # agencyanalytics_com
+        "plan_mrr",  # agencyanalytics_com
     ],
     "contacts": [
         "hs_object_id",
@@ -173,7 +173,7 @@ MANDATORY_PROPERTIES = {
         "mql_date",
         "most_recent_source",  # ably_com
         "ably_id",  # ably_com
-        "sign_up_date", # ably_com
+        "sign_up_date",  # ably_com
         "become_a_customer___phadmin",  # cloudtalk_io
         "customer_canceled_an_account___phadmin",  # cloudtalk_io
         "lead_source",  # cloudtalk_io
@@ -183,16 +183,16 @@ MANDATORY_PROPERTIES = {
         "calculated_users_range_conservative",  # cloudtalk_io
         "trial_login_date",  # cloudtalk_io
         "monthly_recurring_revenue_only_software",  # cloudtalk_io
-        "qual_out_date_stamp", # cloudtalk_io
-        "unqual_date_stamp", # cloudtalk_io
-        "ft_1_2_seats_date_stamp", # cloudtalk_io
-        "ft_3_10_seats_date_stamp", # cloudtalk_io
-        "ft_11_20_seats_date_stamp", # cloudtalk_io
-        "ft_21_50", # cloudtalk_io
-        "ft_51_100_seats_date_stamp", # cloudtalk_io
-        "ft_101_250_seats_date_stamp", # cloudtalk_io
-        "ft_251_more_seats_date_stamp", # cloudtalk_io
-        "segment__contact_", # cloudtalk_io
+        "qual_out_date_stamp",  # cloudtalk_io
+        "unqual_date_stamp",  # cloudtalk_io
+        "ft_1_2_seats_date_stamp",  # cloudtalk_io
+        "ft_3_10_seats_date_stamp",  # cloudtalk_io
+        "ft_11_20_seats_date_stamp",  # cloudtalk_io
+        "ft_21_50",  # cloudtalk_io
+        "ft_51_100_seats_date_stamp",  # cloudtalk_io
+        "ft_101_250_seats_date_stamp",  # cloudtalk_io
+        "ft_251_more_seats_date_stamp",  # cloudtalk_io
+        "segment__contact_",  # cloudtalk_io
         "closedate",  # getmagic_com
         "lifecyclestage",  # getmagic_com
         "contact_type",  # getmagic_com
@@ -204,10 +204,12 @@ MANDATORY_PROPERTIES = {
         "became_a_eupry_lead_date",  # eupry
         "became_a_eupry_qualified_lead_date",  # eupry
         "became_a_eupry_sales_qualified_lead_date",  # eupry
-        "lead_acquisition_group", # coverflex
-        "lead_acquisition_group_date" # coverflex
-        "first_conversion_event_name", # sylvera_io
-        "first_conversion_date" # sylvera_io
+        "lead_acquisition_group",  # coverflex
+        "lead_acquisition_group_date"  # coverflex
+        "first_conversion_event_name",  # sylvera_io
+        "first_conversion_date",  # sylvera_io,
+        "freetrial_createdate",
+        "freetrial_approveddate",
     ],
 }
 
