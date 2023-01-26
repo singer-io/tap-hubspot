@@ -82,6 +82,8 @@ MANDATORY_PROPERTIES = {
         "became_a_sql_date",  # trengo custom field
         "became_a_opportunity_date",  # trengo custom field
         "class",  # trengo custom field
+        "recent_deal_amount", # trengo
+        "initial_deal_size", # trengo
         "hs_additional_domains",
         "marketing_pipeline_value_in__",  # capmo
         "recent_conversion_date",  # capmo
@@ -204,6 +206,8 @@ MANDATORY_PROPERTIES = {
         "became_a_eupry_sales_qualified_lead_date",  # eupry
         "lead_acquisition_group", # coverflex
         "lead_acquisition_group_date" # coverflex
+        "first_conversion_event_name", # sylvera_io
+        "first_conversion_date" # sylvera_io
     ],
 }
 
