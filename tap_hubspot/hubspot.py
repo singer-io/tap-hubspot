@@ -84,6 +84,8 @@ MANDATORY_PROPERTIES = {
         "class",  # trengo custom field
         "recent_deal_amount",  # trengo
         "initial_deal_size",  # trengo
+        "became_a_sal", # trengo
+        "became_a_customer_date", # trengo
         "hs_additional_domains",
         "marketing_pipeline_value_in__",  # capmo
         "recent_conversion_date",  # capmo
