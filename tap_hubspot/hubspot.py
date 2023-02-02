@@ -258,8 +258,7 @@ class Hubspot:
         elif self.tap_stream_id == "contacts":
             self.event_state["contacts_start_date"] = start_date
             self.event_state["contacts_end_date"] = end_date
-
-            yield from self.get_contacts()
+            yield from self.get_contacts_v2(start_date, end_date)
         elif self.tap_stream_id == "contact_lists":
             yield from self.get_contact_lists()
         elif self.tap_stream_id == "contacts_in_contact_lists":
@@ -620,6 +619,36 @@ class Hubspot:
                 }
 
                 self.store_ids_submissions(contact)
+
+                yield contact, replication_value
+
+    def get_contacts_v2(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "lastmodifieddate"
+        obj_type = "contacts"
+        primary_key = "hs_object_id"
+        properties = self.get_object_properties(obj_type)
+
+        gen = self.search(
+            obj_type, filter_key, start_date, end_date, properties, primary_key
+        )
+
+        for chunk in chunker(gen, 100):
+            ids: List[str] = [contact["id"] for contact in chunk]
+            companies_associations = self.get_associations("contacts", "companies", ids)
+
+            for contact in chunk:
+                contact["associations"] = {
+                    "companies": {
+                        "results": companies_associations.get(contact["id"], [])
+                    },
+                }
+
+                self.store_ids_submissions(contact)
+                replication_value = parser.isoparse(
+                    self.get_value(contact, ["properties", filter_key])
+                )
 
                 yield contact, replication_value
 
