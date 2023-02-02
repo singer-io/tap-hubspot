@@ -307,15 +307,12 @@ class Hubspot:
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "deals"
+        primary_key = "hs_object_id"
 
         properties = self.get_object_properties(obj_type)
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         for chunk in chunker(gen, 50):
@@ -595,15 +592,12 @@ class Hubspot:
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "companies"
+        primary_key = "hs_object_id"
 
         properties = self.get_object_properties(obj_type)
 
         companies = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         for company in companies:
@@ -704,13 +698,10 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "calls"
         properties = self.get_object_properties(obj_type)
+        primary_key = "hs_object_id"
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
         return self.attach_engagement_associations(
             obj_type=obj_type,
@@ -724,13 +715,9 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "meetings"
         properties = self.get_object_properties(obj_type)
-
+        primary_key = "hs_object_id"
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
@@ -745,13 +732,10 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "emails"
         properties = self.get_object_properties(obj_type)
+        primary_key = "hs_object_id"
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
@@ -766,13 +750,10 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "notes"
         properties = self.get_object_properties(obj_type)
+        primary_key = "hs_object_id"
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
@@ -787,13 +768,9 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "tasks"
         properties = self.get_object_properties(obj_type)
-
+        primary_key = "hs_object_id"
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
