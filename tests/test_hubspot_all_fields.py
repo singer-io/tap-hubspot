@@ -67,6 +67,9 @@ KNOWN_MISSING_FIELDS = {
         'suppressedReason',
         'cc',
      },
+    'engagements': {  # BUG https://jira.talendforge.org/browse/TDL-14997
+        'scheduledTasks',
+     },
     'workflows': {  # BUG https://jira.talendforge.org/browse/TDL-14998
         'migrationStatus',
         'updateSource',
