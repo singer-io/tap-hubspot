@@ -1,0 +1,155 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "createdAt": {
+            "type": [
+                "null",
+                "string"
+            ],
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": [
+                "null",
+                "string"
+            ],
+            "format": "date-time"
+        },
+        "archived": {
+            "type": "boolean"
+        },
+        "properties": {
+            "type": [
+                "null",
+                "object"
+            ],
+            "properties": {
+                "content": {
+                    "type": [
+                        "null",
+                        "string"
+                    ]
+                },
+                "createdate": {
+                    "type": [
+                        "null",
+                        "string"
+                    ],
+                    "format": "date-time"
+                },
+                "hs_lastmodifieddate": {
+                    "type": [
+                        "null",
+                        "string"
+                    ],
+                    "format": "date-time"
+                },
+                "hs_object_id": {
+                    "type": "integer"
+                },
+                "hs_pipeline": {
+                    "type": "integer"
+                },
+                "hs_pipeline_stage": {
+                    "type": "integer"
+                },
+                "hs_ticket_category": {
+                    "type": [
+                        "null",
+                        "string"
+                    ]
+                },
+                "hs_ticket_priority": {
+                    "type": [
+                        "null",
+                        "string"
+                    ]
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
+        "associations": {
+            "type": [
+                "null",
+                "object"
+            ],
+            "properties": {
+                "companies": {
+                    "type": [
+                        "null",
+                        "object"
+                    ],
+                    "properties": {
+                        "results": [
+                            "null",
+                            "array"
+                        ],
+                        "items": {
+                            "type": [
+                                "null",
+                                "object"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "deals": {
+                    "properties": {
+                        "results": [
+                            "null",
+                            "array"
+                        ],
+                        "items": {
+                            "type": [
+                                "null",
+                                "object"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "contacts": {
+                    "properties": {
+                        "results": [
+                            "null",
+                            "array"
+                        ],
+                        "items": {
+                            "type": [
+                                "null",
+                                "object"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
