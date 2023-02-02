@@ -394,10 +394,12 @@ class Hubspot:
         start_date: datetime,
         end_date: datetime,
         properties: List[str],
+        primary_key: str,
         limit=100,
     ) -> Iterable[Dict]:
         path = f"/crm/v3/objects/{object_type}/search"
         after: int = 0
+        primary_key_value = "0"
         while True:
             try:
                 body = self.build_search_body(
@@ -406,6 +408,8 @@ class Hubspot:
                     properties,
                     filter_key,
                     after,
+                    primary_key,
+                    primary_key_value,
                     limit=limit,
                 )
                 resp = self.do(
@@ -419,6 +423,7 @@ class Hubspot:
                 raise
 
             data = resp.json()
+            LOGGER.info(f"total data to be synced: {data['total']}")
             records = data.get("results", [])
 
             if not records:
@@ -442,10 +447,9 @@ class Hubspot:
             if int(page_after) >= 10000:
                 # reset all pagination values
                 after = 0
-
-                ts_str = self.get_value(records[-1], ["properties", filter_key])
-                start_date = parser.isoparse(ts_str)
-
+                primary_key_value = self.get_value(
+                    records[-1], ["properties", primary_key]
+                )
                 continue
 
             after = int(page_after)
@@ -457,9 +461,11 @@ class Hubspot:
         properties: list,
         filter_key: str,
         after: int,
+        primary_key: str,
+        primary_key_value: str,
         limit: int = 100,
     ):
-        return {
+        q = {
             "filterGroups": [
                 {
                     "filters": [
@@ -473,14 +479,23 @@ class Hubspot:
                             "operator": "LT",
                             "value": str(int(end_date.timestamp() * 1000)),
                         },
+                        {
+                            "propertyName": primary_key,
+                            "operator": "GTE",
+                            "value": primary_key_value,
+                        },
                     ]
                 }
             ],
             "properties": properties,
-            "sorts": [{"propertyName": filter_key, "direction": "ASCENDING"}],
+            "sorts": [
+                {"propertyName": primary_key, "direction": "ASCENDING"},
+            ],
             "limit": limit,
             "after": after,
         }
+        LOGGER.info(f"filter option: {q['filterGroups']}. after:{q['after']}")
+        return q
 
     def attach_engagement_associations(
         self, obj_type: str, search_result: Iterable[Dict], replication_path: List[str]
