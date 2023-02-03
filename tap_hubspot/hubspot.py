@@ -84,8 +84,8 @@ MANDATORY_PROPERTIES = {
         "class",  # trengo custom field
         "recent_deal_amount",  # trengo
         "initial_deal_size",  # trengo
-        "became_a_sal", # trengo
-        "became_a_customer_date", # trengo
+        "became_a_sal",  # trengo
+        "became_a_customer_date",  # trengo
         "hs_additional_domains",
         "marketing_pipeline_value_in__",  # capmo
         "recent_conversion_date",  # capmo
@@ -258,8 +258,7 @@ class Hubspot:
         elif self.tap_stream_id == "contacts":
             self.event_state["contacts_start_date"] = start_date
             self.event_state["contacts_end_date"] = end_date
-
-            yield from self.get_contacts()
+            yield from self.get_contacts_v2(start_date, end_date)
         elif self.tap_stream_id == "contact_lists":
             yield from self.get_contact_lists()
         elif self.tap_stream_id == "contacts_in_contact_lists":
@@ -308,15 +307,12 @@ class Hubspot:
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "deals"
+        primary_key = "hs_object_id"
 
         properties = self.get_object_properties(obj_type)
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         for chunk in chunker(gen, 50):
@@ -395,10 +391,12 @@ class Hubspot:
         start_date: datetime,
         end_date: datetime,
         properties: List[str],
+        primary_key: str,
         limit=100,
     ) -> Iterable[Dict]:
         path = f"/crm/v3/objects/{object_type}/search"
         after: int = 0
+        primary_key_value = "0"
         while True:
             try:
                 body = self.build_search_body(
@@ -407,6 +405,8 @@ class Hubspot:
                     properties,
                     filter_key,
                     after,
+                    primary_key,
+                    primary_key_value,
                     limit=limit,
                 )
                 resp = self.do(
@@ -420,6 +420,7 @@ class Hubspot:
                 raise
 
             data = resp.json()
+            LOGGER.info(f"total data to be synced: {data['total']}")
             records = data.get("results", [])
 
             if not records:
@@ -443,10 +444,9 @@ class Hubspot:
             if int(page_after) >= 10000:
                 # reset all pagination values
                 after = 0
-
-                ts_str = self.get_value(records[-1], ["properties", filter_key])
-                start_date = parser.isoparse(ts_str)
-
+                primary_key_value = self.get_value(
+                    records[-1], ["properties", primary_key]
+                )
                 continue
 
             after = int(page_after)
@@ -458,9 +458,11 @@ class Hubspot:
         properties: list,
         filter_key: str,
         after: int,
+        primary_key: str,
+        primary_key_value: str,
         limit: int = 100,
     ):
-        return {
+        q = {
             "filterGroups": [
                 {
                     "filters": [
@@ -474,14 +476,23 @@ class Hubspot:
                             "operator": "LT",
                             "value": str(int(end_date.timestamp() * 1000)),
                         },
+                        {
+                            "propertyName": primary_key,
+                            "operator": "GTE",
+                            "value": primary_key_value,
+                        },
                     ]
                 }
             ],
             "properties": properties,
-            "sorts": [{"propertyName": filter_key, "direction": "ASCENDING"}],
+            "sorts": [
+                {"propertyName": primary_key, "direction": "ASCENDING"},
+            ],
             "limit": limit,
             "after": after,
         }
+        LOGGER.info(f"filter option: {q['filterGroups']}. after:{q['after']}")
+        return q
 
     def attach_engagement_associations(
         self, obj_type: str, search_result: Iterable[Dict], replication_path: List[str]
@@ -581,15 +592,12 @@ class Hubspot:
     ) -> Iterable[Tuple[Dict, datetime]]:
         filter_key = "hs_lastmodifieddate"
         obj_type = "companies"
+        primary_key = "hs_object_id"
 
         properties = self.get_object_properties(obj_type)
 
         companies = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         for company in companies:
@@ -620,6 +628,36 @@ class Hubspot:
                 }
 
                 self.store_ids_submissions(contact)
+
+                yield contact, replication_value
+
+    def get_contacts_v2(
+        self, start_date: datetime, end_date: datetime
+    ) -> Iterable[Tuple[Dict, datetime]]:
+        filter_key = "lastmodifieddate"
+        obj_type = "contacts"
+        primary_key = "hs_object_id"
+        properties = self.get_object_properties(obj_type)
+
+        gen = self.search(
+            obj_type, filter_key, start_date, end_date, properties, primary_key
+        )
+
+        for chunk in chunker(gen, 100):
+            ids: List[str] = [contact["id"] for contact in chunk]
+            companies_associations = self.get_associations("contacts", "companies", ids)
+
+            for contact in chunk:
+                contact["associations"] = {
+                    "companies": {
+                        "results": companies_associations.get(contact["id"], [])
+                    },
+                }
+
+                self.store_ids_submissions(contact)
+                replication_value = parser.isoparse(
+                    self.get_value(contact, ["properties", filter_key])
+                )
 
                 yield contact, replication_value
 
@@ -660,13 +698,10 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "calls"
         properties = self.get_object_properties(obj_type)
+        primary_key = "hs_object_id"
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
         return self.attach_engagement_associations(
             obj_type=obj_type,
@@ -680,13 +715,9 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "meetings"
         properties = self.get_object_properties(obj_type)
-
+        primary_key = "hs_object_id"
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
@@ -701,13 +732,10 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "emails"
         properties = self.get_object_properties(obj_type)
+        primary_key = "hs_object_id"
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
@@ -722,13 +750,10 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "notes"
         properties = self.get_object_properties(obj_type)
+        primary_key = "hs_object_id"
 
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
@@ -743,13 +768,9 @@ class Hubspot:
         filter_key = "hs_lastmodifieddate"
         obj_type = "tasks"
         properties = self.get_object_properties(obj_type)
-
+        primary_key = "hs_object_id"
         gen = self.search(
-            obj_type,
-            filter_key,
-            start_date,
-            end_date,
-            properties,
+            obj_type, filter_key, start_date, end_date, properties, primary_key
         )
 
         return self.attach_engagement_associations(
