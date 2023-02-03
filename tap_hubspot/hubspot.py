@@ -254,7 +254,7 @@ class Hubspot:
         if self.tap_stream_id == "owners":
             yield from self.get_owners()
         elif self.tap_stream_id == "companies":
-            yield from self.get_companies_legacy()
+            yield from self.get_companies(start_date, end_date)
         elif self.tap_stream_id == "contacts":
             self.event_state["contacts_start_date"] = start_date
             self.event_state["contacts_end_date"] = end_date
