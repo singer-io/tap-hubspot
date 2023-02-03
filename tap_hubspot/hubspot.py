@@ -46,174 +46,6 @@ def giveup_http_codes(e: Exception):
 
 LOGGER = singer.get_logger()
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-MANDATORY_PROPERTIES = {
-    "companies": [
-        "hs_object_id",
-        "name",
-        "country",
-        "domain",
-        "website",
-        "numberofemployees",
-        "industry",
-        "hs_user_ids_of_all_owners",
-        "owneremail",
-        "ownername",
-        "hubspot_owner_id",
-        "hs_all_owner_ids",
-        "industrynaics",
-        "industrysic",
-        "what_industry_company_",
-        "industry",
-        "number_of_employees_company",
-        "numberofemployees",
-        "employeesinalllocations",
-        "employeesinalllocationsnum",
-        "annualrevenue",
-        "currency",
-        "salesannual",
-        "salesannualnum",
-        "total_revenue",
-        "type",
-        "hs_merged_object_ids",
-        "lifecyclestage",
-        "hs_date_entered_salesqualifiedlead",  # trengo custom field
-        "became_a_lead_date",  # trengo custom field
-        "became_a_mql_date",  # trengo custom field
-        "became_a_sql_date",  # trengo custom field
-        "became_a_opportunity_date",  # trengo custom field
-        "class",  # trengo custom field
-        "recent_deal_amount",  # trengo
-        "initial_deal_size",  # trengo
-        "became_a_sal",  # trengo
-        "became_a_customer_date",  # trengo
-        "hs_additional_domains",
-        "marketing_pipeline_value_in__",  # capmo
-        "recent_conversion_date",  # capmo
-        "recent_conversion_event_name",  # capmo
-        "first_conversion_date",  # capmo
-        "first_conversion_event_name",  # capmo
-        "company__target_market__tiers_",  # capmo
-        "plan_price_ex_tax_",  # ably_com
-        "plan",  # ably_com
-        "first_paid_invoice",  # ably_com
-        "monthly_recurring_revenue",  # sleekflow_io
-        "mrr",  # cloudtalk_io
-        "mrr_software_only",  # cloudtalk_io
-        "industry_ivalua_",  # ivalua
-        "profitwell_created_on",  # logmycare_co_uk
-        "profitwell_activated_on",  # logmycare_co_uk
-        "hs_date_entered_marketingqualifiedlead",  # agencyanalytics_com
-        "hs_date_entered_26057217",  # agencyanalytics_com
-        "product_qualified_lead_date",  # agencyanalytics_com
-        "hs_date_entered_salesqualifiedlead",  # agencyanalytics_com
-        "sales_qualified_lead_date",  # agencyanalytics_com
-        "hs_date_entered_opportunity",  # agencyanalytics_com
-        "opportunity_date",  # agencyanalytics_com
-        "hs_date_entered_customer",  # agencyanalytics_com
-        "customer",  # agencyanalytics_com
-        "plan_mrr",  # agencyanalytics_com
-    ],
-    "contacts": [
-        "hs_object_id",
-        "email",
-        "emailadresse",
-        "hs_email_domain",
-        "domain",
-        "utm_campaign_original",
-        "utm_medium_original",
-        "utm_source_original",
-        "utm_term_original",
-        "hs_analytics_source",
-        "hs_analytics_source_data_1",
-        "hs_analytics_source_data_2",
-        "hs_analytics_first_referrer",
-        "hs_analytics_first_url",
-        "hs_analytics_last_url",
-        "hs_analytics_num_page_views",
-        "hs_analytics_num_visits",
-        "hs_analytics_num_event_completions",
-        "hs_analytics_first_touch_converting_campaign",
-        "hs_analytics_last_touch_converting_campaign",
-        "hs_additional_emails",
-        "associatedcompanyid",
-        "hs_analytics_last_timestamp",
-        "recent_conversion_date",
-        "hs_calculated_form_submissions",
-        "hs_all_contact_vids",
-        "hs_facebook_click_id",
-        "hs_google_click_id",
-        "jobtitle",
-        "firstname",
-        "lastname",
-        "date_of_birth",
-        "first_conversion_date",
-        "first_conversion_event_name",
-        "form_submission_url",
-        "numemployees",
-        "employees_all_sites_",
-        "jobseniority",
-        "seniority",
-        "hs_buying_role",
-        "hs_calculated_merged_vids",
-        "hs_merged_object_ids",
-        "job_function",
-        "hs_persona",
-        "salutation",
-        "website_source",
-        "hs_lifecyclestage_customer_date",
-        "hs_lifecyclestage_lead_date",
-        "hs_lifecyclestage_marketingqualifiedlead_date",
-        "hs_lifecyclestage_salesqualifiedlead_date",
-        "hs_lifecyclestage_subscriber_date",
-        "hs_lifecyclestage_evangelist_date",
-        "hs_lifecyclestage_opportunity_date",
-        "hs_lifecyclestage_other_date",
-        "went_mql",
-        "went_mql_date",
-        "original_mql_date_before_reset",
-        "converting_touch",
-        "mql_date",
-        "most_recent_source",  # ably_com
-        "ably_id",  # ably_com
-        "sign_up_date",  # ably_com
-        "become_a_customer___phadmin",  # cloudtalk_io
-        "customer_canceled_an_account___phadmin",  # cloudtalk_io
-        "lead_source",  # cloudtalk_io
-        "approved_trial",  # cloudtalk_io
-        "mrr",  # cloudtalk_io,
-        "new_seat_range_strategy_calculation",  # cloudtalk_io
-        "calculated_users_range_conservative",  # cloudtalk_io
-        "trial_login_date",  # cloudtalk_io
-        "monthly_recurring_revenue_only_software",  # cloudtalk_io
-        "qual_out_date_stamp",  # cloudtalk_io
-        "unqual_date_stamp",  # cloudtalk_io
-        "ft_1_2_seats_date_stamp",  # cloudtalk_io
-        "ft_3_10_seats_date_stamp",  # cloudtalk_io
-        "ft_11_20_seats_date_stamp",  # cloudtalk_io
-        "ft_21_50",  # cloudtalk_io
-        "ft_51_100_seats_date_stamp",  # cloudtalk_io
-        "ft_101_250_seats_date_stamp",  # cloudtalk_io
-        "ft_251_more_seats_date_stamp",  # cloudtalk_io
-        "segment__contact_",  # cloudtalk_io
-        "closedate",  # getmagic_com
-        "lifecyclestage",  # getmagic_com
-        "contact_type",  # getmagic_com
-        "discovery_call_attended",  # getmagic_com
-        "stage",  # getmagic_com
-        "dw_client_total_billed_revenue",  # getmagic_com
-        "offline_source_drill_down_2",  # qmarkets_net,
-        "hs_date_entered_marketingqualifiedlead",  # vestd_com
-        "became_a_eupry_lead_date",  # eupry
-        "became_a_eupry_qualified_lead_date",  # eupry
-        "became_a_eupry_sales_qualified_lead_date",  # eupry
-        "lead_acquisition_group",  # coverflex
-        "lead_acquisition_group_date"  # coverflex
-        "first_conversion_event_name",  # sylvera_io
-        "first_conversion_date",  # sylvera_io,
-        "freetrial_createdate",
-        "freetrial_approveddate",
-    ],
-}
 
 T = TypeVar("T")
 
@@ -573,20 +405,6 @@ class Hubspot:
         object_type = "deals"
         yield from self.get_archived(object_type=object_type)
 
-    def get_companies_legacy(self):
-        path = "/crm/v3/objects/companies"
-        data_field = "results"
-        replication_path = ["updatedAt"]
-        params = {"limit": 100, "properties": MANDATORY_PROPERTIES["companies"]}
-        offset_key = "after"
-        yield from self.get_records(
-            path,
-            replication_path,
-            params=params,
-            data_field=data_field,
-            offset_key=offset_key,
-        )
-
     def get_companies(
         self, start_date: datetime, end_date: datetime
     ) -> Iterable[Tuple[Dict, datetime]]:
@@ -604,32 +422,6 @@ class Hubspot:
             yield company, parser.isoparse(
                 self.get_value(company, ["properties", filter_key])
             )
-
-    def get_contacts(self) -> Iterable[Tuple[Dict, datetime]]:
-        replication_path = ["updatedAt"]
-
-        gen = self.get_records(
-            "/crm/v3/objects/contacts",
-            replication_path,
-            params={"limit": 100, "properties": MANDATORY_PROPERTIES["contacts"]},
-            data_field="results",
-            offset_key="after",
-        )
-
-        for chunk in chunker(gen, 100):
-            ids: List[str] = [contact["id"] for contact, _ in chunk]
-            companies_associations = self.get_associations("contacts", "companies", ids)
-
-            for contact, replication_value in chunk:
-                contact["associations"] = {
-                    "companies": {
-                        "results": companies_associations.get(contact["id"], [])
-                    },
-                }
-
-                self.store_ids_submissions(contact)
-
-                yield contact, replication_value
 
     def get_contacts_v2(
         self, start_date: datetime, end_date: datetime
@@ -653,12 +445,10 @@ class Hubspot:
                         "results": companies_associations.get(contact["id"], [])
                     },
                 }
-
                 self.store_ids_submissions(contact)
                 replication_value = parser.isoparse(
                     self.get_value(contact, ["properties", filter_key])
                 )
-
                 yield contact, replication_value
 
     def get_contact_lists(self) -> Iterable:
