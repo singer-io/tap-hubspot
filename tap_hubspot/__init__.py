@@ -96,6 +96,8 @@ ENDPOINTS = {
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
+
+    "tickets":              "/crm/v4/objects/tickets",
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
@@ -676,6 +678,7 @@ def sync_deals(STATE, ctx):
                      and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
 
     url = get_url('deals_all')
+
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
@@ -696,6 +699,47 @@ def sync_deals(STATE, ctx):
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
     STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
+    singer.write_state(STATE)
+    return STATE
+
+def sync_tickets(STATE, ctx):
+    """
+    Function to sync `tickets` stream records
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+
+    bookmark_key = 'updatedAt'
+    older_bookmark_key = None
+
+    start = utils.strptime_with_tz(get_start(STATE, "tickets", bookmark_key, older_bookmark_key))
+    max_bk_value = start
+    LOGGER.info("sync_tickets from %s", start)
+
+    params = {'limit': 100,
+              'associations': 'contact',
+              'associations': 'company',
+              'associations': 'deals',
+              'properties' : []}
+
+    schema = load_schema("tickets")
+    singer.write_schema("tickets", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
+    modified_time =None
+    url = get_url('tickets')
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) :
+        for row in gen_request(STATE, 'tickets', url, params, 'results', "has-more", [], [], v3_fields=None):
+            
+            modified_time_org = row[bookmark_key]
+            modified_time = utils.strptime_with_tz(datetime.datetime.strptime(modified_time_org, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%SZ"))
+        
+            # Uncomment this afterwards
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+            if not modified_time or modified_time >= start:
+                singer.write_record("tickets", row, catalog.get('stream_alias'), time_extracted=utils.now())
+
+    STATE = singer.write_bookmark(STATE, 'tickets', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
 
@@ -989,6 +1033,7 @@ STREAMS = [
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
+    Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
