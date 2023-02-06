@@ -721,8 +721,8 @@ def gen_request_ticket(STATE, tap_stream_id, url, params, path, more_key):
 
             if not data.get(more_key):
                 break
-            else:
-                params['after'] = data.get(more_key).get('next').get('after')
+            
+            params['after'] = data.get(more_key).get('next').get('after')
 
     singer.write_state(STATE)
 
@@ -742,9 +742,7 @@ def sync_tickets(STATE, ctx):
     LOGGER.info("sync_tickets from %s", bookmark_value)
 
     params = {'limit': 100,
-              'associations': 'contact',
-              'associations': 'company',
-              'associations': 'deals',
+              'associations': 'contact,company,deals',
               'properties': []}
 
     schema = load_schema(stream_id)
