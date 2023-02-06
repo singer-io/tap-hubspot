@@ -721,7 +721,6 @@ def gen_request_ticket(STATE, tap_stream_id, url, params, path, more_key):
 
             if not data.get(more_key):
                 break
-            
             params['after'] = data.get(more_key).get('next').get('after')
 
     singer.write_state(STATE)
