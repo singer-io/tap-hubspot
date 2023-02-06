@@ -702,48 +702,78 @@ def sync_deals(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+
+def gen_request_ticket(STATE, tap_stream_id, url, params, path, more_key):
+    """
+    Cursor-based API Pagination : Used in tickets stream implementation
+    """
+    with metrics.record_counter(tap_stream_id) as counter:
+        while True:
+            data = request(url, params).json()
+
+            if data.get(path) is None:
+                raise RuntimeError(
+                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+            for row in data[path]:
+                counter.increment()
+                yield row
+
+            if not data.get(more_key):
+                break
+            else:
+                params['after'] = data.get(more_key).get('next').get('after')
+
+    singer.write_state(STATE)
+
+
 def sync_tickets(STATE, ctx):
     """
     Function to sync `tickets` stream records
     """
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
 
-    bookmark_key = 'updatedAt'
-    older_bookmark_key = None
+    stream_id = "tickets"
+    primary_key = "id"
+    bookmark_key = "updatedAt"
 
-    start = utils.strptime_with_tz(get_start(STATE, "tickets", bookmark_key, older_bookmark_key))
-    max_bk_value = start
-    LOGGER.info("sync_tickets from %s", start)
+    max_bk_value = bookmark_value = utils.strptime_with_tz(
+        get_start(STATE, stream_id, bookmark_key))
+    LOGGER.info("sync_tickets from %s", bookmark_value)
 
     params = {'limit': 100,
               'associations': 'contact',
               'associations': 'company',
               'associations': 'deals',
-              'properties' : []}
+              'properties': []}
 
-    schema = load_schema("tickets")
-    singer.write_schema("tickets", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
-    modified_time =None
-    url = get_url('tickets')
+    schema = load_schema(stream_id)
+    singer.write_schema(stream_id, schema, [primary_key],
+                        [bookmark_key], catalog.get('stream_alias'))
 
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) :
-        for row in gen_request(STATE, 'tickets', url, params, 'results', "has-more", [], [], v3_fields=None):
-            
+    url = get_url(stream_id)
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING):
+        for row in gen_request_ticket(STATE, stream_id, url, params, 'results', "paging"):
+
             modified_time_org = row[bookmark_key]
-            modified_time = utils.strptime_with_tz(datetime.datetime.strptime(modified_time_org, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%SZ"))
-        
-            # Uncomment this afterwards
-            if modified_time and modified_time >= max_bk_value:
+            modified_time = utils.strptime_with_tz(datetime.datetime.strptime(
+                modified_time_org, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+            # Checking the bookmark value is present and the record is having
+            # grater than or equal to defined previous bookmark value
+            if modified_time and modified_time >= bookmark_value:
+                singer.write_record(stream_id, row, catalog.get(
+                    'stream_alias'), time_extracted=utils.now())
                 max_bk_value = modified_time
 
-            if not modified_time or modified_time >= start:
-                singer.write_record("tickets", row, catalog.get('stream_alias'), time_extracted=utils.now())
-
-    STATE = singer.write_bookmark(STATE, 'tickets', bookmark_key, utils.strftime(max_bk_value))
+    STATE = singer.write_bookmark(
+        STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
 
-#NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
+
+# NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
 def sync_campaigns(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
