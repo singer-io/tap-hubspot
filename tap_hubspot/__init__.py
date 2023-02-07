@@ -703,7 +703,7 @@ def sync_deals(STATE, ctx):
     return STATE
 
 
-def gen_request_ticket(STATE, tap_stream_id, url, params, path, more_key):
+def gen_request_tickets(STATE, tap_stream_id, url, params, path, more_key):
     """
     Cursor-based API Pagination : Used in tickets stream implementation
     """
@@ -751,7 +751,7 @@ def sync_tickets(STATE, ctx):
     url = get_url(stream_id)
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING):
-        for row in gen_request_ticket(STATE, stream_id, url, params, 'results', "paging"):
+        for row in gen_request_tickets(STATE, stream_id, url, params, 'results', "paging"):
 
             modified_time_org = row[bookmark_key]
             modified_time = utils.strptime_with_tz(datetime.datetime.strptime(
@@ -764,8 +764,7 @@ def sync_tickets(STATE, ctx):
                     'stream_alias'), time_extracted=utils.now())
                 max_bk_value = modified_time
 
-    STATE = singer.write_bookmark(
-        STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
 
