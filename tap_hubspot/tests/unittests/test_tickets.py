@@ -1,6 +1,5 @@
 from unittest.mock import patch, ANY
-from tap_hubspot import sync_tickets
-import tap_hubspot
+from tap_hubspot import sync_tickets, gen_request_tickets
 from unittest.mock import patch
 
 class MockResponse:
@@ -66,7 +65,7 @@ output_results = {'results': [
 @patch('tap_hubspot.singer.utils.strftime')
 @patch('tap_hubspot.get_start', return_value="")
 @patch('tap_hubspot.request')
-def test_ticket_request_validated(mocked_request, mocked_catalog_from_id, mocked_get_start,
+def test_ticket_gen_request_validated(mocked_request, mocked_catalog_from_id, mocked_get_start,
                                        mocked_utils_strptime, mocked_utils_strftime):
     """
     # Checking if gen_request_tickets() is calling request function atleast once
@@ -79,7 +78,7 @@ def test_ticket_request_validated(mocked_request, mocked_catalog_from_id, mocked
                       }
     input_url = 'https://api.hubapi.com/crm/v4/objects/tickets'
     stream_id = 'tickets'
-    tap_hubspot.gen_request_tickets({'currently_syncing': 'tickets'},stream_id, input_url, input_params, 'results', "paging")
+    gen_request_tickets({'currently_syncing': 'tickets'},stream_id, input_url, input_params, 'results', "paging")
 
 
     mocked_request.assert_called_once_with(input_url,input_params)
