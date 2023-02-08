@@ -207,8 +207,42 @@ class TestClient():
             return self.get_email_events()
         elif stream == 'subscription_changes':
             return self.get_subscription_changes(since)
+        elif stream == "tickets":
+            return self.get_tickets()
         else:
             raise NotImplementedError
+
+    def get_tickets(self):
+        """
+        Get all tickets.
+        """
+        url = f"{BASE_URL}/crm/v4/objects/tickets"
+        replication_key = list(self.replication_keys["tickets"])[0]
+        records = []
+
+        # response = self.get(url)
+
+        while True:
+            params = {"limit": 100, "associations": "contact,company,deals"}
+            response = self.get(url, params=params)
+
+            # if data.get(path) is None:
+            #     raise RuntimeError(
+            #         "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+            # for row in data["results"]:
+            records.extend(
+                [
+                    record
+                    for record in response["results"]
+                    if record[replication_key] >= "2023-01-01T13:47:54.269Z" # self.start_date
+                ]
+            )
+
+            if not response.get("paging"):
+                break
+            params["after"] = response.get("paging").get("next").get("after")
+        return records
 
     def get_campaigns(self):
         """
