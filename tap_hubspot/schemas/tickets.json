@@ -127,6 +127,10 @@
                     }
                 },
                 "deals": {
+                    "type": [
+                        "null",
+                        "object"
+                    ],                    
                     "properties": {
                         "results": [
                             "null",
@@ -155,6 +159,10 @@
                     }
                 },
                 "contacts": {
+                    "type": [
+                        "null",
+                        "object"
+                    ], 
                     "properties": {
                         "results": [
                             "null",
