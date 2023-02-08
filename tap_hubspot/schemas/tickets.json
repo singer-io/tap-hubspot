@@ -19,7 +19,10 @@
             "format": "date-time"
         },
         "archived": {
-            "type": "boolean"
+            "type": [
+                "null",
+                "boolean"
+            ]
         },
         "properties": {
             "type": [
@@ -48,13 +51,22 @@
                     "format": "date-time"
                 },
                 "hs_object_id": {
-                    "type": "integer"
+                    "type": [
+                        "null",
+                        "integer"
+                    ]
                 },
                 "hs_pipeline": {
-                    "type": "integer"
+                    "type": [
+                        "null",
+                        "integer"
+                    ]
                 },
                 "hs_pipeline_stage": {
-                    "type": "integer"
+                    "type": [
+                        "null",
+                        "integer"
+                    ]
                 },
                 "hs_ticket_category": {
                     "type": [
@@ -69,7 +81,10 @@
                     ]
                 },
                 "subject": {
-                    "type": "string"
+                    "type": [
+                        "null",
+                        "string"
+                    ]
                 }
             }
         },
@@ -96,10 +111,16 @@
                             ],
                             "properties": {
                                 "id": {
-                                    "type": "integer"
+                                    "type": [
+                                        "null",
+                                        "integer"
+                                    ]
                                 },
                                 "type": {
-                                    "type": "string"
+                                    "type": [
+                                        "null",
+                                        "string"
+                                    ]
                                 }
                             }
                         }
@@ -118,10 +139,16 @@
                             ],
                             "properties": {
                                 "id": {
-                                    "type": "integer"
+                                    "type": [
+                                        "null",
+                                        "integer"
+                                    ]
                                 },
                                 "type": {
-                                    "type": "string"
+                                    "type": [
+                                        "null",
+                                        "string"
+                                    ]
                                 }
                             }
                         }
@@ -140,10 +167,16 @@
                             ],
                             "properties": {
                                 "id": {
-                                    "type": "integer"
+                                    "type": [
+                                        "null",
+                                        "integer"
+                                    ]
                                 },
                                 "type": {
-                                    "type": "string"
+                                    "type": [
+                                        "null",
+                                        "string"
+                                    ]
                                 }
                             }
                         }
