@@ -703,7 +703,7 @@ def sync_deals(STATE, ctx):
     return STATE
 
 
-def gen_request_tickets(STATE, tap_stream_id, url, params, path, more_key):
+def gen_request_tickets(tap_stream_id, url, params, path, more_key):
     """
     Cursor-based API Pagination : Used in tickets stream implementation
     """
@@ -723,8 +723,6 @@ def gen_request_tickets(STATE, tap_stream_id, url, params, path, more_key):
                 break
             params['after'] = data.get(more_key).get('next').get('after')
 
-    singer.write_state(STATE)
-
 
 def sync_tickets(STATE, ctx):
     """
@@ -742,7 +740,8 @@ def sync_tickets(STATE, ctx):
 
     params = {'limit': 100,
               'associations': 'contact,company,deals',
-              'properties': []}
+              'archived': False
+              }
 
     schema = load_schema(stream_id)
     singer.write_schema(stream_id, schema, [primary_key],
@@ -751,17 +750,18 @@ def sync_tickets(STATE, ctx):
     url = get_url(stream_id)
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING):
-        for row in gen_request_tickets(STATE, stream_id, url, params, 'results', "paging"):
+        for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
 
             modified_time_org = row[bookmark_key]
             modified_time = utils.strptime_with_tz(datetime.datetime.strptime(
                 modified_time_org, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%SZ"))
 
-            # Checking the bookmark value is present and the record is having
-            # grater than or equal to defined previous bookmark value
+            # Checking the bookmark value is present on the record and it
+            # is greater than or equal to defined previous bookmark value
             if modified_time and modified_time >= bookmark_value:
                 singer.write_record(stream_id, row, catalog.get(
                     'stream_alias'), time_extracted=utils.now())
+            if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
     STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
