@@ -216,6 +216,7 @@ class TestClient():
         """
         Get all tickets.
         """
+        LOGGER.info(f"Within Get Tickets")
         url = f"{BASE_URL}/crm/v4/objects/tickets"
         replication_key = list(self.replication_keys["tickets"])[0]
         records = []
@@ -729,6 +730,8 @@ class TestClient():
             return self.create_subscription_changes()
         elif stream == 'subscription_changes':
             return self.create_subscription_changes(subscriptions, times)
+        elif stream == 'tickets':
+            return self.create_tickets()
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
@@ -977,6 +980,30 @@ class TestClient():
                 "name": "dealtype"
             }
             ]
+        }
+
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def create_tickets(self):
+        """
+        HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
+        """
+        LOGGER.info(f"Within Create Tickets")
+        url = f"{BASE_URL}/crm/v4/objects/tickets"
+
+        data = {
+        "properties": {
+            "content": "also a test",
+            "createdate": "2020-08-26T15:18:14.135Z",
+            "hs_lastmodifieddate": "2020-11-24T19:45:08.380Z",
+            "hs_pipeline": "0",
+            "hs_pipeline_stage": "1",
+            "hs_ticket_priority": "MEDIUM",
+            "subject": "ticket created through python code"
+        }
         }
 
         # generate a record
