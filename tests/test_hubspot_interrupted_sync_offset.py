@@ -33,6 +33,7 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
             'email_events', # unable to manually find a partial state with our test data
             'contacts_by_company', # interruptible does not apply, child of 'companies'
             'subscription_changes', # BUG_TDL-14938
+            'tickets' # covered in TestHubspotInterruptedSync1
         }
 
         return self.expected_streams() - untested

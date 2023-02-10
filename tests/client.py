@@ -677,15 +677,15 @@ class TestClient():
 
         # response = self.get(url)
 
+        params = {"limit": 100, "associations": "contact,company,deals"}
         while True:
-            params = {"limit": 100, "associations": "contact,company,deals"}
             response = self.get(url, params=params)
 
             records.extend(
                 [
                     record
                     for record in response["results"]
-                    if record[replication_key] >= self.start_date
+                    if record[replication_key] >= self.start_date_strf.replace('.Z','.000Z')
                 ]
             )
 
