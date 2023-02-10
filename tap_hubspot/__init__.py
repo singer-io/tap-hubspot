@@ -729,7 +729,7 @@ def sync_tickets(STATE, ctx):
     Function to sync `tickets` stream records
     """
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-
+    mdata = metadata.to_map(catalog.get('metadata'))
     stream_id = "tickets"
     primary_key = "id"
     bookmark_key = "updatedAt"
@@ -749,17 +749,17 @@ def sync_tickets(STATE, ctx):
 
     url = get_url(stream_id)
 
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING):
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
         for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
-
-            modified_time_org = row[bookmark_key]
+            # transforms the data and filters out the selected fields from the catalog
+            record = transformer.transform(row, schema, mdata)
             modified_time = utils.strptime_with_tz(datetime.datetime.strptime(
-                modified_time_org, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%SZ"))
+                record[bookmark_key], "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
 
             # Checking the bookmark value is present on the record and it
             # is greater than or equal to defined previous bookmark value
             if modified_time and modified_time >= bookmark_value:
-                singer.write_record(stream_id, row, catalog.get(
+                singer.write_record(stream_id, record, catalog.get(
                     'stream_alias'), time_extracted=utils.now())
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
