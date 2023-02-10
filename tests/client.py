@@ -212,39 +212,6 @@ class TestClient():
         else:
             raise NotImplementedError
 
-    def get_tickets(self):
-        """
-        Get all tickets.
-        """
-        LOGGER.info(f"Within Get Tickets")
-        url = f"{BASE_URL}/crm/v4/objects/tickets"
-        replication_key = list(self.replication_keys["tickets"])[0]
-        records = []
-
-        # response = self.get(url)
-
-        while True:
-            params = {"limit": 100, "associations": "contact,company,deals"}
-            response = self.get(url, params=params)
-
-            # if data.get(path) is None:
-            #     raise RuntimeError(
-            #         "Unexpected API response: {} not in {}".format(path, data.keys()))
-
-            # for row in data["results"]:
-            records.extend(
-                [
-                    record
-                    for record in response["results"]
-                    if record[replication_key] >= "2023-01-01T13:47:54.269Z" # self.start_date
-                ]
-            )
-
-            if not response.get("paging"):
-                break
-            params["after"] = response.get("paging").get("next").get("after")
-        return records
-
     def get_campaigns(self):
         """
         Get all campaigns by id, then grab the details of each campaign.
@@ -690,6 +657,42 @@ class TestClient():
                         if record[replication_key] >= self.start_date])
         return records
 
+    def _get_tickets_by_pk(self, ticket_id):
+        """
+        Get a specific ticket by pk value
+        HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
+        """
+        url = f"{BASE_URL}/crm/v4/objects/tickets/{ticket_id}?associations=contact,company,deals"
+        response = self.get(url)
+        return response
+
+    def get_tickets(self):
+        """
+        Get all tickets.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
+        """
+        url = f"{BASE_URL}/crm/v4/objects/tickets"
+        replication_key = list(self.replication_keys["tickets"])[0]
+        records = []
+
+        # response = self.get(url)
+
+        while True:
+            params = {"limit": 100, "associations": "contact,company,deals"}
+            response = self.get(url, params=params)
+
+            records.extend(
+                [
+                    record
+                    for record in response["results"]
+                    if record[replication_key] >= self.start_date
+                ]
+            )
+
+            if not response.get("paging"):
+                break
+            params["after"] = response.get("paging").get("next").get("after")
+        return records
     ##########################################################################
     ### CREATE
     ##########################################################################
@@ -991,18 +994,15 @@ class TestClient():
         """
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
-        LOGGER.info(f"Within Create Tickets")
         url = f"{BASE_URL}/crm/v4/objects/tickets"
-
+        record_uuid = str(uuid.uuid4()).replace('-', '')
         data = {
         "properties": {
-            "content": "also a test",
-            "createdate": "2020-08-26T15:18:14.135Z",
-            "hs_lastmodifieddate": "2020-11-24T19:45:08.380Z",
+            "content": f"Created for testing purpose - {record_uuid}",
             "hs_pipeline": "0",
             "hs_pipeline_stage": "1",
             "hs_ticket_priority": "MEDIUM",
-            "subject": "ticket created through python code"
+            "subject": f"Sample ticket name - {record_uuid}"
         }
         }
 
@@ -1311,6 +1311,8 @@ class TestClient():
             return self.update_forms(record_id)
         elif stream == 'engagements':
             return self.update_engagements(record_id)
+        elif stream == 'tickets':
+            return self.update_tickets(record_id)
         else:
             raise NotImplementedError(f"Test client does not have an update method for {stream}")
 
@@ -1523,6 +1525,27 @@ class TestClient():
         self.patch(url, data)
 
         record = self._get_engagements_by_pk(engagement_id)
+
+        return record
+
+    def update_tickets(self, ticket_id):
+        """
+        Hubspot API https://developers.hubspot.com/docs/api/crm/tickets
+        :params ticket_id: the pk value of the ticket record to update
+        :return:
+        """
+        url = f"{BASE_URL}/crm/v4/objects/tickets/{ticket_id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "properties": {
+                "subject": f"update record for testing - {record_uuid}"
+            }
+        }
+
+        self.patch(url, data)
+
+        record = self._get_tickets_by_pk(ticket_id)
 
         return record
 
