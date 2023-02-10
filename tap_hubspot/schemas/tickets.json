@@ -2,7 +2,7 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "integer"
+            "type": "string"
         },
         "createdAt": {
             "type": [
@@ -53,19 +53,19 @@
                 "hs_object_id": {
                     "type": [
                         "null",
-                        "integer"
+                        "string"
                     ]
                 },
                 "hs_pipeline": {
                     "type": [
                         "null",
-                        "integer"
+                        "string"
                     ]
                 },
                 "hs_pipeline_stage": {
                     "type": [
                         "null",
-                        "integer"
+                        "string"
                     ]
                 },
                 "hs_ticket_category": {
@@ -100,27 +100,29 @@
                         "object"
                     ],
                     "properties": {
-                        "results": [
-                            "null",
-                            "array"
-                        ],
-                        "items": {
+                        "results": {
                             "type": [
                                 "null",
-                                "object"
+                                "array"
                             ],
-                            "properties": {
-                                "id": {
-                                    "type": [
-                                        "null",
-                                        "integer"
-                                    ]
-                                },
-                                "type": {
-                                    "type": [
-                                        "null",
-                                        "string"
-                                    ]
+                            "items": {
+                                "type": [
+                                    "null",
+                                    "object"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "null",
+                                            "string"
+                                        ]
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "null",
+                                            "string"
+                                        ]
+                                    }
                                 }
                             }
                         }
@@ -132,27 +134,29 @@
                         "object"
                     ],
                     "properties": {
-                        "results": [
-                            "null",
-                            "array"
-                        ],
-                        "items": {
+                        "results": {
                             "type": [
                                 "null",
-                                "object"
+                                "array"
                             ],
-                            "properties": {
-                                "id": {
-                                    "type": [
-                                        "null",
-                                        "integer"
-                                    ]
-                                },
-                                "type": {
-                                    "type": [
-                                        "null",
-                                        "string"
-                                    ]
+                            "items": {
+                                "type": [
+                                    "null",
+                                    "object"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "null",
+                                            "string"
+                                        ]
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "null",
+                                            "string"
+                                        ]
+                                    }
                                 }
                             }
                         }
@@ -164,27 +168,29 @@
                         "object"
                     ],
                     "properties": {
-                        "results": [
-                            "null",
-                            "array"
-                        ],
-                        "items": {
+                        "results": {
                             "type": [
                                 "null",
-                                "object"
+                                "array"
                             ],
-                            "properties": {
-                                "id": {
-                                    "type": [
-                                        "null",
-                                        "integer"
-                                    ]
-                                },
-                                "type": {
-                                    "type": [
-                                        "null",
-                                        "string"
-                                    ]
+                            "items": {
+                                "type": [
+                                    "null",
+                                    "object"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": [
+                                            "null",
+                                            "string"
+                                        ]
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "null",
+                                            "string"
+                                        ]
+                                    }
                                 }
                             }
                         }
