@@ -1,15 +1,11 @@
 import datetime
-import time
-import requests
-import backoff
-import json
-# from json.decoder import JSONDecodeError
-import uuid
 import random
+import uuid
 
-from tap_tester import menagerie, LOGGER
-
+import backoff
+import requests
 from base import HubspotBaseTest
+from tap_tester import LOGGER
 
 DEBUG = False
 BASE_URL = "https://api.hubapi.com"
@@ -19,6 +15,7 @@ class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
     ##########################################################################
     ### CORE METHODS
     ##########################################################################
@@ -29,7 +26,7 @@ class TestClient():
             return False
 
         return exc.response is not None \
-            and 400 <= exc.response.status_code < 500
+               and 400 <= exc.response.status_code < 500
 
     @backoff.on_exception(backoff.constant,
                           (requests.exceptions.RequestException,
@@ -60,14 +57,14 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.post(url, json=data, params=params, headers=headers)
-        LOGGER.info(f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(
+            f"TEST CLIENT | POST {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
             LOGGER.debug(response.text)
 
         response.raise_for_status()
 
         if response.status_code == 204:
-
             LOGGER.warn(f"TEST CLIENT Response is empty")
             # NB: There is a simplejson.scanner.JSONDecodeError thrown when we attempt
             #     to do a response.json() on a 204 response. To get around this we just return an empty list
@@ -90,7 +87,8 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.put(url, json=data, params=params, headers=headers)
-        LOGGER.info(f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(
+            f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
             LOGGER.debug(response.text)
 
@@ -108,7 +106,8 @@ class TestClient():
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.patch(url, json=data, params=params, headers=headers)
-        LOGGER.info(f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(
+            f"TEST CLIENT | PATCH {url} data={data} params={params}  STATUS: {response.status_code}")
         if debug:
             LOGGER.debug(response.text)
 
@@ -165,11 +164,12 @@ class TestClient():
             for record in records:
                 for column in record.keys():
                     if column in datetime_columns[stream]:
-                        record[column]= self.BaseTest.datetime_from_timestamp(
-                            record[column]/1000, self.BOOKMARK_DATE_FORMAT
+                        record[column] = self.BaseTest.datetime_from_timestamp(
+                            record[column] / 1000, self.BOOKMARK_DATE_FORMAT
                         )
 
-        LOGGER.info(f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
+        LOGGER.info(
+            f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
         return records
 
     ##########################################################################
@@ -260,11 +260,11 @@ class TestClient():
             for company in response['companies']:
                 if company['properties']['hs_lastmodifieddate']:
                     company_timestamp = datetime.datetime.fromtimestamp(
-                        company['properties']['hs_lastmodifieddate']['timestamp']/1000
+                        company['properties']['hs_lastmodifieddate']['timestamp'] / 1000
                     )
                 else:
                     company_timestamp = datetime.datetime.fromtimestamp(
-                        company['properties']['createdate']['timestamp']/1000
+                        company['properties']['createdate']['timestamp'] / 1000
                     )
 
                 if company_timestamp >= since:
@@ -294,7 +294,6 @@ class TestClient():
 
             return response
 
-
         if since == 'all':
             params = {'count': 250}
         else:
@@ -317,7 +316,7 @@ class TestClient():
             response = self.get(url, params=params)
             for record in response['lists']:
 
-                if since == 'all'  or int(since) <= record[replication_key]:
+                if since == 'all' or int(since) <= record[replication_key]:
                     records.append(record)
 
             has_more = response['has-more']
@@ -342,7 +341,7 @@ class TestClient():
         params_2['vid'] = pks
         response_2 = self.get(url_2, params=params_2)
         for vid, record in response_2.items():
-            ts_ms = int(record['properties']['lastmodifieddate']['value'])/1000
+            ts_ms = int(record['properties']['lastmodifieddate']['value']) / 1000
             converted_ts = self.BaseTest.datetime_from_timestamp(
                 ts_ms, self.BOOKMARK_DATE_FORMAT
             )
@@ -389,7 +388,6 @@ class TestClient():
 
         records = self.denest_properties('contacts', records)
         return records
-
 
     def get_contacts_by_company(self, parent_ids):
         """
@@ -452,18 +450,18 @@ class TestClient():
 
         v1_params = {'includeAllProperties': True,
                      'allPropertiesFetchMode': 'latest_version',
-                     'properties' : []}
+                     'properties': []}
         replication_key = list(self.replication_keys['deals'])[0]
         records = []
 
         # hit the v1 endpoint to get the record
         has_more = True
         while has_more:
-
             response = self.get(v1_url, params=v1_params)
             records.extend([record for record in response['deals']
                             # Here replication key of the deals stream is derived from "hs_lastmodifieddate" field.
-                            if record['properties']["hs_lastmodifieddate"]['timestamp'] >= self.start_date])
+                            if record['properties']["hs_lastmodifieddate"][
+                                'timestamp'] >= self.start_date])
             has_more = response['hasMore']
             v1_params['offset'] = response['offset']
 
@@ -488,21 +486,24 @@ class TestClient():
         for v3_record in v3_records:
             for record in records:
                 if v3_record['id'] == str(record['dealId']):
-
                     # don't inclue the v3 property if the value is None
                     non_null_v3_properties = {v3_property_key: v3_property_value
-                                              for v3_property_key, v3_property_value in v3_record['properties'].items()
+                                              for v3_property_key, v3_property_value in
+                                              v3_record['properties'].items()
                                               if v3_property_value is not None}
 
                     # only grab v3 properties with a specific prefix
                     trimmed_v3_properties = {v3_property_key: v3_property_value
-                                             for v3_property_key, v3_property_value in non_null_v3_properties.items()
+                                             for v3_property_key, v3_property_value in
+                                             non_null_v3_properties.items()
                                              if any([v3_property_key.startswith(prefix)
-                                                     for prefix in self.V3_DEALS_PROPERTY_PREFIXES])}
+                                                     for prefix in
+                                                     self.V3_DEALS_PROPERTY_PREFIXES])}
 
                     # the v3 properties must be restructured into objects to match v1
                     v3_properties = {v3_property_key: {'value': v3_property_value}
-                                     for v3_property_key, v3_property_value in trimmed_v3_properties.items()}
+                                     for v3_property_key, v3_property_value in
+                                     trimmed_v3_properties.items()}
 
                     # add the v3 record properties to the v1 record
                     record['properties'].update(v3_properties)
@@ -523,7 +524,6 @@ class TestClient():
 
         has_more = True
         while has_more:
-
             response = self.get(url, params=params)
 
             records.extend([record for record in response['events']
@@ -566,7 +566,6 @@ class TestClient():
                     result['engagement_id'] = result['engagement']['id']
                     result['lastUpdated'] = result['engagement']['lastUpdated']
                     records.append(result)
-
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
@@ -685,7 +684,7 @@ class TestClient():
                 [
                     record
                     for record in response["results"]
-                    if record[replication_key] >= self.start_date_strf.replace('.Z','.000Z')
+                    if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')
                 ]
             )
 
@@ -693,6 +692,7 @@ class TestClient():
                 break
             params["after"] = response.get("paging").get("next").get("after")
         return records
+
     ##########################################################################
     ### CREATE
     ##########################################################################
@@ -749,43 +749,43 @@ class TestClient():
         data = {
             "properties": [
                 {
-                   "property": "email",
-                   "value": f"{record_uuid}@stitchdata.com"
-                 },
-                 {
-                   "property": "firstname",
-                   "value": "Yusaku"
-                 },
-                 {
-                   "property": "lastname",
-                   "value": "Kasahara"
-                 },
-                 {
-                   "property": "website",
-                   "value": "http://app.stitchdata.com"
-                 },
-                 {
-                   "property": "phone",
-                   "value": "555-122-2323"
-                 },
-                 {
-                   "property": "address",
-                   "value": "25 First Street"
-                 },
-                 {
-                   "property": "city",
-                   "value": "Cambridge"
-                 },
-                 {
-                   "property": "state",
-                   "value": "MA"
-                 },
-                 {
-                   "property": "zip",
-                   "value": "02139"
-                 }
-               ]
-             }
+                    "property": "email",
+                    "value": f"{record_uuid}@stitchdata.com"
+                },
+                {
+                    "property": "firstname",
+                    "value": "Yusaku"
+                },
+                {
+                    "property": "lastname",
+                    "value": "Kasahara"
+                },
+                {
+                    "property": "website",
+                    "value": "http://app.stitchdata.com"
+                },
+                {
+                    "property": "phone",
+                    "value": "555-122-2323"
+                },
+                {
+                    "property": "address",
+                    "value": "25 First Street"
+                },
+                {
+                    "property": "city",
+                    "value": "Cambridge"
+                },
+                {
+                    "property": "state",
+                    "value": "MA"
+                },
+                {
+                    "property": "zip",
+                    "value": "02139"
+                }
+            ]
+        }
 
         # generate a contacts record
         response = self.post(url, data)
@@ -796,7 +796,7 @@ class TestClient():
         get_resp = self.get(get_url, params=params)
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
-            get_resp['versionTimestamp']/1000, self.BOOKMARK_DATE_FORMAT
+            get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT
         )
         get_resp['versionTimestamp'] = converted_versionTimestamp
         records = self.denest_properties('contacts', [get_resp])
@@ -848,7 +848,7 @@ class TestClient():
         data = {
             "name": f"tweeters{record_uuid}",
             "dynamic": True,
-            "filters":[
+            "filters": [
                 [{
                     "operator": "EQ",
                     "value": f"@hubspot{record_uuid}",
@@ -978,10 +978,10 @@ class TestClient():
                     "value": "60000",
                     "name": "amount"
                 },
-            {
-                "value": "newbusiness",
-                "name": "dealtype"
-            }
+                {
+                    "value": "newbusiness",
+                    "name": "dealtype"
+                }
             ]
         }
 
@@ -997,19 +997,18 @@ class TestClient():
         url = f"{BASE_URL}/crm/v4/objects/tickets"
         record_uuid = str(uuid.uuid4()).replace('-', '')
         data = {
-        "properties": {
-            "content": f"Created for testing purpose - {record_uuid}",
-            "hs_pipeline": "0",
-            "hs_pipeline_stage": "1",
-            "hs_ticket_priority": "MEDIUM",
-            "subject": f"Sample ticket name - {record_uuid}"
-        }
+            "properties": {
+                "content": f"Created for testing purpose - {record_uuid}",
+                "hs_pipeline": "0",
+                "hs_pipeline_stage": "1",
+                "hs_ticket_priority": "MEDIUM",
+                "subject": f"Sample ticket name - {record_uuid}"
+            }
         }
 
         # generate a record
         response = self.post(url, data)
-        records = [response]
-        return records
+        return [response]
 
     def create_email_events(self):
         """
@@ -1020,7 +1019,8 @@ class TestClient():
         the preferred approach. We do not currently rely on this approach.
         """
 
-        raise NotImplementedError("Use create_subscription_changes instead to create records for email_events stream")
+        raise NotImplementedError(
+            "Use create_subscription_changes instead to create records for email_events stream")
 
     def create_engagements(self):
         """
@@ -1034,7 +1034,7 @@ class TestClient():
         contact_records = self.get_contacts()
         contact_ids = [contact['vid']
                        for contact in contact_records
-                       if contact['vid'] != 2304] # contact 2304 has hit the 10,000 assoc limit
+                       if contact['vid'] != 2304]  # contact 2304 has hit the 10,000 assoc limit
         contact_id = random.choice(contact_ids)
 
         url = f"{BASE_URL}/engagements/v1/engagements"
@@ -1048,9 +1048,9 @@ class TestClient():
             "associations": {
                 "contactIds": [contact_id],
                 "companyIds": [6804176293],
-                "dealIds": [ ],
-                "ownerIds": [ ],
-		"ticketIds":[ ]
+                "dealIds": [],
+                "ownerIds": [],
+                "ticketIds": []
             },
             "attachments": [
                 {
@@ -1195,9 +1195,10 @@ class TestClient():
         """
         HubSpot API The Owners API is read-only. Owners can only be created in HubSpot.
         """
-        raise NotImplementedError("Only able to create owners from web app manually. No api endpoint exists.")
+        raise NotImplementedError(
+            "Only able to create owners from web app manually. No api endpoint exists.")
 
-    def create_subscription_changes(self, subscriptions=[] , times=1):
+    def create_subscription_changes(self, subscriptions=[], times=1):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/email/update_status
 
@@ -1206,7 +1207,8 @@ class TestClient():
         # by default, a new subscription change will be created from a previous subscription change from one week ago as defined in the get
         if subscriptions == []:
             subscriptions = self.get_subscription_changes()
-        subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']] for subscription in subscriptions]
+        subscription_id_list = [[change.get('subscriptionId') for change in subscription['changes']]
+                                for subscription in subscriptions]
         count = 0
         email_records = []
         subscription_records = []
@@ -1214,14 +1216,14 @@ class TestClient():
 
         for item in subscription_id_list:
             if count < times:
-                #if item[0]
+                # if item[0]
                 record_uuid = str(uuid.uuid4()).replace('-', '')
                 recipient = record_uuid + "@stitchdata.com"
                 url = f"{BASE_URL}/email/public/v1/subscriptions/{recipient}"
                 data = {
                     "subscriptionStatuses": [
                         {
-                            "id": item[0], #a_sub_id,
+                            "id": item[0],  # a_sub_id,
                             "subscribed": True,
                             "optState": "OPT_IN",
                             "legalBasis": "PERFORMANCE_OF_CONTRACT",
@@ -1236,17 +1238,17 @@ class TestClient():
                 # The intention is for this method to return both of the objects that it creates with this put
 
                 email_event = self.get_email_events(recipient=recipient)
-                #subscriptions = self.get_subscription_changes()
+                # subscriptions = self.get_subscription_changes()
                 # if len(email_event) > 1 or len(subscription_change) > 1:
                 #     raise RuntimeError(
                 #         "Expected this change to generate 1 email_event and 1 subscription_change only. "
                 #         "Generate {len(email_event)} email_events and {len(subscription_changes)} subscription_changes."
                 #     )
                 email_records.extend(email_event)
-                #subscription_records.append(subscription_change)
+                # subscription_records.append(subscription_change)
                 count += 1
 
-        return email_records # , subscription_records
+        return email_records  # , subscription_records
 
     def create_workflows(self):
         """
@@ -1296,7 +1298,7 @@ class TestClient():
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
             self.acquire_access_token_from_refresh_token()
-            
+
         if stream == 'companies':
             return self.update_companies(record_id)
         elif stream == 'contacts':
@@ -1499,13 +1501,15 @@ class TestClient():
         """
         HubSpot API The Owners API is read-only. Owners can only be updated in HubSpot.
         """
-        raise NotImplementedError("Only able to update owners from web app manuanlly. No API endpoint in hubspot.")
+        raise NotImplementedError(
+            "Only able to update owners from web app manuanlly. No API endpoint in hubspot.")
 
     def update_campaigns(self):
         """
         HubSpot API The Campaigns API is read-only. Campaigns can only be updated in HubSpot.
         """
-        raise NotImplementedError("Only able to update campaigns from web app manuanlly. No API endpoint in hubspot.")
+        raise NotImplementedError(
+            "Only able to update campaigns from web app manuanlly. No API endpoint in hubspot.")
 
     def update_engagements(self, engagement_id):
         """
@@ -1545,9 +1549,7 @@ class TestClient():
 
         self.patch(url, data)
 
-        record = self._get_tickets_by_pk(ticket_id)
-
-        return record
+        return self._get_tickets_by_pk(ticket_id)
 
     ##########################################################################
     ### Deletes
@@ -1557,7 +1559,7 @@ class TestClient():
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
             self.acquire_access_token_from_refresh_token()
-            
+
         if stream == 'deal_pipelines':
             self.delete_deal_pipelines(records, count)
         elif stream == 'contact_lists':
@@ -1574,7 +1576,7 @@ class TestClient():
 
         record_ids_to_delete = [record['listId'] for record in records]
         if len(record_ids_to_delete) == 1 or \
-           len(record_ids_to_delete) <= count:
+                len(record_ids_to_delete) <= count:
             raise RuntimeError(
                 "delete count is greater or equal to the number of existing records for contact_lists, "
                 "need to have at least one record remaining"
@@ -1583,7 +1585,6 @@ class TestClient():
             url = f"{BASE_URL}/contacts/v1/lists/{record_id}"
 
             self.delete(url)
-
 
     def delete_deal_pipelines(self, records=[], count=10):
         """
@@ -1595,14 +1596,15 @@ class TestClient():
 
         record_ids_to_delete = [record['pipelineId'] for record in records]
         if len(record_ids_to_delete) == 1 or \
-           len(record_ids_to_delete) <= count:
+                len(record_ids_to_delete) <= count:
             raise RuntimeError(
                 "delete count is greater or equal to the number of existing records for deal_pipelines, "
                 "need to have at least one record remaining"
             )
         for record_id in record_ids_to_delete:
-            if record_id == 'default' or len(record_id) > 16: # not a timestamp, not made by this client
-                continue # skip
+            if record_id == 'default' or len(
+                    record_id) > 16:  # not a timestamp, not made by this client
+                continue  # skip
 
             url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
             self.delete(url)
@@ -1635,8 +1637,8 @@ class TestClient():
         self.CONFIG['access_token'] = auth['access_token']
         self.CONFIG['refresh_token'] = auth['refresh_token']
         self.CONFIG['token_expires'] = (
-            datetime.datetime.utcnow() +
-            datetime.timedelta(seconds=auth['expires_in'] - 600))
+                datetime.datetime.utcnow() +
+                datetime.timedelta(seconds=auth['expires_in'] - 600))
         self.HEADERS = {'Authorization': f"Bearer {self.CONFIG['access_token']}"}
         LOGGER.info(f"TEST CLIENT | Token refreshed. Expires at {self.CONFIG['token_expires']}")
 
@@ -1648,7 +1650,7 @@ class TestClient():
 
         self.start_date_strf = start_date if start_date else self.CONFIG['start_date']
         self.start_date = datetime.datetime.strptime(
-                self.start_date_strf, self.BaseTest.START_DATE_FORMAT
+            self.start_date_strf, self.BaseTest.START_DATE_FORMAT
         ).timestamp() * 1000
 
         self.acquire_access_token_from_refresh_token()
