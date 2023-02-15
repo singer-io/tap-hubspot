@@ -39,9 +39,8 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
 
         tickets_bookmark = self.timedelta_formatted(
-            reference_state['bookmarks']['engagements']['lastUpdated'],
-            days=-1, str_format=self.BASIC_DATE_FORMAT
-        )
+            reference_state['bookmarks']['tickets']['updatedAt'],
+            days=-1, str_format=self.BASIC_DATE_FORMAT)
         new_state['bookmarks']['tickets']['updatedAt'] = tickets_bookmark
 
         return new_state

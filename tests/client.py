@@ -680,13 +680,9 @@ class TestClient():
         while True:
             response = self.get(url, params=params)
 
-            records.extend(
-                [
-                    record
+            records.extend([record
                     for record in response["results"]
-                    if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')
-                ]
-            )
+                    if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
 
             if not response.get("paging"):
                 break
