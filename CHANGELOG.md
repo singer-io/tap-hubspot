@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.11.0
+  * Implement new stream - `tickets` [#218](https://github.com/singer-io/tap-hubspot/pull/218)
+  * Update integration tests for the tickets stream implementation [#219](https://github.com/singer-io/tap-hubspot/pull/219)
+
 ## 2.10.0
   * Updated replication method as INCREMENTAL and replication key as property_hs_lastmodifieddate for deals and companies streams [#195](https://github.com/singer-io/tap-hubspot/pull/195)
   * Fixed Pylint errors [#204](https://github.com/singer-io/tap-hubspot/pull/204)

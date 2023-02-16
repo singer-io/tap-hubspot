@@ -96,6 +96,8 @@ ENDPOINTS = {
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
+
+    "tickets":              "/crm/v4/objects/tickets",
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
@@ -676,6 +678,7 @@ def sync_deals(STATE, ctx):
                      and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
 
     url = get_url('deals_all')
+
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
@@ -699,7 +702,74 @@ def sync_deals(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
-#NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
+
+def gen_request_tickets(tap_stream_id, url, params, path, more_key):
+    """
+    Cursor-based API Pagination : Used in tickets stream implementation
+    """
+    with metrics.record_counter(tap_stream_id) as counter:
+        while True:
+            data = request(url, params).json()
+
+            if data.get(path) is None:
+                raise RuntimeError(
+                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+            for row in data[path]:
+                counter.increment()
+                yield row
+
+            if not data.get(more_key):
+                break
+            params['after'] = data.get(more_key).get('next').get('after')
+
+
+def sync_tickets(STATE, ctx):
+    """
+    Function to sync `tickets` stream records
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    stream_id = "tickets"
+    primary_key = "id"
+    bookmark_key = "updatedAt"
+
+    max_bk_value = bookmark_value = utils.strptime_with_tz(
+        get_start(STATE, stream_id, bookmark_key))
+    LOGGER.info("sync_tickets from %s", bookmark_value)
+
+    params = {'limit': 100,
+              'associations': 'contact,company,deals',
+              'archived': False
+              }
+
+    schema = load_schema(stream_id)
+    singer.write_schema(stream_id, schema, [primary_key],
+                        [bookmark_key], catalog.get('stream_alias'))
+
+    url = get_url(stream_id)
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+        for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
+            # transforms the data and filters out the selected fields from the catalog
+            record = transformer.transform(row, schema, mdata)
+            modified_time = utils.strptime_with_tz(datetime.datetime.strptime(
+                record[bookmark_key], "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+
+            # Checking the bookmark value is present on the record and it
+            # is greater than or equal to defined previous bookmark value
+            if modified_time and modified_time >= bookmark_value:
+                singer.write_record(stream_id, record, catalog.get(
+                    'stream_alias'), time_extracted=utils.now())
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
+    singer.write_state(STATE)
+    return STATE
+
+
+# NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
 def sync_campaigns(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -989,6 +1059,7 @@ STREAMS = [
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
+    Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
