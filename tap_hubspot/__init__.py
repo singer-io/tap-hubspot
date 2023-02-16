@@ -92,6 +92,7 @@ ENDPOINTS = {
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
     "contact_lists":        "/contacts/v1/lists",
+    "list_contacts_recent": "/contacts/v1/lists/{list_id}/contacts/recent",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
@@ -464,11 +465,41 @@ def sync_contacts(STATE, ctx):
     max_bk_value = start
     schema = load_schema("contacts")
 
-    singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
+    url = get_url("contact_lists")
+    params = {'count': 100}
+    lists = gen_request(STATE, 'contact_lists', url, params, 'lists', 'has-more', ['offset'], ['offset'])
+    list_ids = [l["listId"] for l in lists]
+
+    newly_added = []
+    vids = []
+    params = default_contact_params.copy()
+    params["formSubmissionMode"] = "all"
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        for list_id in list_ids:
+            break_loop = False
+            while not break_loop:
+                data = request(get_url("list_contacts_recent", list_id=list_id), params=default_contact_params).json()
+                mdata = metadata.to_map(catalog.get('metadata'))
+                for record in data.get("contacts", []):
+
+                    if record["addedAt"] >= int(start.timestamp()*1000):
+                        newly_added.append(record["vid"])
+                        vids.append(record["vid"])
+                    else:
+                        break_loop = True
+                        break
+
+                    if len(vids) == 100:
+                        _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                        vids = []
+                
+                if data["has-more"]:
+                    params["vidOffset"] = data["vid-offset"]
+                    params["timeOffset"] = data["time-offset"]
+                else:
+                    break
 
     url = get_url("contacts_all")
-
-    vids = []
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
@@ -479,7 +510,8 @@ def sync_contacts(STATE, ctx):
                         UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
             if not modified_time or modified_time >= start:
-                vids.append(row['vid'])
+                if row['vid'] not in newly_added:
+                    vids.append(row['vid'])
 
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
