@@ -465,6 +465,8 @@ def sync_contacts(STATE, ctx):
     max_bk_value = start
     schema = load_schema("contacts")
 
+    singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
+
     url = get_url("contact_lists")
     params = {'count': 100}
     lists = gen_request(STATE, 'contact_lists', url, params, 'lists', 'has-more', ['offset'], ['offset'])
@@ -479,7 +481,6 @@ def sync_contacts(STATE, ctx):
             break_loop = False
             while not break_loop:
                 data = request(get_url("list_contacts_recent", list_id=list_id), params=default_contact_params).json()
-                mdata = metadata.to_map(catalog.get('metadata'))
                 for record in data.get("contacts", []):
 
                     if record["addedAt"] >= int(start.timestamp()*1000):
