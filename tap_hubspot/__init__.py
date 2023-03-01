@@ -97,6 +97,7 @@ ENDPOINTS = {
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
 
+    "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
 }
 
@@ -182,10 +183,16 @@ def get_field_schema(field_type, extras=False):
         }
 
 def parse_custom_schema(entity_name, data):
-    return {
-        field['name']: get_field_schema(field['type'], entity_name != 'contacts')
-        for field in data
-    }
+    if entity_name == "tickets":
+        return {
+            field['name']: get_field_type_schema(field['type'])
+            for field in data["results"]
+        }
+    else:
+        return {
+            field['name']: get_field_schema(field['type'], entity_name != 'contacts')
+            for field in data
+        }
 
 
 def get_custom_schema(entity_name):
@@ -207,7 +214,7 @@ def load_associated_company_schema():
 
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
+    if entity_name in ["contacts", "companies", "deals", "tickets"]:
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
@@ -225,9 +232,12 @@ def load_schema(entity_name):
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
         schema['properties'].update(custom_schema_top_level)
 
-        # Make properties_versions selectable and share the same schema.
-        versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
-        schema['properties']['properties_versions'] = versions_schema
+        # Exclude properties_versions field for tickets stream. As the versions are not present in
+        # the api response.
+        if entity_name != "tickets":
+            # Make properties_versions selectable and share the same schema.
+            versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
+            schema['properties']['properties_versions'] = versions_schema
 
     if entity_name == "contacts":
         schema['properties']['associated-company'] = load_associated_company_schema()
