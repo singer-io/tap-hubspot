@@ -1242,6 +1242,7 @@ def sync_line_items(STATE, ctx):
     return STATE
 
 
+
 def sync_lead(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -1255,10 +1256,10 @@ def sync_lead(STATE, ctx):
     singer.write_state(STATE)
     LOGGER.info("sync_lead_v3 from %s", start)
 
-    ''' Add params getting from /crm/v3/properties/lead '''    
+    ''' Add params getting from /crm/v3/properties/p3299491_lead '''    
     params = {'limit': 100}
-    params["properties"] = ",".join(get_params_from_properties('lead'))
-    
+    params["properties"] = ",".join(get_params_from_properties('p3299491_lead'))
+        
     url = get_url('lead')
     with Transformer(NO_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in gen_request_v3(STATE, 'lead', url, params, 'results'):
