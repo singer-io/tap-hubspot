@@ -140,6 +140,19 @@ def clean_state(state):
             LOGGER.info("%s - Removing last_sync_duration from state.", stream)
             state["bookmarks"][stream].pop("last_sync_duration", None)
 
+def get_selected_property_fields(catalog, mdata):
+
+    # mdata = metadata.to_map(catalog.get_stream(stream_name).metadata)
+    fields = catalog.get("schema").get("properties").keys()
+    property_field_names = []
+    for field in fields:
+        if "property_" in field:
+            field_metadata = mdata.get(('properties', field))
+            if utils.should_sync_field(field_metadata.get('inclusion'),
+                                       field_metadata.get('selected')):
+                property_field_names.append(field.split("property_")[1])
+    return ",".join(property_field_names)
+
 def get_url(endpoint, **kwargs):
     if endpoint not in ENDPOINTS:
         raise ValueError("Invalid endpoint {}".format(endpoint))
@@ -472,7 +485,7 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookm
     data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
     time_extracted = utils.now()
     mdata = metadata.to_map(catalog.get('metadata'))
-
+    property_fields = selected_property_fields(catalog, mdata, "contacts")
     for record in data.values():
         # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
         record[bookmark_key] = bookmark_values.get(record.get("vid"))
@@ -733,7 +746,6 @@ def gen_request_tickets(tap_stream_id, url, params, path, more_key):
                 break
             params['after'] = data.get(more_key).get('next').get('after')
 
-
 def sync_tickets(STATE, ctx):
     """
     Function to sync `tickets` stream records
@@ -750,6 +762,7 @@ def sync_tickets(STATE, ctx):
 
     params = {'limit': 100,
               'associations': 'contact,company,deals',
+              'properties': get_selected_property_fields(catalog, mdata),
               'archived': False
               }
 
