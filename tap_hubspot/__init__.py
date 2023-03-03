@@ -1205,11 +1205,16 @@ def discover_schemas():
     result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
-        schema, mdata = load_discovered_schema(stream)
-        result['streams'].append({'stream': stream.tap_stream_id,
-                                  'tap_stream_id': stream.tap_stream_id,
-                                  'schema': schema,
-                                  'metadata': mdata})
+        try:
+            schema, mdata = load_discovered_schema(stream)
+            result['streams'].append({'stream': stream.tap_stream_id,
+                                      'tap_stream_id': stream.tap_stream_id,
+                                      'schema': schema,
+                                      'metadata': mdata})
+        except SourceUnavailableException as ex:
+            # Skip the discovery mode on the streams were the required scopes are missing
+            warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+            LOGGER.warning(warning_message)
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
     contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
