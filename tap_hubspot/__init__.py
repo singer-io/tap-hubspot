@@ -32,6 +32,9 @@ class SourceUnavailableException(Exception):
 class DependencyException(Exception):
     pass
 
+class UriTooLongException(Exception):
+    pass
+
 class DataFields:
     offset = 'offset'
 
@@ -150,7 +153,7 @@ def get_selected_property_fields(catalog, mdata):
             field_metadata = mdata.get(('properties', field))
             if utils.should_sync_field(field_metadata.get('inclusion'),
                                        field_metadata.get('selected')):
-                property_field_names.append(field.split("property_")[1])
+                property_field_names.append(field.split("property_", 1)[1])
     return ",".join(property_field_names)
 
 def get_url(endpoint, **kwargs):
@@ -349,6 +352,8 @@ def request(url, params=None):
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
+        elif resp.status_code == 414:
+            raise UriTooLongException(resp.content)
         else:
             resp.raise_for_status()
 
@@ -364,12 +369,12 @@ def request(url, params=None):
 def lift_properties_and_versions(record):
     for key, value in record.get('properties', {}).items():
         computed_key = "property_{}".format(key)
-        versions = value.get('versions')
         record[computed_key] = value
-
-        if versions:
-            if not record.get('properties_versions'):
-                record['properties_versions'] = []
+        if isinstance(value, dict):
+            versions = value.get('versions')
+            if versions:
+                if not record.get('properties_versions'):
+                    record['properties_versions'] = []
             record['properties_versions'] += versions
     return record
 
@@ -774,14 +779,14 @@ def sync_tickets(STATE, ctx):
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
         for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
-            # transforms the data and filters out the selected fields from the catalog
-            record = transformer.transform(row, schema, mdata)
-            modified_time = utils.strptime_with_tz(datetime.datetime.strptime(
-                record[bookmark_key], "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+            # parsing the string formatted date to datetime object
+            modified_time = utils.strptime_to_utc(row[bookmark_key])
 
             # Checking the bookmark value is present on the record and it
             # is greater than or equal to defined previous bookmark value
             if modified_time and modified_time >= bookmark_value:
+                # transforms the data and filters out the selected fields from the catalog
+                record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record(stream_id, record, catalog.get(
                     'stream_alias'), time_extracted=utils.now())
             if modified_time and modified_time >= max_bk_value:
@@ -1135,7 +1140,10 @@ def do_sync(STATE, catalog):
         except SourceUnavailableException as ex:
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
-
+        except UriTooLongException as ex:
+            LOGGER.fatal(f"Please select less number of properties as hubspot system doesn't allow "
+                         f"huge request uri.")
+            raise ex
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
