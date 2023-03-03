@@ -490,7 +490,6 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookm
     data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
     time_extracted = utils.now()
     mdata = metadata.to_map(catalog.get('metadata'))
-    property_fields = selected_property_fields(catalog, mdata, "contacts")
     for record in data.values():
         # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
         record[bookmark_key] = bookmark_values.get(record.get("vid"))
@@ -1141,8 +1140,8 @@ def do_sync(STATE, catalog):
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
         except UriTooLongException as ex:
-            LOGGER.fatal(f"Please select less number of properties as hubspot system doesn't allow "
-                         f"huge request uri.")
+            LOGGER.fatal(f"For stream - {stream}, please select less number of properties as "
+                         f"hubspot system doesn't allow huge request uri.")
             raise ex
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
