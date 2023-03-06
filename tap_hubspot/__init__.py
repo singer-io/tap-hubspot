@@ -375,7 +375,7 @@ def lift_properties_and_versions(record):
             if versions:
                 if not record.get('properties_versions'):
                     record['properties_versions'] = []
-            record['properties_versions'] += versions
+                record['properties_versions'] += versions
     return record
 
 # backoff for Timeout error is already included in "requests.exceptions.RequestException"
