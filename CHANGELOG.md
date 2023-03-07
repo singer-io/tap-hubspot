@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.12.0
+  * Include properties(default + custom) in tickets stream [#220](https://github.com/singer-io/tap-hubspot/pull/220)
+
 ## 2.11.0
   * Implement new stream - `tickets` [#218](https://github.com/singer-io/tap-hubspot/pull/218)
   * Update integration tests for the tickets stream implementation [#219](https://github.com/singer-io/tap-hubspot/pull/219)
