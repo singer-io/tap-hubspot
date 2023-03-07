@@ -41,86 +41,81 @@ class MockResponse:
 
 class MockContext:
     def get_catalog_from_id(self, stream_name):
-        return {"stream": "tickets", "tap_stream_id": "tickets",
-                "schema": {"type": "object",
-                            "properties": {"id": {
-                                "type": "string"},
-                                           "createdAt": {
-                                               "type": [
-                                                   "null",
-                                                   "string"],
-                                               "format": "date-time"},
-                                           "updatedAt": {
-                                               "type": [
-                                                   "null",
-                                                   "string"],
-                                               "format": "date-time"},
-                                           "properties": {
-                                               "type": "object",
-                                               "properties": {
-                                                   "closed_date": {
-                                                       "type": [
-                                                           "null",
-                                                           "string"],
-                                                       "format": "date-time"},
-                                                   "hs_all_team_ids": {
-                                                       "type": [
-                                                           "null",
-                                                           "string"]}}},
-                                           "associations": {
-                                               "type": [
-                                                   "null",
-                                                   "object"],
-                                               "properties": {
-                                                   "companies": {
-                                                       "type": [
-                                                           "null",
-                                                           "object"],
-                                                       "properties": {
-                                                           "results": {
-                                                               "type": [
-                                                                   "null",
-                                                                   "array"],
-                                                               "items": {
-                                                                   "type": [
-                                                                       "null",
-                                                                       "object"],
-                                                                   "properties": {
-                                                                       "id": {
-                                                                           "type": [
-                                                                               "null",
-                                                                               "string"]},
-                                                                       "type": {
-                                                                           "type": [
-                                                                               "null",
-                                                                               "string"]}}}}}}}},
-                                           "property_closed_date": {
-                                               "type": [
-                                                   "null",
-                                                   "string"],
-                                               "format": "date-time"},
-                                           "property_hs_all_team_ids": {
-                                               "type": [
-                                                   "null",
-                                                   "string"]}}},
-                "metadata": [{"breadcrumb": [], "metadata": {"table-key-properties": ["id"],
-                                                             "forced-replication-method": "INCREMENTAL",
-                                                             "valid-replication-keys": [
-                                                                 "updatedAt"], "selected": True}},
-                             {"breadcrumb": ["properties", "id"],
-                              "metadata": {"inclusion": "automatic"}},
-                             {"breadcrumb": ["properties", "createdAt"],
-                              "metadata": {"inclusion": "available"}},
-                             {"breadcrumb": ["properties", "updatedAt"],
-                              "metadata": {"inclusion": "automatic"}},
-                             {"breadcrumb": ["properties", "properties"],
-                              "metadata": {"inclusion": "available"}},
-                             {"breadcrumb": ["properties", "associations"],
-                              "metadata": {"inclusion": "available"}},
-                             {"breadcrumb": ["properties", "property_closed_date"],
-                              "metadata": {"inclusion": "available", "selected": True}},
-                             {"breadcrumb": ["properties", "property_hs_all_team_ids"],
-                              "metadata": {"inclusion": "available"}}]}
+        return {
+            "stream": "tickets",
+            "tap_stream_id": "tickets",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": [
+                            "null",
+                            "string"
+                        ],
+                        "format": "date-time"
+                    },
+                    "properties": {
+                        "type": "object",
+                        "properties": {
+                            "hs_all_team_ids": {
+                                "type": [
+                                    "null",
+                                    "string"
+                                ]
+                            }
+                        }
+                    },
+                    "property_hs_all_team_ids": {
+                        "type": [
+                            "null",
+                            "string"
+                        ]
+                    }
+                }
+            },
+            "metadata": [{
+                "breadcrumb": [],
+                "metadata": {
+                    "table-key-properties": ["id"],
+                    "forced-replication-method": "INCREMENTAL",
+                    "valid-replication-keys": [
+                        "updatedAt"
+                    ],
+                    "selected": True
+                }
+            },
+                {
+                    "breadcrumb": ["properties", "id"],
+                    "metadata": {
+                        "inclusion": "automatic"
+                    }
+                },
+
+                {
+                    "breadcrumb": ["properties", "updatedAt"],
+                    "metadata": {
+                        "inclusion": "automatic"
+                    }
+                },
+                {
+                    "breadcrumb": ["properties", "properties"],
+                    "metadata": {
+                        "inclusion": "available"
+                    }
+                },
+
+                {
+                    "breadcrumb": ["properties", "property_hs_all_team_ids"],
+                    "metadata": {
+                        "inclusion": "available",
+                        "selected": True
+                    }
+                }
+            ]
+        }
 
 
 class TestTickets(unittest.TestCase):
@@ -136,6 +131,7 @@ class TestTickets(unittest.TestCase):
         mock_context = MockContext()
         expected_param = {'limit': 100,
                           'associations': 'contact,company,deals',
+                          'properties': 'hs_all_team_ids',
                           'archived': False
                           }
         expected_return_value = {'currently_syncing': 'tickets', 'bookmarks': {
@@ -148,7 +144,4 @@ class TestTickets(unittest.TestCase):
         )
         mocked_gen_request.assert_called_once_with('tickets',
                                                    'https://api.hubapi.com/crm/v4/objects/tickets',
-                                                   {'limit': 100,
-                                                    'associations': 'contact,company,deals',
-                                                    'properties': 'closed_date', 'archived': False},
-                                                   'results', 'paging')
+                                                   expected_param, 'results', 'paging')

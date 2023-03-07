@@ -204,11 +204,11 @@ def parse_custom_schema(entity_name, data):
             field['name']: get_field_type_schema(field['type'])
             for field in data["results"]
         }
-    else:
-        return {
-            field['name']: get_field_schema(field['type'], entity_name != 'contacts')
-            for field in data
-        }
+
+    return {
+        field['name']: get_field_schema(field['type'], entity_name != 'contacts')
+        for field in data
+    }
 
 
 def get_custom_schema(entity_name):
@@ -354,8 +354,7 @@ def request(url, params=None):
             raise SourceUnavailableException(resp.content)
         elif resp.status_code == 414:
             raise UriTooLongException(resp.content)
-        else:
-            resp.raise_for_status()
+        resp.raise_for_status()
 
     return resp
 # {"bookmarks" : {"contacts" : { "lastmodifieddate" : "2001-01-01"
@@ -1140,7 +1139,7 @@ def do_sync(STATE, catalog):
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
         except UriTooLongException as ex:
-            LOGGER.fatal(f"For stream - {stream}, please select less number of properties as "
+            LOGGER.fatal(f"For stream - {stream.tap_stream_id}, please select less number of properties as "
                          f"hubspot system doesn't allow huge request uri.")
             raise ex
     STATE = singer.set_currently_syncing(STATE, None)
