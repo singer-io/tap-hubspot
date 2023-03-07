@@ -474,13 +474,13 @@ def sync_contacts(STATE, ctx):
 
     newly_added = []
     vids = []
-    params = default_contact_params.copy()
-    params["formSubmissionMode"] = "all"
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for list_id in list_ids:
+            params = default_contact_params.copy()
+            params["formSubmissionMode"] = "all"
             break_loop = False
             while not break_loop:
-                data = request(get_url("list_contacts_recent", list_id=list_id), params=default_contact_params).json()
+                data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
                 for record in data.get("contacts", []):
 
                     if record["addedAt"] >= int(start.timestamp()*1000):
@@ -494,7 +494,7 @@ def sync_contacts(STATE, ctx):
                         _sync_contact_vids(catalog, vids, schema, bumble_bee)
                         vids = []
                 
-                if data["has-more"]:
+                if data["has-more"] and not break_loop:
                     params["vidOffset"] = data["vid-offset"]
                     params["timeOffset"] = data["time-offset"]
                 else:
