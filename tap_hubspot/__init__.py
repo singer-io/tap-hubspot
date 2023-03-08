@@ -145,7 +145,6 @@ def clean_state(state):
 
 def get_selected_property_fields(catalog, mdata):
 
-    # mdata = metadata.to_map(catalog.get_stream(stream_name).metadata)
     fields = catalog.get("schema").get("properties").keys()
     property_field_names = []
     for field in fields:
@@ -1139,8 +1138,8 @@ def do_sync(STATE, catalog):
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
         except UriTooLongException as ex:
-            LOGGER.fatal(f"For stream - {stream.tap_stream_id}, please select less number of properties as "
-                         f"hubspot system doesn't allow huge request uri.")
+            LOGGER.fatal(f"For stream - {stream.tap_stream_id}, please select fewer fields. "
+                         f"The current selection exceeds Hubspot's maximum character allowance.")
             raise ex
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)

@@ -140,11 +140,12 @@ class TestClient():
             if record.get('properties'):
                 for property_key, property_value in record['properties'].items():
 
-                    # if any property has a versions object track it by the top level key 'properties_versions'
-                    if property_value.get('versions'):
-                        if not record.get('properties_versions'):
-                            record['properties_versions'] = []
-                        record['properties_versions'] += property_value['versions']
+                    if isinstance(property_value, dict):
+                        # if any property has a versions object track it by the top level key 'properties_versions'
+                        if property_value.get('versions'):
+                            if not record.get('properties_versions'):
+                                record['properties_versions'] = []
+                            record['properties_versions'] += property_value['versions']
 
                     # denest each property to be a top level key
                     record[f'property_{property_key}'] = property_value
@@ -665,6 +666,17 @@ class TestClient():
         response = self.get(url)
         return response
 
+    def get_tickets_properties(self):
+        """
+        Get tickets properties.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
+        """
+        url = f"{BASE_URL}/crm/v3/properties/tickets"
+        # records = []
+        records = self.get(url)
+
+        return ",".join([record["name"] for record in records["results"]])
+
     def get_tickets(self):
         """
         Get all tickets.
@@ -676,7 +688,7 @@ class TestClient():
 
         # response = self.get(url)
 
-        params = {"limit": 100, "associations": "contact,company,deals"}
+        params = {"limit": 100, "associations": "contact,company,deals", 'properties': self.get_tickets_properties()}
         while True:
             response = self.get(url, params=params)
 
@@ -687,6 +699,8 @@ class TestClient():
             if not response.get("paging"):
                 break
             params["after"] = response.get("paging").get("next").get("after")
+        
+        records = self.denest_properties('tickets', records)
         return records
 
     ##########################################################################
