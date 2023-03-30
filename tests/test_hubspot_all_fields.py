@@ -88,6 +88,7 @@ KNOWN_MISSING_FIELDS = {
         'themeColor',
         'publishAt',
         'editVersion',
+        'embedVersion',
         'themeName',
         'style',
         'thankYouMessageJson',
