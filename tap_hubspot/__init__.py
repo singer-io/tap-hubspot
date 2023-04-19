@@ -517,6 +517,7 @@ def sync_contacts(STATE, ctx):
     # Dict to store replication key value for each contact record
     bookmark_values = {}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        sync_start_time = utils.now()
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
             if bookmark_key in row:
@@ -540,7 +541,7 @@ def sync_contacts(STATE, ctx):
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
 
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
+    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(min(sync_start_time, max_bk_value)))
     singer.write_state(STATE)
     return STATE
 
