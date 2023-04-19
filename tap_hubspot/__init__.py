@@ -124,6 +124,21 @@ def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
         return CONFIG['start_date']
     return current_bookmark
 
+def get_lookback_window(bookmark_value):
+    if bookmark_value:
+        lookback_window = datetime.timedelta(days=float(CONFIG.get("lookback_window") or "0"))
+        # If lookback window overlaps with start date then reduce the lookback window
+        # to avoid syncing records older than start date
+        bookmark_value_tz = utils.strptime_with_tz(bookmark_value)
+        start_date_tz = utils.strptime_with_tz(CONFIG["start_date"])
+        if start_date_tz > bookmark_value_tz - lookback_window:
+            lookback_window = bookmark_value_tz - start_date_tz
+    else:
+        # On first sync, to avoid syncing records older than start date set lookback window "0"
+        lookback_window = datetime.timedelta(days=0)
+
+    return lookback_window
+
 def get_current_sync_start(state, tap_stream_id):
     current_sync_start_value = singer.get_bookmark(state, tap_stream_id, "current_sync_start")
     if current_sync_start_value is None:
@@ -504,9 +519,10 @@ def sync_contacts(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'versionTimestamp'
     start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
+    lookback_window = get_lookback_window(singer.get_bookmark(STATE, "contacts", bookmark_key))
     LOGGER.info("sync_contacts from %s", start)
 
-    max_bk_value = start
+    max_bk_value = start - lookback_window
     schema = load_schema("contacts")
 
     singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
@@ -525,7 +541,7 @@ def sync_contacts(STATE, ctx):
                         row[bookmark_key],
                         UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
 
-            if not modified_time or modified_time >= start:
+            if not modified_time or modified_time >= start - lookback_window:
                 vids.append(row['vid'])
                 # Adding replication key value in `bookmark_values` dict
                 # Here, key is vid(primary key) and value is replication key value.
@@ -1245,7 +1261,8 @@ def main_impl():
          "client_id",
          "client_secret",
          "refresh_token",
-         "start_date"])
+         "start_date",
+         "lookback_window"])
 
     CONFIG.update(args.config)
     STATE = {}
