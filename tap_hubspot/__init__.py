@@ -519,7 +519,6 @@ def sync_contacts(STATE, ctx):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
-        # For more details, refer comment discussed at L#### for `companies` stream
         sync_start_time = utils.now()
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
@@ -713,7 +712,6 @@ def sync_deals(STATE, ctx):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
-        # For more details, refer comment discussed at L#### for `companies` stream
         sync_start_time = utils.now()
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
@@ -789,7 +787,6 @@ def sync_tickets(STATE, ctx):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
-        # For more details, refer comment discussed at L#### for `companies` stream
         sync_start_time = utils.now()
         for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
             # parsing the string formatted date to datetime object
