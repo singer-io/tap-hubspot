@@ -517,6 +517,9 @@ def sync_contacts(STATE, ctx):
     # Dict to store replication key value for each contact record
     bookmark_values = {}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        # For more details, refer comment discussed at L#### for `companies` stream
         sync_start_time = utils.now()
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
@@ -541,7 +544,9 @@ def sync_contacts(STATE, ctx):
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
 
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(min(sync_start_time, max_bk_value)))
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -706,6 +711,10 @@ def sync_deals(STATE, ctx):
     url = get_url('deals_all')
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        # For more details, refer comment discussed at L#### for `companies` stream
+        sync_start_time = utils.now()
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
@@ -724,7 +733,9 @@ def sync_deals(STATE, ctx):
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
-    STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -776,6 +787,10 @@ def sync_tickets(STATE, ctx):
     url = get_url(stream_id)
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        # For more details, refer comment discussed at L#### for `companies` stream
+        sync_start_time = utils.now()
         for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
             # parsing the string formatted date to datetime object
             modified_time = utils.strptime_to_utc(row[bookmark_key])
@@ -790,7 +805,9 @@ def sync_tickets(STATE, ctx):
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
-    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -904,6 +921,9 @@ def sync_contact_lists(STATE, ctx):
     url = get_url("contact_lists")
     params = {'count': 250}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
@@ -912,7 +932,9 @@ def sync_contact_lists(STATE, ctx):
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
     return STATE
@@ -933,6 +955,9 @@ def sync_forms(STATE, ctx):
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in data:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
@@ -941,7 +966,9 @@ def sync_forms(STATE, ctx):
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'forms', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'forms', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
     return STATE
@@ -964,6 +991,9 @@ def sync_workflows(STATE, ctx):
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in data['workflows']:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
             if record[bookmark_key] >= start:
@@ -971,7 +1001,9 @@ def sync_workflows(STATE, ctx):
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -995,6 +1027,9 @@ def sync_owners(STATE, ctx):
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in data:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
             if record[bookmark_key] >= max_bk_value:
@@ -1003,7 +1038,9 @@ def sync_owners(STATE, ctx):
             if record[bookmark_key] >= start:
                 singer.write_record("owners", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
-    STATE = singer.write_bookmark(STATE, 'owners', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'owners', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
