@@ -94,9 +94,14 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
         synced_records_2 = runner.get_records_from_target_output()
         state_2 = menagerie.get_state(conn_id)
 
-        # verify the uninterrupted sync and the simulated resuming sync end with the same bookmark values
-        with self.subTest(stream=stream):
-            self.assertEqual(state_1, state_2)
+        # Verify post-iterrupted sync bookmark should be greater than or equal to interrupted sync bookmark
+        # since newly created test records may get updated while stream is syncing
+        replication_keys = self.expected_replication_keys()
+        for stream in state_1.get('bookmarks'):
+            replication_key = list(replication_keys[stream])[0]
+            self.assertLessEqual(state_1["bookmarks"][stream].get(replication_key),
+                                 state_2["bookmarks"][stream].get(replication_key),
+                                 msg="First sync bookmark should not be greater than the second bookmark.")
 
 
 class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
