@@ -1,10 +1,6 @@
 from tap_hubspot import sync_deals
 from unittest.mock import patch, ANY
 
-# from debugpy import listen, wait_for_client
-# listen(8000)
-# wait_for_client()
-
 
 @patch('builtins.min')
 @patch('tap_hubspot.Context.get_catalog_from_id', return_value={"metadata": ""})
