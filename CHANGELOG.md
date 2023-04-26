@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.12.1
+  * Use sync start time for writing bookmarks [#226](https://github.com/singer-io/tap-hubspot/pull/226)
+
 ## 2.12.0
   * Include properties(default + custom) in tickets stream [#220](https://github.com/singer-io/tap-hubspot/pull/220)
 
