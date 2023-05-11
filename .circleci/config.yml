@@ -41,7 +41,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             # BUG https://jira.talendforge.org/browse/TDL-15447
             echo "Disabling the following $PYLINT_DISABLE_LIST"
-            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,consider-using-from-import,logging-format-interpolation,unused-variable,singleton-comparison,useless-object-inheritance,unnecessary-pass,wrong-import-order,global-statement,unused-argument,unused-import,wildcard-import,unused-wildcard-import,import-error,use-list-literal,no-self-use,duplicate-code,bad-whitespace,bad-continuation"
+            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST"
       - run:
           name: 'Unit Tests'
           command: |
@@ -72,10 +72,14 @@ jobs:
           name: 'Integration Tests'
           command: |
             source /usr/local/share/virtualenvs/dev_env.sh
+            mkdir /tmp/${CIRCLE_PROJECT_REPONAME}
+            export STITCH_CONFIG_DIR=/tmp/${CIRCLE_PROJECT_REPONAME}
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             << parameters.test_command >>
       - slack/notify-on-failure:
           only_for_branches: master
+      - store_artifacts:
+          path: /tmp/tap-hubspot
 
 workflows:
   version: 2

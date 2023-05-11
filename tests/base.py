@@ -6,9 +6,11 @@ from datetime import timedelta
 import tap_tester.menagerie   as menagerie
 import tap_tester.connections as connections
 import tap_tester.runner      as runner
+from tap_tester.base_case import BaseCase
+from tap_tester import LOGGER
 
 
-class HubspotBaseTest(unittest.TestCase):
+class HubspotBaseTest(BaseCase):
 
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
@@ -72,7 +74,7 @@ class HubspotBaseTest(unittest.TestCase):
             "companies": {
                 self.PRIMARY_KEYS: {"companyId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
                 self.EXPECTED_PAGE_SIZE: 250,
                 self.OBEYS_START_DATE: True
             },
@@ -105,7 +107,7 @@ class HubspotBaseTest(unittest.TestCase):
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
                 self.OBEYS_START_DATE: True
             },
             "email_events": {
@@ -251,7 +253,7 @@ class HubspotBaseTest(unittest.TestCase):
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
         self.assertSetEqual(self.expected_check_streams(), found_catalog_names,
                             msg="discovered schemas do not match")
-        print("discovered schemas are OK")
+        LOGGER.info("discovered schemas are OK")
 
         return found_catalogs
 
@@ -276,7 +278,7 @@ class HubspotBaseTest(unittest.TestCase):
         total_row_count = sum(sync_record_count.values())
         self.assertGreater(total_row_count, 0,
                            msg="failed to replicate any data: {}".format(sync_record_count))
-        print("total replicated row count: {}".format(total_row_count))
+        LOGGER.info("total replicated row count: %s", total_row_count)
 
         return sync_record_count
 
@@ -306,7 +308,7 @@ class HubspotBaseTest(unittest.TestCase):
 
             # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
-            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            LOGGER.info("Validating selection on %s: %s", cat['stream_name'], selected)
             if cat['stream_name'] not in expected_selected:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
                 continue # Skip remaining assertions if we aren't selecting this stream
@@ -316,8 +318,8 @@ class HubspotBaseTest(unittest.TestCase):
                 # Verify all fields within each selected stream are selected
                 for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                     field_selected = field_props.get('selected')
-                    print("\tValidating selection on {}.{}: {}".format(
-                        cat['stream_name'], field, field_selected))
+                    LOGGER.info("\tValidating selection on %s.%s: %s",
+                                cat['stream_name'], field, field_selected)
                     self.assertTrue(field_selected, msg="Field not selected.")
             else:
                 # Verify only automatic fields are selected

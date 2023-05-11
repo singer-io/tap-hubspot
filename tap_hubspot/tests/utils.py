@@ -16,7 +16,7 @@ def verify_environment_vars():
     missing_envs = [x for x in [os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                                 os.getenv('TAP_HUBSPOT_CLIENT_ID'),
                                 os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
-                                os.getenv('TAP_HUBSPOT_REFRESH_TOKEN')] if x == None]
+                                os.getenv('TAP_HUBSPOT_REFRESH_TOKEN')] if x is None]
     if len(missing_envs) != 0:
         #pylint: disable=line-too-long
         raise Exception("set TAP_HUBSPOT_REDIRECT_URI, TAP_HUBSPOT_CLIENT_ID, TAP_HUBSPOT_CLIENT_SECRET, TAP_HUBSPOT_REFRESH_TOKEN")
@@ -56,19 +56,25 @@ def our_write_bookmark(state, table_name, bookmark_key, bookmark_value):
     state = singer.bookmarks.write_bookmark(state, table_name, bookmark_key, bookmark_value)
     return state
 
-def our_write_schema(table_name, schema, pks, stream_alias=None):
-    global caught_pks
+def our_write_schema(table_name, schema, pks):
     caught_pks[table_name] = pks
     caught_schema[table_name] = schema
 
 def our_write_state(state):
-    LOGGER.info("our_write_state: {}".format(state))
+    # pylint: disable=global-statement
+    LOGGER.info("our_write_state: %s", state)
     global caught_state
     caught_state = state
     return state
 
-def our_write_record(table_name, record, stream_alias=None):
-    if caught_records.get(table_name) == None:
+def our_write_record(table_name, record):
+    if caught_records.get(table_name) is None:
         caught_records[table_name] = []
 
     caught_records[table_name].append(record)
+
+def write_to_singer():
+    singer.write_bookmark = our_write_bookmark
+    singer.write_state = our_write_state
+    singer.write_record = our_write_record
+    singer.write_schema = our_write_schema

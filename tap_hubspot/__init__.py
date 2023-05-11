@@ -6,13 +6,13 @@ import os
 import re
 import sys
 import json
-
+# pylint: disable=import-error
 import attr
 import backoff
 import requests
 import singer
 import singer.messages
-import singer.metrics as metrics
+from singer import metrics
 from singer import metadata
 from singer import utils
 from singer import (transform,
@@ -115,9 +115,23 @@ ENDPOINTS = {
     "owners":               "/crm/v3/owners/",
 }
 
-def get_start(state, tap_stream_id, bookmark_key):
+def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
+    """
+    If the current bookmark_key is available in the state, then return the bookmark_key value.
+    If it is not available then check and return the older_bookmark_key in the state for the existing connection.
+    If none of the keys are available in the state for a particular stream, then return start_date.
+
+    We have made this change because of an update in the replication key of the deals stream.
+    So, if any existing connections have only older_bookmark_key in the state then tap should utilize that bookmark value.
+    Then next time, the tap should use the current bookmark value.
+    """
     current_bookmark = singer.get_bookmark(state, tap_stream_id, bookmark_key)
     if current_bookmark is None:
+        if older_bookmark_key:
+            previous_bookmark = singer.get_bookmark(state, tap_stream_id, older_bookmark_key)
+            if previous_bookmark:
+                return previous_bookmark
+
         return CONFIG['start_date']
     return current_bookmark
 
@@ -137,7 +151,7 @@ def clean_state(state):
     """ Clear deprecated keys out of state. """
     for stream, bookmark_map in state.get("bookmarks", {}).items():
         if "last_sync_duration" in bookmark_map:
-            LOGGER.info("{} - Removing last_sync_duration from state.".format(stream))
+            LOGGER.info("%s - Removing last_sync_duration from state.", stream)
             state["bookmarks"][stream].pop("last_sync_duration", None)
 
 def get_url(endpoint, **kwargs):
@@ -371,7 +385,7 @@ def post_search_endpoint(url, data, params=None):
     params, headers = get_params_and_headers(params)
     headers['content-type'] = "application/json"
 
-    with metrics.http_request_timer(url) as timer:
+    with metrics.http_request_timer(url) as _:
         resp = requests.post(
             url=url,
             json=data,
@@ -680,8 +694,10 @@ def sync_companies(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
-    bookmark_key = 'hs_lastmodifieddate'
-    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
+    bookmark_key = 'property_hs_lastmodifieddate'
+    bookmark_field_in_record = 'hs_lastmodifieddate'
+
+    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key, older_bookmark_key=bookmark_field_in_record))
     LOGGER.info("sync_companies from %s", start)
     schema = load_schema('companies')
     singer.write_schema("companies", schema, ["companyId"], [bookmark_key], catalog.get('stream_alias'))
@@ -706,9 +722,9 @@ def sync_companies(STATE, ctx):
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
             row_properties = row['properties']
             modified_time = None
-            if bookmark_key in row_properties:
+            if bookmark_field_in_record in row_properties:
                 # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_key]['timestamp'] / 1000.0
+                timestamp_millis = row_properties[bookmark_field_in_record]['timestamp'] / 1000.0
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
             elif 'createdate' in row_properties:
                 # Hubspot returns timestamps in millis
@@ -735,18 +751,34 @@ def sync_companies(STATE, ctx):
 def has_selected_custom_field(mdata):
     top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
     for prop in top_level_custom_props:
-        if mdata.get(prop, {}).get('selected') == True:
+        # Return 'True' if the custom field is automatic.
+        if (mdata.get(prop, {}).get('selected') is True) or (mdata.get(prop, {}).get('inclusion') == "automatic"):
             return True
     return False
 
 def sync_deals(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
-    bookmark_key = 'hs_lastmodifieddate'
-    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key))
+    bookmark_key = 'property_hs_lastmodifieddate'
+    # The Bookmark field('hs_lastmodifieddate') available in the record is different from
+    # the tap's bookmark key(property_hs_lastmodifieddate).
+    # `hs_lastmodifieddate` is available in the properties field at the nested level.
+    # As `hs_lastmodifieddate` is not available at the 1st level it can not be marked as automatic inclusion.
+    # tap includes all nested fields of the properties field as custom fields in the schema by appending the
+    # prefix `property_` along with each field.
+    # That's why bookmark_key is `property_hs_lastmodifieddate` so that we can mark it as automatic inclusion.
+
+    last_modified_date = 'hs_lastmodifieddate'
+
+    # Tap was used to write bookmark using replication key `hs_lastmodifieddate`.
+    # Now, as the replication key gets changed to "property_hs_lastmodifieddate", `get_start` function would return
+    # bookmark value of older bookmark key(`hs_lastmodifieddate`) if it is available.
+    # So, here `older_bookmark_key` is the previous bookmark key that may be available in the state of
+    # the existing connection.
+
+    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key, older_bookmark_key=last_modified_date))
     max_bk_value = start
     LOGGER.info("sync_deals from %s", start)
-    most_recent_modified_time = start
     params = {'limit': 100,
               'includeAssociations': False,
               'properties' : []}
@@ -758,7 +790,7 @@ def sync_deals(STATE, ctx):
     for key in mdata.keys():
         if 'associations' in key:
             assoc_mdata = mdata.get(key)
-            if (assoc_mdata.get('selected') and assoc_mdata.get('selected') == True):
+            if (assoc_mdata.get('selected') and assoc_mdata.get('selected') is True):
                 params['includeAssociations'] = True
 
     v3_fields = None
@@ -776,7 +808,7 @@ def sync_deals(STATE, ctx):
         v3_fields = [breadcrumb[1].replace('property_', '')
                      for breadcrumb, mdata_map in mdata.items()
                      if breadcrumb
-                     and (mdata_map.get('selected') == True or has_selected_properties)
+                     and (mdata_map.get('selected') is True or has_selected_properties)
                      and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
 
     url = get_url('deals_all')
@@ -784,9 +816,9 @@ def sync_deals(STATE, ctx):
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
-            if bookmark_key in row_properties:
+            if last_modified_date in row_properties:
                 # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_key]['timestamp'] / 1000.0
+                timestamp_millis = row_properties[last_modified_date]['timestamp'] / 1000.0
                 modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
             elif 'createdate' in row_properties:
                 # Hubspot returns timestamps in millis
@@ -855,7 +887,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
             with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
                 while True:
                     our_offset = singer.get_offset(STATE, entity_name)
-                    if bool(our_offset) and our_offset.get('offset') != None:
+                    if bool(our_offset) and our_offset.get('offset') is not None:
                         params[StateFields.offset] = our_offset.get('offset')
 
                     data = request(url, params).json()
@@ -878,7 +910,7 @@ def sync_entity_chunked(STATE, catalog, entity_name, key_properties, path):
                         STATE = singer.clear_offset(STATE, entity_name)
                         singer.write_state(STATE)
                         break
-            STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.fromtimestamp((start_ts / 1000), datetime.timezone.utc ))) # pylint: disable=line-too-long
+            STATE = singer.write_bookmark(STATE, entity_name, 'startTimestamp', utils.strftime(datetime.datetime.fromtimestamp((start_ts / 1000), datetime.timezone.utc)))  # pylint: disable=line-too-long
             singer.write_state(STATE)
             start_ts = end_ts
 
@@ -1275,7 +1307,7 @@ def sync_lead(STATE, ctx):
     return STATE
 
 @attr.s
-class Stream(object):
+class Stream:
     tap_stream_id = attr.ib()
     sync = attr.ib()
     key_properties = attr.ib()
@@ -1287,7 +1319,8 @@ STREAMS = [
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
-    Stream('lead', sync_lead, ["id"], 'updatedAt', 'INCREMENTAL'),
+    Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
+    Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('associations_line_items_deals_v3', sync_associations_line_items_deals_v3, ['id'], 'updatedAt', 'FULL_TABLE'),
@@ -1298,8 +1331,6 @@ STREAMS = [
     Stream('owners', sync_owners, ['id'], 'updatedAt', 'FULL_TABLE'),
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
-    Stream('companies', sync_companies, ["companyId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
@@ -1345,13 +1376,12 @@ def do_sync(STATE, catalog):
         except SourceUnavailableException as ex:
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
-            pass
 
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
 
-class Context(object):
+class Context:
     def __init__(self, catalog):
         self.selected_stream_ids = set()
 
@@ -1362,9 +1392,8 @@ class Context(object):
 
         self.catalog = catalog
 
-    def get_catalog_from_id(self,tap_stream_id):
-        return [c for c in self.catalog.get('streams')
-               if c.get('stream') == tap_stream_id][0]
+    def get_catalog_from_id(self, tap_stream_id):
+        return [c for c in self.catalog.get('streams') if c.get('stream') == tap_stream_id][0]
 
 # stream a is dependent on stream STREAM_DEPENDENCIES[a]
 STREAM_DEPENDENCIES = {
@@ -1376,7 +1405,7 @@ def validate_dependencies(ctx):
     msg_tmpl = ("Unable to extract {0} data. "
                 "To receive {0} data, you also need to select {1}.")
 
-    for k,v in STREAM_DEPENDENCIES.items():
+    for k, v in STREAM_DEPENDENCIES.items():
         if k in ctx.selected_stream_ids and v not in ctx.selected_stream_ids:
             errs.append(msg_tmpl.format(k, v))
     if errs:
@@ -1392,7 +1421,7 @@ def load_discovered_schema(stream):
     if stream.replication_key:
         mdata = metadata.write(mdata, (), 'valid-replication-keys', [stream.replication_key])
 
-    for field_name, props in schema['properties'].items():
+    for field_name in schema['properties'].keys():
         if field_name in stream.key_properties or field_name == stream.replication_key:
             mdata = metadata.write(mdata, ('properties', field_name), 'inclusion', 'automatic')
         else:

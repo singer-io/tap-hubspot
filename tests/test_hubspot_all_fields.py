@@ -1,7 +1,10 @@
+import datetime
+
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-import datetime
+from tap_tester import LOGGER
+
 from base import HubspotBaseTest
 from client import TestClient
 
@@ -47,7 +50,10 @@ KNOWN_MISSING_FIELDS = {
     },
     'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
         'authorId',
-        'teamIds'
+        'teamIds',
+        'internal',
+        'ilsFilterBranch',
+        'limitExempt',
     },
     'email_events': {  # BUG https://jira.talendforge.org/browse/TDL-14997
         'portalSubscriptionStatus',
@@ -140,8 +146,8 @@ KNOWN_MISSING_FIELDS = {
 
 class TestHubspotAllFields(HubspotBaseTest):
     """Test that with all fields selected for a stream we replicate data as expected"""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_all_fields_dynamic"
 
     def streams_under_test(self):
@@ -172,7 +178,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                 self.expected_records[stream] = test_client.read(stream)
 
         for stream, records in self.expected_records.items():
-            print(f"The test client found {len(records)} {stream} records.")
+            LOGGER.info("The test client found %s %s records.", len(records), stream)
 
 
         self.convert_datatype(self.expected_records)
@@ -234,7 +240,8 @@ class TestHubspotAllFields(HubspotBaseTest):
                         # grab the replicated record that corresponds to expected_record by checking primary keys
                         matching_actual_records_by_pk = get_matching_actual_record_by_pk(primary_key_dict, actual_records)
                         if not matching_actual_records_by_pk:
-                            print(f"WARNING Expected {stream} record was not replicated: {primary_key_dict}")
+                            LOGGER.warn("Expected %s record was not replicated: %s",
+                                        stream, primary_key_dict)
                             continue # skip this expected record if it isn't replicated
                         actual_record = matching_actual_records_by_pk[0]
 
@@ -295,11 +302,14 @@ class TestHubspotAllFields(HubspotBaseTest):
                                                             for primary_key in primary_keys])
                                                      for record in actual_records}
                 if expected_primary_key_values.issubset(actual_records_primary_key_values):
-                    print(f"WARNING Unexpected {stream} records replicated: {actual_records_primary_key_values - expected_primary_key_values}")
+                    LOGGER.warn("Unexpected %s records replicated: %s",
+                                stream,
+                                actual_records_primary_key_values - expected_primary_key_values)
 
 
 class TestHubspotAllFieldsStatic(TestHubspotAllFields):
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_all_fields_static"
 
     def streams_under_test(self):

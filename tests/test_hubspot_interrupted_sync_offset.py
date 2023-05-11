@@ -12,8 +12,8 @@ from client import TestClient
 
 class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_interrupt_contact_lists"
 
     def streams_to_test(self):
@@ -100,8 +100,8 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
 
 class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_interrupt_contacts"
 
     def get_properties(self):
@@ -118,8 +118,8 @@ class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetC
 
 class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetContactLists):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_interrupt_deals"
 
     def get_properties(self):
@@ -131,5 +131,5 @@ class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetCont
         return 'deals'
 
     def state_to_inject(self):
-        return  {'hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
+        return  {'property_hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
                  'offset': {'offset': 3442973342}}

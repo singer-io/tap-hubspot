@@ -8,7 +8,8 @@ from base import HubspotBaseTest
 STATIC_DATA_STREAMS = {'owners'}
 
 class TestHubspotAutomaticFields(HubspotBaseTest):
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_automatic"
 
     def streams_to_test(self):
@@ -69,7 +70,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                 expected_keys = self.expected_automatic_fields().get(stream)
 
                 # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 Replication keys are not included as an automatic field for these streams
-                if stream in {'companies', 'deals', 'subscription_changes', 'email_events'}:
+                if stream in {'subscription_changes', 'email_events'}:
                     # replication keys not in the expected_keys
                     remove_keys = self.expected_metadata()[stream].get(self.REPLICATION_KEYS)
                     expected_keys = expected_keys.difference(remove_keys)
@@ -98,7 +99,8 @@ class TestHubspotAutomaticFieldsStaticData(TestHubspotAutomaticFields):
         """streams to test"""
         return STATIC_DATA_STREAMS
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_automatic_static"
 
     def get_properties(self):

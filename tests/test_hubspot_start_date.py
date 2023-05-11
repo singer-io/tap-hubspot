@@ -3,6 +3,7 @@ import datetime
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
+from tap_tester import LOGGER
 
 from base import HubspotBaseTest
 from client import TestClient
@@ -12,7 +13,8 @@ STATIC_DATA_STREAMS = {'owners', 'campaigns'}
 
 class TestHubspotStartDate(HubspotBaseTest):
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_start_date"
 
     def setUp(self):
@@ -22,7 +24,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         (of start_date_1 -> now) than there are in the sync 2 time bin (of start_date_2 -> now).
         """
 
-        print("running streams with creates")
+        LOGGER.info("running streams with creates")
         streams_under_test = self.expected_streams() - {'email_events'} # we get this for free with subscription_changes
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
@@ -116,7 +118,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
                         # BUG_TDL-9939 replication key is not listed correctly
                         if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
-                            replication_key = [f'property_{replication_key[0]}']
+                            # For deals stream, the replication key is already prefixed with 'property_'.
+                            replication_key =  [replication_key[0]] if stream in ["deals", "companies"] else [f'property_{replication_key[0]}']
                             first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
                                                                  for record in first_sync_messages]
                             second_sync_replication_key_values = [record['data'][replication_key[0]]['value']
@@ -148,7 +151,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
 
 class TestHubspotStartDateStatic(TestHubspotStartDate):
-    def name(self):
+    @staticmethod
+    def name():
         return "tt_hubspot_start_date_static"
 
     def expected_streams(self):
@@ -172,4 +176,4 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
             }
 
     def setUp(self):
-        print("running streams with no creates")
+        LOGGER.info("running streams with no creates")

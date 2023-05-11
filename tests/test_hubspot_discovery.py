@@ -92,7 +92,7 @@ class DiscoveryTest(HubspotBaseTest):
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
               
-                    if stream == "contacts":
+                    if stream in ["contacts", "companies", "deals"]:                        
                         self.assertTrue(actual_replication_method == self.INCREMENTAL,
                                     msg="Expected INCREMENTAL replication "
                                     "since there is a replication key")
@@ -114,7 +114,7 @@ class DiscoveryTest(HubspotBaseTest):
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
-                if stream == "contacts":
+                if stream in ["contacts", "companies", "deals"]:
                     self.assertEqual(expected_automatic_fields,
                                     actual_automatic_fields,
                                     msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields}"

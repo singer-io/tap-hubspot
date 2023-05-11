@@ -455,7 +455,8 @@ class TestClient():
 
             response = self.get(v1_url, params=v1_params)
             records.extend([record for record in response['deals']
-                            if record['properties'][replication_key]['timestamp'] >= self.start_date])
+                            # Here replication key of the deals stream is derived from "hs_lastmodifieddate" field.
+                            if record['properties']["hs_lastmodifieddate"]['timestamp'] >= self.start_date])
             has_more = response['hasMore']
             v1_params['offset'] = response['offset']
 
