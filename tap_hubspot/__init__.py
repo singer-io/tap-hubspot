@@ -484,8 +484,9 @@ def sync_contacts(STATE, ctx):
                 for record in data.get("contacts", []):
 
                     if record["addedAt"] >= int(start.timestamp()*1000):
-                        newly_added.append(record["vid"])
-                        vids.append(record["vid"])
+                        if record['vid'] not in newly_added:
+                            newly_added.append(record["vid"])
+                            vids.append(record["vid"])
                     else:
                         break_loop = True
                         break
