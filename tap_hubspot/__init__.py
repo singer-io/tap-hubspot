@@ -466,40 +466,39 @@ def sync_contacts(STATE, ctx):
     schema = load_schema("contacts")
 
     singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
-
     url = get_url("contact_lists")
     params = {'count': 100}
     lists = gen_request(STATE, 'contact_lists', url, params, 'lists', 'has-more', ['offset'], ['offset'])
     list_ids = [l["listId"] for l in lists]
-
     newly_added = []
     vids = []
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for list_id in list_ids:
-            params = default_contact_params.copy()
-            params["formSubmissionMode"] = "all"
-            break_loop = False
-            while not break_loop:
-                data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
-                for record in data.get("contacts", []):
+    if STATE["bookmarks"].get("contacts"):
+        with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+            for list_id in list_ids:
+                params = default_contact_params.copy()
+                params["formSubmissionMode"] = "all"
+                break_loop = False
+                while not break_loop:
+                    data = request(get_url("list_contacts_recent", list_id=list_id), params=params).json()
+                    for record in data.get("contacts", []):
+                       
+                        if record["addedAt"] >= int(start.timestamp()*1000):
+                            if record['vid'] not in newly_added:
+                                newly_added.append(record["vid"])
+                                vids.append(record["vid"])
+                        else:
+                            break_loop = True
+                            break
 
-                    if record["addedAt"] >= int(start.timestamp()*1000):
-                        if record['vid'] not in newly_added:
-                            newly_added.append(record["vid"])
-                            vids.append(record["vid"])
+                        if len(vids) == 100:
+                            _sync_contact_vids(catalog, vids, schema, bumble_bee)
+                            vids = []
+                    
+                    if data["has-more"] and not break_loop:
+                        params["vidOffset"] = data["vid-offset"]
+                        params["timeOffset"] = data["time-offset"]
                     else:
-                        break_loop = True
                         break
-
-                    if len(vids) == 100:
-                        _sync_contact_vids(catalog, vids, schema, bumble_bee)
-                        vids = []
-                
-                if data["has-more"] and not break_loop:
-                    params["vidOffset"] = data["vid-offset"]
-                    params["timeOffset"] = data["time-offset"]
-                else:
-                    break
 
     url = get_url("contacts_all")
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
