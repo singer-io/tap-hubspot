@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.12.2
+  * Dependabot update [#228](https://github.com/singer-io/tap-hubspot/pull/228)
+
 ## 2.12.1
   * Use sync start time for writing bookmarks [#226](https://github.com/singer-io/tap-hubspot/pull/226)
 
