@@ -37,6 +37,7 @@ KNOWN_EXTRA_FIELDS = {
         # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
         #                 Has an value of object with key 'value' and value 'Null'
         'property_hs_date_entered_1258834',
+        'property_hs_time_in_example_stage1660743867503491_315775040'
     },
 }
 
@@ -277,7 +278,8 @@ class TestHubspotAllFields(HubspotBaseTest):
                         #     to our test data. We have determined that the filtering of these fields is an expected behavior.
 
                         # deals workaround for 'property_hs_date_entered_<property>' fields
-                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_'}
+                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_',
+                                            'property_hs_time_in'}
                         bad_keys = set()
                         for key in expected_keys_adjusted:
                             for prefix in bad_key_prefixes:
