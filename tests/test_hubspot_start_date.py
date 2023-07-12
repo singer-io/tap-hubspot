@@ -72,7 +72,6 @@ class TestHubspotStartDate(HubspotBaseTest):
         expected_streams = self.expected_streams()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries)
-
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
         first_sync_records = runner.get_records_from_target_output()
 
@@ -172,7 +171,7 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
 
         else:
             return {
-                'start_date' : '2022-02-25T00:00:00Z'
+                'start_date' : '2023-02-25T00:00:00Z'
             }
 
     def setUp(self):
