@@ -162,10 +162,6 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
         }
 
     def get_properties(self, original=True):
-        utc_today = datetime.datetime.strftime(
-            datetime.datetime.utcnow(), self.START_DATE_FORMAT
-        )
-
         if original:
             return {'start_date' : '2017-11-22T00:00:00Z'}
 
