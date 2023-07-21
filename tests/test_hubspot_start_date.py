@@ -55,11 +55,11 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         if original:
             return {
-                'start_date' : self.timedelta_formatted(utc_today, days=-2)
+                'start_date' : self.timedelta_formatted(utc_today, days=-8)
             }
         else:
             return {
-                'start_date': utc_today
+                'start_date': self.timedelta_formatted(utc_today, days=-4)
             }
 
     def test_run(self):
@@ -162,10 +162,6 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
         }
 
     def get_properties(self, original=True):
-        utc_today = datetime.datetime.strftime(
-            datetime.datetime.utcnow(), self.START_DATE_FORMAT
-        )
-
         if original:
             return {'start_date' : '2017-11-22T00:00:00Z'}
 
