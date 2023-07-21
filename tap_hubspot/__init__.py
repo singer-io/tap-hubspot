@@ -1321,7 +1321,7 @@ STREAMS = [
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
-
+    Stream('lead', sync_lead, ["id"], 'updatedAt', 'INCREMENTAL'),
     # Do these last as they are full table
     Stream('associations_line_items_deals_v3', sync_associations_line_items_deals_v3, ['id'], 'updatedAt', 'FULL_TABLE'),
     Stream('line_items', sync_line_items, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
