@@ -49,6 +49,10 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_timezone',
         'property_hs_latest_source_timestamp',
         'property_hs_v2_date_entered_lead',
+        'property_hs_v2_date_exited_lead',
+        'property_hs_v2_date_entered_customer',
+        'property_hs_v2_cumulative_time_in_lead',
+        'property_hs_v2_latest_time_in_lead',
     },
     'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
         'authorId',
