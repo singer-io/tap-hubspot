@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.10.1
+  * Use engagements_page_size advanced option [#234](https://github.com/singer-io/tap-hubspot/pull/234)
+
 ## 2.10.0
   * Updated replication method as INCREMENTAL and replication key as property_hs_lastmodifieddate for deals and companies streams [#195](https://github.com/singer-io/tap-hubspot/pull/195)
   * Fixed Pylint errors [#204](https://github.com/singer-io/tap-hubspot/pull/204)
