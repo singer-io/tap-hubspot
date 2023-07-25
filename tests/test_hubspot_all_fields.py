@@ -37,6 +37,7 @@ KNOWN_EXTRA_FIELDS = {
         # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
         #                 Has an value of object with key 'value' and value 'Null'
         'property_hs_date_entered_1258834',
+        'property_hs_time_in_example_stage1660743867503491_315775040'
     },
 }
 
@@ -47,6 +48,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_latest_source_data_1',
         'property_hs_timezone',
         'property_hs_latest_source_timestamp',
+        'property_hs_v2_date_entered_lead',
     },
     'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
         'authorId',
@@ -67,6 +69,9 @@ KNOWN_MISSING_FIELDS = {
         'suppressedReason',
         'cc',
      },
+    'engagements': {  # BUG https://jira.talendforge.org/browse/TDL-14997
+        'scheduledTasks',
+     },
     'workflows': {  # BUG https://jira.talendforge.org/browse/TDL-14998
         'migrationStatus',
         'updateSource',
@@ -85,6 +90,7 @@ KNOWN_MISSING_FIELDS = {
         'themeColor',
         'publishAt',
         'editVersion',
+        'embedVersion',
         'themeName',
         'style',
         'thankYouMessageJson',
@@ -273,7 +279,8 @@ class TestHubspotAllFields(HubspotBaseTest):
                         #     to our test data. We have determined that the filtering of these fields is an expected behavior.
 
                         # deals workaround for 'property_hs_date_entered_<property>' fields
-                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_'}
+                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_',
+                                            'property_hs_time_in'}
                         bad_keys = set()
                         for key in expected_keys_adjusted:
                             for prefix in bad_key_prefixes:

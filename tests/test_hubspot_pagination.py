@@ -57,6 +57,7 @@ class TestHubspotPagination(HubspotBaseTest):
                 existing_records[stream] = test_client.read(stream)
 
             # check if we exceed the pagination limit
+            LOGGER.info(f"Pagination limit set to - {limits[stream]} and total number of existing record - {len(existing_records[stream])}")
             under_target = limits[stream] + 1 - len(existing_records[stream])
             LOGGER.info(f'under_target = {under_target} for {stream}')
 

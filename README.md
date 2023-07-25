@@ -18,6 +18,7 @@ This tap:
   - [Owners](http://developers.hubspot.com/docs/methods/owners/get_owners)
   - [Subscription Changes](http://developers.hubspot.com/docs/methods/email/get_subscriptions_timeline)
   - [Workflows](http://developers.hubspot.com/docs/methods/workflows/v3/get_workflows)
+  - [Tickets](https://developers.hubspot.com/docs/api/crm/tickets)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 

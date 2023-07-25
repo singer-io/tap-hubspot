@@ -148,6 +148,13 @@ class HubspotBaseTest(BaseCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
                 self.OBEYS_START_DATE: True
+            },
+            "tickets": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
             }
         }
 

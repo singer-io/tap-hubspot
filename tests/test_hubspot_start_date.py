@@ -55,11 +55,11 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         if original:
             return {
-                'start_date' : self.timedelta_formatted(utc_today, days=-2)
+                'start_date' : self.timedelta_formatted(utc_today, days=-8)
             }
         else:
             return {
-                'start_date': utc_today
+                'start_date': self.timedelta_formatted(utc_today, days=-4)
             }
 
     def test_run(self):
@@ -72,7 +72,6 @@ class TestHubspotStartDate(HubspotBaseTest):
         expected_streams = self.expected_streams()
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in expected_streams]
         self.select_all_streams_and_fields(conn_id, catalog_entries)
-
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
         first_sync_records = runner.get_records_from_target_output()
 
@@ -163,16 +162,12 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
         }
 
     def get_properties(self, original=True):
-        utc_today = datetime.datetime.strftime(
-            datetime.datetime.utcnow(), self.START_DATE_FORMAT
-        )
-
         if original:
             return {'start_date' : '2017-11-22T00:00:00Z'}
 
         else:
             return {
-                'start_date' : '2022-02-25T00:00:00Z'
+                'start_date' : '2023-02-25T00:00:00Z'
             }
 
     def setUp(self):
