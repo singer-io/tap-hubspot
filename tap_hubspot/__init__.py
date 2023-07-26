@@ -32,6 +32,9 @@ class SourceUnavailableException(Exception):
 class DependencyException(Exception):
     pass
 
+class UriTooLongException(Exception):
+    pass
+
 class DataFields:
     offset = 'offset'
 
@@ -96,6 +99,9 @@ ENDPOINTS = {
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
+
+    "tickets_properties":   "/crm/v3/properties/tickets",
+    "tickets":              "/crm/v4/objects/tickets",
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
@@ -136,6 +142,18 @@ def clean_state(state):
         if "last_sync_duration" in bookmark_map:
             LOGGER.info("%s - Removing last_sync_duration from state.", stream)
             state["bookmarks"][stream].pop("last_sync_duration", None)
+
+def get_selected_property_fields(catalog, mdata):
+
+    fields = catalog.get("schema").get("properties").keys()
+    property_field_names = []
+    for field in fields:
+        if "property_" in field:
+            field_metadata = mdata.get(('properties', field))
+            if utils.should_sync_field(field_metadata.get('inclusion'),
+                                       field_metadata.get('selected')):
+                property_field_names.append(field.split("property_", 1)[1])
+    return ",".join(property_field_names)
 
 def get_url(endpoint, **kwargs):
     if endpoint not in ENDPOINTS:
@@ -180,6 +198,12 @@ def get_field_schema(field_type, extras=False):
         }
 
 def parse_custom_schema(entity_name, data):
+    if entity_name == "tickets":
+        return {
+            field['name']: get_field_type_schema(field['type'])
+            for field in data["results"]
+        }
+
     return {
         field['name']: get_field_schema(field['type'], entity_name != 'contacts')
         for field in data
@@ -205,7 +229,7 @@ def load_associated_company_schema():
 
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
+    if entity_name in ["contacts", "companies", "deals", "tickets"]:
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
@@ -223,9 +247,12 @@ def load_schema(entity_name):
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
         schema['properties'].update(custom_schema_top_level)
 
-        # Make properties_versions selectable and share the same schema.
-        versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
-        schema['properties']['properties_versions'] = versions_schema
+        # Exclude properties_versions field for tickets stream. As the versions are not present in
+        # the api response.
+        if entity_name != "tickets":
+            # Make properties_versions selectable and share the same schema.
+            versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
+            schema['properties']['properties_versions'] = versions_schema
 
     if entity_name == "contacts":
         schema['properties']['associated-company'] = load_associated_company_schema()
@@ -324,8 +351,9 @@ def request(url, params=None):
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
-        else:
-            resp.raise_for_status()
+        elif resp.status_code == 414:
+            raise UriTooLongException(resp.content)
+        resp.raise_for_status()
 
     return resp
 # {"bookmarks" : {"contacts" : { "lastmodifieddate" : "2001-01-01"
@@ -339,13 +367,13 @@ def request(url, params=None):
 def lift_properties_and_versions(record):
     for key, value in record.get('properties', {}).items():
         computed_key = "property_{}".format(key)
-        versions = value.get('versions')
         record[computed_key] = value
-
-        if versions:
-            if not record.get('properties_versions'):
-                record['properties_versions'] = []
-            record['properties_versions'] += versions
+        if isinstance(value, dict):
+            versions = value.get('versions')
+            if versions:
+                if not record.get('properties_versions'):
+                    record['properties_versions'] = []
+                record['properties_versions'] += versions
     return record
 
 # backoff for Timeout error is already included in "requests.exceptions.RequestException"
@@ -460,7 +488,6 @@ def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookm
     data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
     time_extracted = utils.now()
     mdata = metadata.to_map(catalog.get('metadata'))
-
     for record in data.values():
         # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
         record[bookmark_key] = bookmark_values.get(record.get("vid"))
@@ -490,6 +517,9 @@ def sync_contacts(STATE, ctx):
     # Dict to store replication key value for each contact record
     bookmark_values = {}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
             modified_time = None
             if bookmark_key in row:
@@ -513,7 +543,9 @@ def sync_contacts(STATE, ctx):
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
 
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -676,7 +708,11 @@ def sync_deals(STATE, ctx):
                      and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
 
     url = get_url('deals_all')
+
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
             row_properties = row['properties']
             modified_time = None
@@ -695,11 +731,85 @@ def sync_deals(STATE, ctx):
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
-    STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(max_bk_value))
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
-#NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
+
+def gen_request_tickets(tap_stream_id, url, params, path, more_key):
+    """
+    Cursor-based API Pagination : Used in tickets stream implementation
+    """
+    with metrics.record_counter(tap_stream_id) as counter:
+        while True:
+            data = request(url, params).json()
+
+            if data.get(path) is None:
+                raise RuntimeError(
+                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+            for row in data[path]:
+                counter.increment()
+                yield row
+
+            if not data.get(more_key):
+                break
+            params['after'] = data.get(more_key).get('next').get('after')
+
+def sync_tickets(STATE, ctx):
+    """
+    Function to sync `tickets` stream records
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    stream_id = "tickets"
+    primary_key = "id"
+    bookmark_key = "updatedAt"
+
+    max_bk_value = bookmark_value = utils.strptime_with_tz(
+        get_start(STATE, stream_id, bookmark_key))
+    LOGGER.info("sync_tickets from %s", bookmark_value)
+
+    params = {'limit': 100,
+              'associations': 'contact,company,deals',
+              'properties': get_selected_property_fields(catalog, mdata),
+              'archived': False
+              }
+
+    schema = load_schema(stream_id)
+    singer.write_schema(stream_id, schema, [primary_key],
+                        [bookmark_key], catalog.get('stream_alias'))
+
+    url = get_url(stream_id)
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
+        for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
+            # parsing the string formatted date to datetime object
+            modified_time = utils.strptime_to_utc(row[bookmark_key])
+
+            # Checking the bookmark value is present on the record and it
+            # is greater than or equal to defined previous bookmark value
+            if modified_time and modified_time >= bookmark_value:
+                # transforms the data and filters out the selected fields from the catalog
+                record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                singer.write_record(stream_id, record, catalog.get(
+                    'stream_alias'), time_extracted=utils.now())
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
+    return STATE
+
+
+# NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
 def sync_campaigns(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -808,6 +918,9 @@ def sync_contact_lists(STATE, ctx):
     url = get_url("contact_lists")
     params = {'count': 250}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
@@ -816,7 +929,9 @@ def sync_contact_lists(STATE, ctx):
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
     return STATE
@@ -837,6 +952,9 @@ def sync_forms(STATE, ctx):
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in data:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
@@ -845,7 +963,9 @@ def sync_forms(STATE, ctx):
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'forms', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'forms', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
     return STATE
@@ -868,6 +988,9 @@ def sync_workflows(STATE, ctx):
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in data['workflows']:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
             if record[bookmark_key] >= start:
@@ -875,7 +998,9 @@ def sync_workflows(STATE, ctx):
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'workflows', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -899,6 +1024,9 @@ def sync_owners(STATE, ctx):
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
         for row in data:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
             if record[bookmark_key] >= max_bk_value:
@@ -907,7 +1035,9 @@ def sync_owners(STATE, ctx):
             if record[bookmark_key] >= start:
                 singer.write_record("owners", record, catalog.get('stream_alias'), time_extracted=time_extracted)
 
-    STATE = singer.write_bookmark(STATE, 'owners', bookmark_key, max_bk_value)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'owners', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -989,6 +1119,7 @@ STREAMS = [
     Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
+    Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -1041,7 +1172,10 @@ def do_sync(STATE, catalog):
         except SourceUnavailableException as ex:
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
-
+        except UriTooLongException as ex:
+            LOGGER.fatal(f"For stream - {stream.tap_stream_id}, please select fewer fields. "
+                         f"The current selection exceeds Hubspot's maximum character allowance.")
+            raise ex
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
@@ -1103,11 +1237,16 @@ def discover_schemas():
     result = {'streams': []}
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
-        schema, mdata = load_discovered_schema(stream)
-        result['streams'].append({'stream': stream.tap_stream_id,
-                                  'tap_stream_id': stream.tap_stream_id,
-                                  'schema': schema,
-                                  'metadata': mdata})
+        try:
+            schema, mdata = load_discovered_schema(stream)
+            result['streams'].append({'stream': stream.tap_stream_id,
+                                      'tap_stream_id': stream.tap_stream_id,
+                                      'schema': schema,
+                                      'metadata': mdata})
+        except SourceUnavailableException as ex:
+            # Skip the discovery mode on the streams were the required scopes are missing
+            warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+            LOGGER.warning(warning_message)
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
     contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')

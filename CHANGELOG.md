@@ -1,7 +1,17 @@
 # Changelog
 
-## 2.10.1
+## 2.12.2
   * Use engagements_page_size advanced option [#234](https://github.com/singer-io/tap-hubspot/pull/234)
+  * 
+## 2.12.1
+  * Use sync start time for writing bookmarks [#226](https://github.com/singer-io/tap-hubspot/pull/226)
+
+## 2.12.0
+  * Include properties(default + custom) in tickets stream [#220](https://github.com/singer-io/tap-hubspot/pull/220)
+
+## 2.11.0
+  * Implement new stream - `tickets` [#218](https://github.com/singer-io/tap-hubspot/pull/218)
+  * Update integration tests for the tickets stream implementation [#219](https://github.com/singer-io/tap-hubspot/pull/219)
 
 ## 2.10.0
   * Updated replication method as INCREMENTAL and replication key as property_hs_lastmodifieddate for deals and companies streams [#195](https://github.com/singer-io/tap-hubspot/pull/195)
