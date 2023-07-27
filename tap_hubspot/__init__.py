@@ -90,6 +90,7 @@ ENDPOINTS = {
     "engagements_all":      "/engagements/v1/engagements/paged",
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
+    "subscription_types":   "/communication-preferences/v3/status/email/{subscriber_email}",
     "email_events":         "/email/public/v1/events",
     "contact_lists":        "/contacts/v1/lists",
     "list_contacts_recent": "/contacts/v1/lists/{list_id}/contacts/recent",
@@ -441,7 +442,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
 def _sync_contact_vids(catalog, vids, schema, bumble_bee):
     if len(vids) == 0:
         return
-
+    
     data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
     time_extracted = utils.now()
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -456,6 +457,18 @@ default_contact_params = {
     'count': 100,
 }
 
+def _sync_subscription_types(catalog, subscribers_emails, schema, bumble_bee):
+    if len(subscribers_emails) == 0:
+        return
+    
+    for subscriber_email in subscribers_emails:
+        record = request(get_url("subscription_types", subscriber_email=subscriber_email)).json()
+        time_extracted = utils.now()
+        mdata = metadata.to_map(catalog.get('metadata'))
+
+        record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
+        singer.write_record("subscription_types", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+
 def sync_contacts(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     bookmark_key = 'versionTimestamp'
@@ -464,14 +477,17 @@ def sync_contacts(STATE, ctx):
 
     max_bk_value = start
     schema = load_schema("contacts")
+    subscription_types_schema = load_schema("subscription_types")
 
     singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
+    singer.write_schema("subscription_types", subscription_types_schema, ["subscriber_email"], [bookmark_key], catalog.get('stream_alias'))
     url = get_url("contact_lists")
     params = {'count': 100}
     lists = gen_request(STATE, 'contact_lists', url, params, 'lists', 'has-more', ['offset'], ['offset'])
     list_ids = [l["listId"] for l in lists]
     newly_added = []
     vids = []
+    subscriber_emails = []
     if STATE["bookmarks"].get("contacts"):
         with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
             for list_id in list_ids:
@@ -514,6 +530,11 @@ def sync_contacts(STATE, ctx):
                 if row['vid'] not in newly_added:
                     vids.append(row['vid'])
 
+            for identity_profile in row['identity-profiles']:
+                for identity in identity_profile["identities"]:
+                    if identity['type'] == 'EMAIL':
+                        subscriber_emails.append(identity['value'])
+
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
@@ -522,6 +543,7 @@ def sync_contacts(STATE, ctx):
                 vids = []
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee)
+        _sync_subscription_types(catalog, subscriber_emails, subscription_types_schema, bumble_bee)
 
     STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)

@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "recipient": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "subscriptionStatuses": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "name": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "description": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "status": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "sourceOfStatus": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "preferenceGroupName": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "legalBasis": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "legalBasisExplanation": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
