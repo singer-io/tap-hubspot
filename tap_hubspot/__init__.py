@@ -543,7 +543,8 @@ def sync_contacts(STATE, ctx):
                 vids = []
 
         _sync_contact_vids(catalog, vids, schema, bumble_bee)
-        _sync_subscription_types(catalog, subscriber_emails, subscription_types_schema, bumble_bee)
+        if "subscription_types" in ctx.selected_stream_ids:
+            _sync_subscription_types(catalog, subscriber_emails, subscription_types_schema, bumble_bee)
 
     STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
