@@ -980,7 +980,7 @@ def sync_engagements(STATE, ctx):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for engagement in engagements:
             record = bumble_bee.transform(lift_properties_and_versions(engagement), schema, mdata)
-            if record['engagement'][bookmark_key] >= start:
+            if record['engagement'][bookmark_key] >= start and record['engagement']['type'] in ('MEETING', 'TASK', 'CALL', 'NOTE'):
                 # hoist PK and bookmark field to top-level record
                 record['engagement_id'] = record['engagement']['id']
                 record[bookmark_key] = record['engagement'][bookmark_key]

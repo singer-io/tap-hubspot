@@ -52,7 +52,7 @@
         "companyIds": {
           "type": ["null", "array"],
           "items": {
-            "type": "string"
+            "type": "integer"
           }
         },
         "dealIds": {
@@ -151,13 +151,7 @@
         "title": {
           "type": ["null", "string"]
         },
-        "toNumber": {
-          "type": ["null", "string"]
-        },
-        "fromNumber": {
-          "type": ["null", "string"]
-        },
-        "externalId": {
+        "disposition": {
           "type": ["null", "string"]
         },
         "durationMilliseconds": {
@@ -166,11 +160,34 @@
         "externalAccountId": {
           "type": ["null", "string"]
         },
+        "externalId": {
+          "type": ["null", "string"]
+        },
+        "fromNumber": {
+          "type": ["null", "string"]
+        },
+        "toNumber": {
+          "type": ["null", "string"]
+        },
         "recordingUrl": {
           "type": ["null", "string"],
           "format": "uri"
         },
-        "disposition": {
+        "createdFromLinkId": {
+          "type": ["null", "integer"]
+        },
+        "externalUrl": {
+          "type": ["null", "string"],
+          "format": "uri"
+        },
+        "source": {
+          "type": ["null", "string"]
+        },
+        "completionDate": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "taskType": {
           "type": ["null", "string"]
         }
       }
