@@ -177,7 +177,7 @@ class TestClient():
     ### GET
     ##########################################################################
     ### Take page_size also to limit the pagination to first 2 pages tdl-16124 ###
-    def read(self, stream, parent_ids=[], since='', page_size=0):
+    def read(self, stream, page_size, parent_ids=[], since='', pagination=False):
 
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
@@ -188,13 +188,13 @@ class TestClient():
         elif stream == 'owners':
             return self.get_owners()
         elif stream == 'companies':
-            return self.get_companies(since, page_size)
+            return self.get_companies(since, page_size, pagination)
         elif stream == 'contact_lists':
-            return self.get_contact_lists(since)
+            return self.get_contact_lists(since, pagination=pagination)
         elif stream == 'contacts_by_company':
-            return self.get_contacts_by_company(parent_ids, page_size)
+            return self.get_contacts_by_company(parent_ids, page_size, pagination)
         elif stream == 'engagements':
-            return self.get_engagements(page_size)
+            return self.get_engagements(page_size, pagination)
         elif stream == 'campaigns':
             return self.get_campaigns()
         elif stream == 'deals':
@@ -202,15 +202,15 @@ class TestClient():
         elif stream == 'workflows':
             return self.get_workflows()
         elif stream == 'contacts':
-            return self.get_contacts(page_size)
+            return self.get_contacts(page_size, pagination)
         elif stream == 'deal_pipelines':
             return self.get_deal_pipelines()
         elif stream == 'email_events':
-            return self.get_email_events(page_size)
+            return self.get_email_events(page_size, pagination)
         elif stream == 'subscription_changes':
-            return self.get_subscription_changes(since, page_size)
+            return self.get_subscription_changes(since, page_size, pagination)
         elif stream == "tickets":
-            return self.get_tickets(page_size)
+            return self.get_tickets(page_size, pagination)
         else:
             raise NotImplementedError
 
@@ -239,7 +239,7 @@ class TestClient():
         response = self.get(url)
         return response
 
-    def get_companies(self, since='', page_size=0):
+    def get_companies(self, since='', page_size=0, pagination=False):
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
@@ -274,7 +274,7 @@ class TestClient():
 
             has_more = response['has-more']
             params['offset'] = response['offset']
-            if page_size and len(companies) > page_size+10:
+            if pagination and len(companies) > page_size+10:
                 break
 
         # get the details of each company
@@ -286,7 +286,7 @@ class TestClient():
 
         return records
 
-    def get_contact_lists(self, since='', list_id='', page_size=0):
+    def get_contact_lists(self, since='', list_id='', pagination=False):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
@@ -325,7 +325,7 @@ class TestClient():
 
             has_more = response['has-more']
             params['offset'] = response['offset']
-            if page_size and len(records) > page_size+10:
+            if pagination and len(records) > 260:
                 break
 
         return records
@@ -359,7 +359,7 @@ class TestClient():
 
         return records[0]
 
-    def get_contacts(self, page_size=0):
+    def get_contacts(self, page_size=0, pagination=False):
         """
         Get all contact vids by paginating using 'has-more' and 'vid-offset/vidOffset'.
         Then use the vids to grab the detailed contacts records.
@@ -392,13 +392,14 @@ class TestClient():
             params_2['vid'] = vids
             response_2 = self.get(url_2, params=params_2)
             records.extend([record for record in response_2.values()])
-            if page_size and len(records) > page_size+10:
+            if pagination  and len(records) > page_size+10:
+                LOGGER.info("haven't met the page size")
                 break
 
         records = self.denest_properties('contacts is %s', records)
         return records
 
-    def get_contacts_by_company(self, parent_ids, page_size=0):
+    def get_contacts_by_company(self, parent_ids, page_size=0, pagination=False):
         """
         Get all contacts_by_company iterating over compnayId's and
         paginating using 'hasMore' and 'vidOffset'. This stream is essentially
@@ -424,7 +425,7 @@ class TestClient():
 
                 has_more = response['hasMore']
                 params['vidOffset'] = response['vidOffset']
-                if page_size and len(records) > page_size+10:
+                if pagination and len(records) > page_size+10:
                     break
 
             params = {'count': page_size}
@@ -522,7 +523,7 @@ class TestClient():
         records = self.denest_properties('deals', records)
         return records
 
-    def get_email_events(self, recipient='', page_size=0):
+    def get_email_events(self, recipient='', page_size=0, pagination=False):
         """
         Get all email_events by paginating using 'hasMore' and 'offset'.
         """
@@ -542,7 +543,7 @@ class TestClient():
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
-            if page_size and len(records) > page_size+10:
+            if pagination and len(records) > page_size+10:
                 break
 
         return records
@@ -561,7 +562,7 @@ class TestClient():
 
         return response
 
-    def get_engagements(self, page_size=0):
+    def get_engagements(self, page_size=0, pagination=False):
         """
         Get all engagements by paginating using 'hasMore' and 'offset'.
         """
@@ -582,7 +583,7 @@ class TestClient():
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
-            if page_size and len(records) > page_size+10:
+            if pagination and len(records) > page_size+10:
                 break
 
         return records
@@ -620,7 +621,7 @@ class TestClient():
         transformed_records = self.datatype_transformations('owners', records)
         return transformed_records
 
-    def get_subscription_changes(self, since='', page_size=0):
+    def get_subscription_changes(self, since='', page_size=0, pagination=False):
         """
         Get all subscription_changes from 'since' date by paginating using 'hasMore' and 'offset'.
         Default since date is one week ago
@@ -646,7 +647,7 @@ class TestClient():
                 #                            this won't be feasible until BUG_TDL-14938 is addressed
                 if int(since) <= record['timestamp']:
                     records.append(record)
-            if page_size and len(records) > page_size+10:
+            if pagination and len(records) > page_size+10:
                 break
 
         return records
@@ -693,7 +694,7 @@ class TestClient():
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_tickets(self, page_size=0):
+    def get_tickets(self, page_size=0, pagination=False):
         """
         Get all tickets.
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
@@ -904,7 +905,7 @@ class TestClient():
         if not company_ids:
             company_ids = [company['companyId'] for company in self.get_companies()]
         if not contact_records:
-            contact_records = self.get_contacts()
+            contact_records = self.get_contacts(100)
 
         records = []
         for _ in range(times):
@@ -1065,7 +1066,8 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         # gather all contacts and randomly choose one that has not hit the limit
-        contact_records = self.get_contacts()
+        page_size = 250
+        contact_records = self.get_contacts(page_size)
         contact_ids = [contact['vid']
                        for contact in contact_records
                        if contact['vid'] != 2304]  # contact 2304 has hit the 10,000 assoc limit
