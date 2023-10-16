@@ -393,7 +393,6 @@ class TestClient():
             response_2 = self.get(url_2, params=params_2)
             records.extend([record for record in response_2.values()])
             if pagination  and len(records) > page_size+10:
-                LOGGER.info("haven't met the page size")
                 break
 
         records = self.denest_properties('contacts is %s', records)
