@@ -817,13 +817,12 @@ class TestClient():
         }
 
         # generate a contacts record
-        LOGGER.info("Before Post")
+        LOGGER.info("Message to get data for Histogram generation ")
         response = self.post(url, data)
         records = [response]
 
         get_url = f"{BASE_URL}/contacts/v1/contact/vid/{response['vid']}/profile"
         params = {'includeVersion': True}
-        LOGGER.info("Before Get")
         get_resp = self.get(get_url, params=params)
 
         created_time = get_resp.get('properties').get('createdate').get('value')

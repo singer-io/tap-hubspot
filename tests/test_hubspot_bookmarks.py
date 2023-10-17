@@ -13,7 +13,6 @@ from client import TestClient
 STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
 STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
 
-
 class TestHubspotBookmarks(HubspotBaseTest):
     """Ensure tap replicates new and upated records based on the replication method of a given stream.
 
@@ -48,17 +47,25 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.test_client = TestClient(self.get_properties()['start_date'])
 
     def create_test_data(self, expected_streams):
+        """
+        Creating more records(10) instead of 3 to get the update time to build the histogram - tdl-20939
+        Excluding workflows as it results in assertion failures with expected_pk and sync_pk at line#255
+        """
 
         self.expected_records = {stream: []
                                  for stream in expected_streams}
-
         for stream in expected_streams - {'contacts_by_company'}:
-            if stream == 'email_events':
-                email_records = self.test_client.create(stream, times=3)
+            if stream == 'workflows': 
+                times=3
+            else:
+                times =10
+
+            if stream in 'email_events':
+                email_records = self.test_client.create(stream, times)
                 self.expected_records['email_events'] += email_records
             else:
                 # create records, one will be updated between syncs
-                for _ in range(3):
+                for _ in range(times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
 
