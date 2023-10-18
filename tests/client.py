@@ -299,6 +299,7 @@ class TestClient():
             return response
 
         if since == 'all':
+            #TODO from TDL-16124 - Don't have access to expected_metadata to pass page_size
             params = {'count': 250}
         else:
             if not since:
@@ -904,6 +905,7 @@ class TestClient():
         if not company_ids:
             company_ids = [company['companyId'] for company in self.get_companies()]
         if not contact_records:
+            #TODO from TDL-16124 - Don't have access to the expected metadata to pass the page_size
             contact_records = self.get_contacts(100)
 
         records = []
@@ -1065,6 +1067,7 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         # gather all contacts and randomly choose one that has not hit the limit
+        #TODO from TDL-16124 - Don't have access to expected_metadata to pass page_size
         page_size = 250
         contact_records = self.get_contacts(page_size)
         contact_ids = [contact['vid']
