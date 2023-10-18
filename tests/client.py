@@ -15,6 +15,8 @@ class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+    record_create_times = {}
+    time_difference = 0
 
     ##########################################################################
     ### CORE METHODS
@@ -818,6 +820,12 @@ class TestClient():
 
         # generate a contacts record
         LOGGER.info("Message to get data for Histogram generation ")
+
+        date= datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+        print("Number of days since epoch:",date)
+        seconds =(date.total_seconds())
+        print("Number of seconds since epoch:",seconds)
+
         response = self.post(url, data)
         records = [response]
 
@@ -828,6 +836,8 @@ class TestClient():
         created_time = get_resp.get('properties').get('createdate').get('value')
         ts=int(created_time)/1000
         LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
+        LOGGER.info("Difference from Created Time  %s", ts - seconds)
+        time_difference = ts-seconds
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
             get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT

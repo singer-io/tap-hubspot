@@ -8,6 +8,7 @@ import tap_tester.runner      as runner
 
 from base import HubspotBaseTest
 from client import TestClient
+from tap_tester import LOGGER
 
 
 STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
@@ -65,9 +66,13 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 self.expected_records['email_events'] += email_records
             else:
                 # create records, one will be updated between syncs
+                time_diff =0
                 for _ in range(times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
+                    time_diff += self.test_client.time_difference 
+
+                self.test_client.record_create_times[stream] = time_diff
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
@@ -253,3 +258,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                               'email_events'}: # BUG | https://jira.talendforge.org/browse/TDL-15706
                     continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
+
+                LOGGER.info("Printing the time_difference")
+                for key, val in record_create_times:
+                    LOGGER.info("Time difference for stream %s is %s", key, val )
