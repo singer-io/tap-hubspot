@@ -49,17 +49,18 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def create_test_data(self, expected_streams):
         """
-        Creating more records(10) instead of 3 to get the update time to build the histogram - tdl-20939
-        Excluding workflows as it results in assertion failures with expected_pk and sync_pk at line#255
+        Creating more records(5) instead of 3 to get the update time to build the histogram - tdl-20939
+        Excluding workflows as it results in assertion failures with expected_pk and sync_pk at line#261
         """
 
         self.expected_records = {stream: []
                                  for stream in expected_streams}
+        times=0
         for stream in expected_streams - {'contacts_by_company'}:
             if stream == 'workflows': 
                 times=3
             else:
-                times =10
+                times =5
 
             if stream in 'email_events':
                 email_records = self.test_client.create(stream, times)
@@ -70,14 +71,16 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 for _ in range(times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
-                    time_diff += self.test_client.time_difference 
+                    if stream in 'contacts':
+                        time_diff += self.test_client.time_difference 
 
-                self.test_client.record_create_times[stream] = time_diff
+                if stream in 'contacts':
+                    self.test_client.record_create_times[stream] = time_diff
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
             contact_records = self.expected_records['contacts']
-            for i in range(3):
+            for i in range(times):
                 record = self.test_client.create_contacts_by_company(
                     company_ids=company_ids, contact_records=contact_records
                 )
@@ -259,6 +262,5 @@ class TestHubspotBookmarks(HubspotBaseTest):
                     continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
 
-                LOGGER.info("Printing the time_difference")
-                for key, val in record_create_times:
-                    LOGGER.info("Time difference for stream %s is %s", key, val )
+        #Logging for monitoring the time difference for all streams
+        LOGGER.info("Time_difference between Created time and POST message %s", self.test_client.record_create_times )

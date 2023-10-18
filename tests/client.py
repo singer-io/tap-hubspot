@@ -818,14 +818,11 @@ class TestClient():
             ]
         }
 
-        # generate a contacts record
-        LOGGER.info("Message to get data for Histogram generation ")
-
+        #Get the current time in seconds
         date= datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
-        print("Number of days since epoch:",date)
         seconds =(date.total_seconds())
-        print("Number of seconds since epoch:",seconds)
 
+        # generate a contacts record
         response = self.post(url, data)
         records = [response]
 
@@ -833,11 +830,10 @@ class TestClient():
         params = {'includeVersion': True}
         get_resp = self.get(get_url, params=params)
 
+        #Get the created time and the difference to monitor the time difference - tdl-20939
         created_time = get_resp.get('properties').get('createdate').get('value')
         ts=int(created_time)/1000
-        LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
-        LOGGER.info("Difference from Created Time  %s", ts - seconds)
-        time_difference = ts-seconds
+        self.time_difference = ts-seconds
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
             get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT
