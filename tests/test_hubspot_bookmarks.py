@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timedelta
 from time import sleep
 
@@ -55,32 +56,39 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         self.expected_records = {stream: []
                                  for stream in expected_streams}
-        times=0
+        self.times=0
         for stream in expected_streams - {'contacts_by_company'}:
-            if stream == 'workflows': 
-                times=3
+            self.minimum=sys.maxsize
+            self.maximum=-sys.maxsize-1
+            if stream == 'contacts': 
+                self.times=10
             else:
-                times =5
+                self.times =3
 
             if stream in 'email_events':
-                email_records = self.test_client.create(stream, times)
+                email_records = self.test_client.create(stream, self.times)
                 self.expected_records['email_events'] += email_records
             else:
                 # create records, one will be updated between syncs
                 time_diff =0
-                for _ in range(times):
+                for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
                     if stream in 'contacts':
+                        if self.test_client.time_difference < self.minimum:
+                            self.minimum = self.test_client.time_difference
+                        if self.test_client.time_difference > self.maximum:
+                            self.maximum = self.test_client.time_difference
                         time_diff += self.test_client.time_difference 
 
                 if stream in 'contacts':
+                    self.avg = time_diff/5
                     self.test_client.record_create_times[stream] = time_diff
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
             contact_records = self.expected_records['contacts']
-            for i in range(times):
+            for i in range(self.times):
                 record = self.test_client.create_contacts_by_company(
                     company_ids=company_ids, contact_records=contact_records
                 )
@@ -263,4 +271,5 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
 
         #Logging for monitoring the time difference for all streams
-        LOGGER.info("Time_difference between Created time and POST message %s", self.test_client.record_create_times )
+        LOGGER.info("Time_difference between Created time and POST message: For 10 records in contacts")
+        LOGGER.info("total: %s, min: %s, max: %s, avg: %s", self.test_client.record_create_times, self.minimum, self.maximum, self.avg)
