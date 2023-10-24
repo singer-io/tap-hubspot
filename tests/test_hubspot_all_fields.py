@@ -191,9 +191,9 @@ class TestHubspotAllFields(HubspotBaseTest):
             # Get all records
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in self.expected_records['companies']]
-                self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids)
+                self.expected_records[stream] = test_client.read(stream, self.expected_page_limits().get(stream), parent_ids=company_ids)
             else:
-                self.expected_records[stream] = test_client.read(stream)
+                self.expected_records[stream] = test_client.read(stream, self.expected_page_limits().get(stream))
 
         for stream, records in self.expected_records.items():
             LOGGER.info("The test client found %s %s records.", len(records), stream)
