@@ -28,16 +28,13 @@ class TestHubspotStartDate(HubspotBaseTest):
         streams_under_test = self.expected_streams() - {'email_events'} # we get this for free with subscription_changes
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
-
-        self.page_size = dict()
         for stream in streams_under_test:
-            #self.page_size[stream] = self.expected_metadata().get(stream).get('expected_page_size')
             if stream == 'contacts_by_company':
-                companies_records = self.test_client.read('companies', self.expected_page_limits().get(stream), since=self.my_start_date)
+                companies_records = self.test_client.read('companies', since=self.my_start_date)
                 company_ids = [company['companyId'] for company in companies_records]
                 self.test_client.create(stream, company_ids)
             else:
-                self.test_client.create(stream )
+                self.test_client.create(stream)
 
     def expected_streams(self):
         """
