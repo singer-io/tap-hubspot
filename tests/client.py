@@ -243,7 +243,7 @@ class TestClient():
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
-        page_size = self.BaseTest.expected_metadata()['companies'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('companies', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/companies/v2/companies/paged"
         if not since:
             since = self.start_date_strf
@@ -292,7 +292,7 @@ class TestClient():
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
         url = f"{BASE_URL}/contacts/v1/lists"
-        page_size = self.BaseTest.expected_metadata()['contact_lists'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('contact_lists',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
 
         if list_id:
             url += f"/{list_id}"
@@ -310,7 +310,7 @@ class TestClient():
                 since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
 
             since = str(since.timestamp() * 1000).split(".")[0]
-            params = {'since': since, 'count': page_size+10}
+            params = {'since': since, 'count': page_size}
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
@@ -318,7 +318,6 @@ class TestClient():
         # paginating through allxo the contact_lists
         has_more = True
         while has_more:
-            
             response = self.get(url, params=params)
             for record in response['lists']:
 
@@ -366,7 +365,7 @@ class TestClient():
         Get all contact vids by paginating using 'has-more' and 'vid-offset/vidOffset'.
         Then use the vids to grab the detailed contacts records.
         """
-        page_size = self.BaseTest.expected_metadata().get('contacts').get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('contacts',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url_1 = f"{BASE_URL}/contacts/v1/lists/all/contacts/all"
         params_1 = {
             'showListMemberships': True,
@@ -398,7 +397,7 @@ class TestClient():
             if pagination  and len(records) > page_size+10:
                 break
 
-        records = self.denest_properties('contacts is %s', records)
+        records = self.denest_properties('contacts', records)
         return records
 
     def get_contacts_by_company(self, parent_ids, pagination=False):
@@ -411,7 +410,7 @@ class TestClient():
             pulling the 'companyId' from each record to perform the corresponding get here.
         """
 
-        page_size = self.BaseTest.expected_metadata()['contacts_by_company'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('contacts_by_company', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/companies/v2/companies/{{}}/vids"
         params = {'count': page_size}
         records = []
@@ -530,7 +529,7 @@ class TestClient():
         """
         Get all email_events by paginating using 'hasMore' and 'offset'.
         """
-        page_size = self.BaseTest.expected_metadata()['email_events'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('email_events',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/email/public/v1/events"
         replication_key = list(self.replication_keys['email_events'])[0]
         params = {'count': page_size}
@@ -570,7 +569,7 @@ class TestClient():
         """
         Get all engagements by paginating using 'hasMore' and 'offset'.
         """
-        page_size = self.BaseTest.expected_metadata()['engagements'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('engagements',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/engagements/v1/engagements/paged"
         replication_key = list(self.replication_keys['engagements'])[0]
         params = {'limit': page_size}
@@ -631,7 +630,7 @@ class TestClient():
         Get all subscription_changes from 'since' date by paginating using 'hasMore' and 'offset'.
         Default since date is one week ago
         """
-        page_size = self.BaseTest.expected_metadata()['subscription_changes'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('subscription_changes',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/email/public/v1/subscriptions/timeline"
         params = {'count': page_size}
         records = []
@@ -705,7 +704,7 @@ class TestClient():
         Get all tickets.
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
-        page_size = self.BaseTest.expected_metadata()['tickets'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('tickets',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/crm/v4/objects/tickets"
         replication_key = list(self.replication_keys["tickets"])[0]
         records = []
@@ -824,13 +823,11 @@ class TestClient():
         }
 
         # generate a contacts record
-        LOGGER.info("Before Post")
         response = self.post(url, data)
         records = [response]
 
         get_url = f"{BASE_URL}/contacts/v1/contact/vid/{response['vid']}/profile"
         params = {'includeVersion': True}
-        LOGGER.info("Before Get")
         get_resp = self.get(get_url, params=params)
 
         created_time = get_resp.get('properties').get('createdate').get('value')
@@ -912,7 +909,7 @@ class TestClient():
         if not company_ids:
             company_ids = [company['companyId'] for company in self.get_companies()]
         if not contact_records:
-            page_size = self.BaseTest.expected_metadata()['contacts_by_company'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+            page_size = self.BaseTest.expected_metadata().get('contacts_by_company',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
             contact_records = self.get_contacts(page_size)
 
         records = []
@@ -1074,7 +1071,7 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         # gather all contacts and randomly choose one that has not hit the limit
-        page_size = self.BaseTest.expected_metadata()['engagements'].get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        page_size = self.BaseTest.expected_metadata().get('engagements',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         contact_records = self.get_contacts(page_size)
         contact_ids = [contact['vid']
                        for contact in contact_records
