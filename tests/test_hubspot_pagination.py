@@ -46,15 +46,12 @@ class TestHubspotPagination(HubspotBaseTest):
 
         # generate test data if necessary, one stream at a time
         for stream in streams:
-
             # Get all records
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in existing_records['companies']]
-                existing_records[stream] = test_client.read(stream, parent_ids=company_ids)
-            elif stream in {'companies', 'contact_lists', 'subscription_changes', 'engagements', 'email_events'}:
-                existing_records[stream] = test_client.read(stream)
+                existing_records[stream] = test_client.read(stream, parent_ids=company_ids, pagination=True)
             else:
-                existing_records[stream] = test_client.read(stream)
+                existing_records[stream] = test_client.read(stream, pagination=True)
 
             # check if we exceed the pagination limit
             LOGGER.info(f"Pagination limit set to - {limits[stream]} and total number of existing record - {len(existing_records[stream])}")
@@ -92,7 +89,6 @@ class TestHubspotPagination(HubspotBaseTest):
             'email_events',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
-
         return streams_to_test
 
     def test_run(self):
