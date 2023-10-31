@@ -102,6 +102,9 @@ ENDPOINTS = {
 
     "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
+
+    "custom_object":        "/crm/v3/schemas",
+    "custom_object_record": "/crm/v3/objects/{object_id}"
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
