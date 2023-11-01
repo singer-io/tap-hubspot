@@ -15,8 +15,7 @@ class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
-    record_create_times = {}
-    time_difference = 0
+    #time_difference = 0
 
     ##########################################################################
     ### CORE METHODS
@@ -178,8 +177,8 @@ class TestClient():
     ##########################################################################
     ### GET
     ##########################################################################
-    ### Take page_size also to limit the pagination to first 2 pages tdl-16124 ###
-    def read(self, stream, page_size, parent_ids=[], since='', pagination=False):
+    ### Take pagination parameter to limit the pagination to first 2 pages tdl-16124 ###
+    def read(self, stream, parent_ids=[], since='', pagination=False):
 
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
@@ -190,13 +189,13 @@ class TestClient():
         elif stream == 'owners':
             return self.get_owners()
         elif stream == 'companies':
-            return self.get_companies(since, page_size, pagination)
+            return self.get_companies(since, pagination)
         elif stream == 'contact_lists':
             return self.get_contact_lists(since, pagination=pagination)
         elif stream == 'contacts_by_company':
-            return self.get_contacts_by_company(parent_ids, page_size, pagination)
+            return self.get_contacts_by_company(parent_ids, pagination)
         elif stream == 'engagements':
-            return self.get_engagements(page_size, pagination)
+            return self.get_engagements(pagination)
         elif stream == 'campaigns':
             return self.get_campaigns()
         elif stream == 'deals':
@@ -204,15 +203,15 @@ class TestClient():
         elif stream == 'workflows':
             return self.get_workflows()
         elif stream == 'contacts':
-            return self.get_contacts(page_size, pagination)
+            return self.get_contacts(pagination)
         elif stream == 'deal_pipelines':
             return self.get_deal_pipelines()
         elif stream == 'email_events':
-            return self.get_email_events(page_size, pagination)
+            return self.get_email_events(pagination)
         elif stream == 'subscription_changes':
-            return self.get_subscription_changes(since, page_size, pagination)
+            return self.get_subscription_changes(since, pagination)
         elif stream == "tickets":
-            return self.get_tickets(page_size, pagination)
+            return self.get_tickets(pagination)
         else:
             raise NotImplementedError
 
@@ -241,10 +240,11 @@ class TestClient():
         response = self.get(url)
         return response
 
-    def get_companies(self, since='', page_size=0, pagination=False):
+    def get_companies(self, since='', pagination=False):
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
+        page_size = self.BaseTest.expected_metadata().get('companies', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/companies/v2/companies/paged"
         if not since:
             since = self.start_date_strf
@@ -292,6 +292,7 @@ class TestClient():
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
+        page_size = self.BaseTest.expected_metadata().get('contact_lists',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/contacts/v1/lists"
 
         if list_id:
@@ -301,7 +302,7 @@ class TestClient():
             return response
 
         if since == 'all':
-            params = {'count': 250}
+            params = {'count': page_size}
         else:
             if not since:
                 since = self.start_date_strf
@@ -310,7 +311,7 @@ class TestClient():
                 since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
 
             since = str(since.timestamp() * 1000).split(".")[0]
-            params = {'since': since, 'count': 250}
+            params = {'since': since, 'count': page_size}
 
         records = []
         replication_key = list(self.replication_keys['contact_lists'])[0]
@@ -327,7 +328,7 @@ class TestClient():
 
             has_more = response['has-more']
             params['offset'] = response['offset']
-            if pagination and len(records) > 260:
+            if pagination and len(records) > page_size+10:
                 break
 
         return records
@@ -361,11 +362,12 @@ class TestClient():
 
         return records[0]
 
-    def get_contacts(self, page_size=0, pagination=False):
+    def get_contacts(self, pagination=False):
         """
         Get all contact vids by paginating using 'has-more' and 'vid-offset/vidOffset'.
         Then use the vids to grab the detailed contacts records.
         """
+        page_size = self.BaseTest.expected_metadata().get('contacts',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url_1 = f"{BASE_URL}/contacts/v1/lists/all/contacts/all"
         params_1 = {
             'showListMemberships': True,
@@ -398,10 +400,10 @@ class TestClient():
                 LOGGER.info("haven't met the page size")
                 break
 
-        records = self.denest_properties('contacts is %s', records)
+        records = self.denest_properties('contacts', records)
         return records
 
-    def get_contacts_by_company(self, parent_ids, page_size=0, pagination=False):
+    def get_contacts_by_company(self, parent_ids, pagination=False):
         """
         Get all contacts_by_company iterating over compnayId's and
         paginating using 'hasMore' and 'vidOffset'. This stream is essentially
@@ -411,6 +413,7 @@ class TestClient():
             pulling the 'companyId' from each record to perform the corresponding get here.
         """
 
+        page_size = self.BaseTest.expected_metadata().get('contacts_by_company', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/companies/v2/companies/{{}}/vids"
         params = {'count': page_size}
         records = []
@@ -525,10 +528,11 @@ class TestClient():
         records = self.denest_properties('deals', records)
         return records
 
-    def get_email_events(self, recipient='', page_size=0, pagination=False):
+    def get_email_events(self, recipient='', pagination=False):
         """
         Get all email_events by paginating using 'hasMore' and 'offset'.
         """
+        page_size = self.BaseTest.expected_metadata().get('email_events',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/email/public/v1/events"
         replication_key = list(self.replication_keys['email_events'])[0]
         params = {'count': page_size}
@@ -564,10 +568,11 @@ class TestClient():
 
         return response
 
-    def get_engagements(self, page_size=0, pagination=False):
+    def get_engagements(self, pagination=False):
         """
         Get all engagements by paginating using 'hasMore' and 'offset'.
         """
+        page_size = self.BaseTest.expected_metadata().get('engagements',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/engagements/v1/engagements/paged"
         replication_key = list(self.replication_keys['engagements'])[0]
         params = {'limit': page_size}
@@ -623,11 +628,12 @@ class TestClient():
         transformed_records = self.datatype_transformations('owners', records)
         return transformed_records
 
-    def get_subscription_changes(self, since='', page_size=0, pagination=False):
+    def get_subscription_changes(self, since='', pagination=False):
         """
         Get all subscription_changes from 'since' date by paginating using 'hasMore' and 'offset'.
         Default since date is one week ago
         """
+        page_size = self.BaseTest.expected_metadata().get('subscription_changes',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/email/public/v1/subscriptions/timeline"
         params = {'count': page_size}
         records = []
@@ -696,11 +702,12 @@ class TestClient():
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_tickets(self, page_size=0, pagination=False):
+    def get_tickets(self, pagination=False):
         """
         Get all tickets.
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
+        page_size = self.BaseTest.expected_metadata().get('tickets',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/crm/v4/objects/tickets"
         replication_key = list(self.replication_keys["tickets"])[0]
         records = []
@@ -833,6 +840,7 @@ class TestClient():
         #Get the created time and the difference to monitor the time difference - tdl-20939
         created_time = get_resp.get('properties').get('createdate').get('value')
         ts=int(created_time)/1000
+        LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
         self.time_difference = ts-seconds
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
@@ -910,7 +918,8 @@ class TestClient():
         if not company_ids:
             company_ids = [company['companyId'] for company in self.get_companies()]
         if not contact_records:
-            contact_records = self.get_contacts(100)
+            page_size = self.BaseTest.expected_metadata().get('contacts_by_company',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
+            contact_records = self.get_contacts(page_size)
 
         records = []
         for _ in range(times):
@@ -1071,7 +1080,7 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         # gather all contacts and randomly choose one that has not hit the limit
-        page_size = 250
+        page_size = self.BaseTest.expected_metadata().get('engagements',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         contact_records = self.get_contacts(page_size)
         contact_ids = [contact['vid']
                        for contact in contact_records

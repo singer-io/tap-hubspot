@@ -49,9 +49,9 @@ class TestHubspotPagination(HubspotBaseTest):
             # Get all records
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in existing_records['companies']]
-                existing_records[stream] = test_client.read(stream, page_size=limits.get(stream), parent_ids=company_ids, pagination=True)
+                existing_records[stream] = test_client.read(stream, parent_ids=company_ids, pagination=True)
             else:
-                existing_records[stream] = test_client.read(stream, page_size=limits.get(stream), pagination=True)
+                existing_records[stream] = test_client.read(stream, pagination=True)
 
             # check if we exceed the pagination limit
             LOGGER.info(f"Pagination limit set to - {limits[stream]} and total number of existing record - {len(existing_records[stream])}")
