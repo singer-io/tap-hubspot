@@ -15,6 +15,7 @@ class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+    record_create_times = {}
 
     ##########################################################################
     ### CORE METHODS
@@ -822,6 +823,10 @@ class TestClient():
             ]
         }
 
+        #Get the current time in seconds
+        date= datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+        seconds =(date.total_seconds())
+
         # generate a contacts record
         response = self.post(url, data)
         records = [response]
@@ -830,9 +835,11 @@ class TestClient():
         params = {'includeVersion': True}
         get_resp = self.get(get_url, params=params)
 
+        #Get the created time and the difference to monitor the time difference - tdl-20939
         created_time = get_resp.get('properties').get('createdate').get('value')
         ts=int(created_time)/1000
         LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
+        self.time_difference = ts-seconds
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
             get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT
