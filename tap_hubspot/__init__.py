@@ -104,7 +104,7 @@ ENDPOINTS = {
     "tickets":              "/crm/v4/objects/tickets",
 
     "custom_object":        "/crm/v3/schemas",
-    "custom_object_record": "/crm/v3/objects/{object_id}"
+    "custom_object_record": "/crm/v3/objects/p_{object_name}"
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
@@ -1134,6 +1134,13 @@ STREAMS = [
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
+def add_custom_streams(mode):
+    # Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
+    if mode == "DISCOVER":
+        pass
+    elif mode == "SYNC":
+        # bypass the schema addition step
+        pass
 def get_streams_to_sync(streams, state):
     target_stream = singer.get_currently_syncing(state)
     result = streams
@@ -1155,6 +1162,8 @@ def get_selected_streams(remaining_streams, ctx):
     return selected_streams
 
 def do_sync(STATE, catalog):
+    # TODO: Add the custom streams in the existing stream.
+    add_custom_streams()
     # Clear out keys that are no longer used
     clean_state(STATE)
 
@@ -1238,6 +1247,8 @@ def load_discovered_schema(stream):
 
 def discover_schemas():
     result = {'streams': []}
+    # TODO: Add the custom streams in the existing stream.
+    add_custom_streams()
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         try:
