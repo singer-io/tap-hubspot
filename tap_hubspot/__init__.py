@@ -103,7 +103,7 @@ ENDPOINTS = {
     "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
 
-    "custom_object":        "/crm/v3/schemas",
+    "custom_objects":        "/crm/v3/schemas",
     "custom_object_record": "/crm/v3/objects/p_{object_name}"
 }
 
@@ -205,6 +205,11 @@ def parse_custom_schema(entity_name, data):
         return {
             field['name']: get_field_type_schema(field['type'])
             for field in data["results"]
+        }
+    elif entity_name.startswith("custom_"):
+        return {
+            field['name']: get_field_type_schema(field['type'])
+            for field in data
         }
 
     return {
@@ -1107,6 +1112,14 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def sync_custom_objects():
+    # TODO
+    pass
+
+def sync_custom_object_records():
+    # TODO
+    pass
+
 @attr.s
 class Stream:
     tap_stream_id = attr.ib()
@@ -1123,6 +1136,7 @@ STREAMS = [
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
+    Stream('custom_objects', sync_custom_objects, ['id'], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -1134,13 +1148,66 @@ STREAMS = [
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
+
 def add_custom_streams(mode):
-    # Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
-    if mode == "DISCOVER":
-        pass
-    elif mode == "SYNC":
-        # bypass the schema addition step
-        pass
+    custom_objects_url = get_url("custom_objects")
+    data = request(custom_objects_url).json()
+    if "results" in data.keys():
+        for custom_object in data["results"]:
+            stream_id = "custom_" + custom_object["name"]
+            STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
+            if mode == "DISCOVER":
+                schema = {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": [
+                                "null",
+                                "string"
+                            ]
+                        },
+                        "createdAt": {
+                            "type": ["null", "string"],
+                            "format": "date-time"
+                        },
+                        "updatedAt": {
+                            "type": ["null", "string"],
+                            "format": "date-time"
+                        },
+                        "archived": {
+                            "type": [
+                                "null",
+                                "boolean"
+                            ]
+                        }
+                    }
+                }
+                custom_schema = parse_custom_schema(stream_id, custom_object["properties"])
+                schema["properties"]["properties"] = {
+                    "type": "object",
+                    "properties": custom_schema,
+                }
+
+                # Move properties to top level
+                custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
+                schema['properties'].update(custom_schema_top_level)
+
+                custom_schema_path = get_abs_path('schemas/{}.json'.format(stream_id))
+
+                # Write data to the JSON file
+                with open(custom_schema_path, 'w') as json_file:
+                    json.dump(schema, json_file)
+
+
+    # if mode == "DISCOVER":
+    #     pass
+    # elif mode == "SYNC":
+    #     # bypass the schema addition step
+    #     pass
+# TODO: Flow
+# Discovery - 
+# 1. Generate the schema and write it down in the folder.
+# 2. Add the STREAM object in the streams dictionary.
 def get_streams_to_sync(streams, state):
     target_stream = singer.get_currently_syncing(state)
     result = streams
@@ -1163,7 +1230,7 @@ def get_selected_streams(remaining_streams, ctx):
 
 def do_sync(STATE, catalog):
     # TODO: Add the custom streams in the existing stream.
-    add_custom_streams()
+    # add_custom_streams(mode="SYNC")
     # Clear out keys that are no longer used
     clean_state(STATE)
 
@@ -1248,7 +1315,7 @@ def load_discovered_schema(stream):
 def discover_schemas():
     result = {'streams': []}
     # TODO: Add the custom streams in the existing stream.
-    add_custom_streams()
+    add_custom_streams(mode="DISCOVER")
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         try:
