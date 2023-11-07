@@ -35,6 +35,14 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
+
+    def get_custom_property(self, url, params=dict()):
+        """Perform a GET using the standard requests method and logs the action"""
+        """Do not handle exception for get failure in custom contact properties"""
+        response = requests.get(url, params=params, headers=self.HEADERS)
+        LOGGER.info(f"TEST CLIENT | GET {url} params={params}  STATUS: {response.status_code}")
+        return response
+
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
         response = requests.get(url, params=params, headers=self.HEADERS)
@@ -773,6 +781,111 @@ class TestClient():
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
+    def delete_custom_contacts_property(self):
+        """ Clearup the custom contact properties before CRUD test """
+        custom_properties = ['custom_string', 'custom_number', 'custom_date', 'custom_datetime', 'multi_pick']
+        for property in custom_properties:
+             get_url = f"{BASE_URL}/properties/v1/contacts/properties/named/" + property
+             response = self.get_custom_property(get_url)
+             if ( response.status_code == 404 ):
+                 continue
+             url = f"{BASE_URL}/properties/v1/contacts/properties/named/" + property
+             response = self.delete(url)
+             LOGGER.info("response is %s", response)
+
+    def create_custom_contact_properties(self):
+        """Create custom contact properties of all the types"""
+        self.delete_custom_contacts_property()
+
+        url = f"{BASE_URL}/properties/v1/contacts/properties"
+        data1 = {
+            "name": "custom_string",
+            "label": "A New String Custom Property",
+            "description": "A new string property for you",
+            "groupName": "contactinformation",
+            "type": "string",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 6,
+            "options": [
+            ]
+        }
+
+        data2 = {
+            "name": "custom_number",
+            "label": "A New Number Custom Property",
+            "description": "A new number property for you",
+            "groupName": "contactinformation",
+            "type": "number",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 7,
+            "options": [
+            ]
+        }
+
+        data3 = {
+            "name": "custom_date",
+            "label": "A New Date Custom Property",
+            "description": "A new date property for you",
+            "groupName": "contactinformation",
+            "type": "date",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 9,
+            "options": [
+            ]
+        }
+
+        data4 = {
+            "name": "custom_datetime",
+            "label": "A New Datetime Custom Property",
+            "description": "A new datetime property for you",
+            "groupName": "contactinformation",
+            "type": "datetime",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 10,
+            "options": [
+            ]
+        }
+        data5 = {
+            "name": "multi_pick",
+            "label": "multi pick",
+            "description": "multi select picklist test",
+            "groupName": "contactinformation",
+            "type": "enumeration",
+            "fieldType": "checkbox",
+            "hidden": False,
+            "options": [
+              {
+                "label": "Option A",
+                "value": "option_a"
+              },
+              {
+                "label": "Option B",
+                "value": "option_b"
+              },
+              {
+                "label": "Option C",
+      "          value": "option_c"
+              }
+            ],
+            "formField": True
+        }
+
+        # generate a contacts record
+        response = self.post(url, data1)
+        LOGGER.info("response is %s", response)
+        response = self.post(url, data2)
+        LOGGER.info("response is %s", response)
+        response = self.post(url, data3)
+        LOGGER.info("response is %s", response)
+        response = self.post(url, data4)
+        LOGGER.info("response is %s", response)
+        response = self.post(url, data5)
+        LOGGER.info("response is %s", response)
+
     def create_contacts(self):
         """
         Generate a single contacts record.
@@ -783,6 +896,14 @@ class TestClient():
         url = f"{BASE_URL}/contacts/v1/contact"
         data = {
             "properties": [
+                {
+                    "property": "custom_string",
+                    "value": "custom_string_value"
+                },
+                {
+                    "property": "custom_number",
+                    "value": 1567
+                },
                 {
                     "property": "email",
                     "value": f"{record_uuid}@stitchdata.com"
