@@ -53,6 +53,9 @@ class TestHubspotBookmarks(HubspotBaseTest):
                                  for stream in expected_streams}
 
         for stream in expected_streams - {'contacts_by_company'}:
+            """ Create custom properties for contacts """
+            if stream == 'contacts':
+                self.test_client.create_custom_contact_properties()
             if stream == 'email_events':
                 email_records = self.test_client.create(stream, times=3)
                 self.expected_records['email_events'] += email_records
@@ -61,7 +64,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 for _ in range(3):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
-
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
             contact_records = self.expected_records['contacts']
