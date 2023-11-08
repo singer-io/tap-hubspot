@@ -1225,7 +1225,6 @@ STREAMS = [
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
-    Stream('custom_objects', sync_custom_objects, ['id'], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
@@ -1240,11 +1239,10 @@ STREAMS = [
 
 def add_custom_streams(mode):
     custom_objects_url = get_url("custom_objects")
-    data = request(custom_objects_url).json()
     # Load Hubspot's shared schemas
     refs = load_shared_schema_refs()
-    if "results" in data.keys():
-        for custom_object in data["results"]:
+    try:
+        for custom_object in gen_request_custom_objects("custom_objects", custom_objects_url, {}, 'results', "paging"):
             stream_id = "custom_" + custom_object["name"]
             STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
             if mode == "DISCOVER":
@@ -1265,6 +1263,12 @@ def add_custom_streams(mode):
                 # Write data to the JSON file
                 with open(custom_schema_path, 'w') as json_file:
                     json.dump(final_schema, json_file)
+        else:
+            # on having the correct scopes for custom schemas add the custom_objects schema stream
+            STREAMS.append(Stream('custom_objects', sync_custom_objects, ['id'], 'updatedAt', 'INCREMENTAL')),
+    except SourceUnavailableException as ex:
+        warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+        LOGGER.warning(warning_message)
 
 def load_shared_schema_refs():
     shared_schemas_path = get_abs_path('schemas/shared')
