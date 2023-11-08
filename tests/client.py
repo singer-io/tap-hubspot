@@ -17,7 +17,6 @@ class TestClient():
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     record_create_times = {}
-    time_difference=[]
 
     ##########################################################################
     ### CORE METHODS
@@ -761,8 +760,9 @@ class TestClient():
         elif stream == 'workflows':
             return self.create_workflows()
         elif stream == 'contacts':
+            if stream not in self.record_create_times.keys():
+                self.record_create_times[stream]=[]
             records =  self.create_contacts()
-            self.record_create_times[stream]=self.time_difference
             return records
         elif stream == 'deal_pipelines':
             return self.create_deal_pipelines()
@@ -843,7 +843,7 @@ class TestClient():
         created_time = get_resp.get('properties').get('createdate').get('value')
         ts=int(created_time)/1000
         LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
-        self.time_difference.append(ts-seconds)
+        self.record_create_times["contacts"].append(ts-seconds)
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
             get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT

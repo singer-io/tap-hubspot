@@ -55,7 +55,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.expected_records = {stream: []
                                  for stream in expected_streams}
         for stream in expected_streams - {'contacts_by_company'}:
-            self.time_difference =[]
             if stream == 'contacts': 
                 self.times=10
             else:
