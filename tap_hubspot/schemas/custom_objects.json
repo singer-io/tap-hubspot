@@ -56,7 +56,6 @@
                         "readOnlyValue": {"type": ["null", "boolean"]}
                     },
                     "name": {"type": ["null", "string"]},
-                    "options": {"type": ["null", "array"]},
                     "showCurrencySymbol": {"type": ["null", "boolean"]},
                     "updatedUserId": {"type": ["null", "string"]},
                     "updatedAt": {"type": ["null", "string"], "format": "date-time"}
