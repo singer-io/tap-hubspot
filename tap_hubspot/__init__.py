@@ -1112,13 +1112,102 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
-def sync_custom_objects():
-    # TODO
-    pass
+def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
+    """
+    Cursor-based API Pagination : Used in custom_objects stream implementation
+    """
+    with metrics.record_counter(tap_stream_id) as counter:
+        while True:
+            data = request(url, params).json()
 
-def sync_custom_object_records():
-    # TODO
-    pass
+            if data.get(path) is None:
+                raise RuntimeError(
+                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+            for row in data[path]:
+                counter.increment()
+                yield row
+
+            if not data.get(more_key):
+                break
+            params['after'] = data.get(more_key).get('next').get('after')
+
+def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
+    
+    mdata = metadata.to_map(catalog.get('metadata'))
+    if stream_id.startswith("custom_") and stream_id != "custom_objects":
+        url = get_url("custom_object_record", object_name=stream_id[len("custom_"):])
+    else:
+        url = get_url(stream_id)
+    max_bk_value = bookmark_value = utils.strptime_with_tz(
+        get_start(STATE, stream_id, bookmark_key))
+
+    LOGGER.info(f"Sync record for {stream_id} from {bookmark_value}")
+    
+    schema = load_schema(stream_id)
+    singer.write_schema(stream_id, schema, [primary_key],
+                        [bookmark_key], catalog.get('stream_alias'))
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
+        for row in gen_request_custom_objects(stream_id, url, params, 'results', "paging"):
+            # parsing the string formatted date to datetime object
+            modified_time = utils.strptime_to_utc(row[bookmark_key])
+
+            # Checking the bookmark value is present on the record and it
+            # is greater than or equal to defined previous bookmark value
+            if modified_time and modified_time >= bookmark_value:
+                # transforms the data and filters out the selected fields from the catalog
+                if stream_id == "custom_objects":
+                    record = transformer.transform(row, schema, mdata)
+                else:
+                    record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                singer.write_record(stream_id, record, catalog.get(
+                    'stream_alias'), time_extracted=utils.now())
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
+    return STATE
+
+def sync_custom_objects(STATE, ctx):
+    """
+    Function to sync `custom_objects` schema records
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    stream_id = "custom_objects"
+    primary_key = "id"
+    bookmark_key = "updatedAt"
+
+    params = {'limit': 100,
+              'associations': 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets',
+              'archived': False
+              }
+    return sync_records(stream_id,primary_key,bookmark_key, catalog, STATE, params)
+
+
+def sync_custom_object_records(STATE, ctx, stream_id):
+    """
+    Function to sync `custom_'object'` stream records
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    primary_key = "id"
+    bookmark_key = "updatedAt"
+
+    params = {'limit': 100,
+              'associations': 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets',
+              'properties': get_selected_property_fields(catalog, mdata),
+              'archived': False
+              }
+    return sync_records(stream_id,primary_key,bookmark_key, catalog, STATE, params)
+
 
 @attr.s
 class Stream:
@@ -1199,15 +1288,6 @@ def add_custom_streams(mode):
                     json.dump(schema, json_file)
 
 
-    # if mode == "DISCOVER":
-    #     pass
-    # elif mode == "SYNC":
-    #     # bypass the schema addition step
-    #     pass
-# TODO: Flow
-# Discovery - 
-# 1. Generate the schema and write it down in the folder.
-# 2. Add the STREAM object in the streams dictionary.
 def get_streams_to_sync(streams, state):
     target_stream = singer.get_currently_syncing(state)
     result = streams
@@ -1229,8 +1309,7 @@ def get_selected_streams(remaining_streams, ctx):
     return selected_streams
 
 def do_sync(STATE, catalog):
-    # TODO: Add the custom streams in the existing stream.
-    # add_custom_streams(mode="SYNC")
+    add_custom_streams(mode="SYNC")
     # Clear out keys that are no longer used
     clean_state(STATE)
 
@@ -1247,7 +1326,10 @@ def do_sync(STATE, catalog):
         singer.write_state(STATE)
 
         try:
-            STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
+            if stream.tap_stream_id.startswith("custom_") and stream.tap_stream_id != "custom_objects":
+                stream.sync(STATE, ctx, stream.tap_stream_id)
+            else:
+                STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException as ex:
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
