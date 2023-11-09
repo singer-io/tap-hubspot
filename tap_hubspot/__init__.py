@@ -1138,7 +1138,7 @@ def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
     Synchronize records from a data source
     """
     mdata = metadata.to_map(catalog.get('metadata'))
-    if stream_id.startswith("custom_") and stream_id != "custom_objects":
+    if stream_id.startswith("custom_"):
         url = get_url("custom_object_record", object_name=stream_id[len("custom_"):])
     else:
         url = get_url(stream_id)
@@ -1176,21 +1176,6 @@ def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
     STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
-
-def sync_custom_objects(STATE, ctx):
-    """
-    Function to sync all the `custom_objects` schema
-    """
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get('metadata'))
-    stream_id = "custom_objects"
-    primary_key = "id"
-    bookmark_key = "updatedAt"
-
-    params = {'limit': 100,
-              'archived': False
-              }
-    return sync_records(stream_id,primary_key,bookmark_key, catalog, STATE, params)
 
 
 def sync_custom_object_records(STATE, ctx, stream_id):
@@ -1264,9 +1249,7 @@ def add_custom_streams(mode):
                 # Write data to the JSON file
                 with open(custom_schema_path, 'w') as json_file:
                     json.dump(final_schema, json_file)
-        else:
-            # on having the correct scopes for custom schemas add the custom_objects schema stream
-            STREAMS.append(Stream('custom_objects', sync_custom_objects, ['id'], 'updatedAt', 'INCREMENTAL')),
+
     except SourceUnavailableException as ex:
         warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
         LOGGER.warning(warning_message)
@@ -1322,7 +1305,7 @@ def do_sync(STATE, catalog):
         singer.write_state(STATE)
 
         try:
-            if stream.tap_stream_id.startswith("custom_") and stream.tap_stream_id != "custom_objects":
+            if stream.tap_stream_id.startswith("custom_"):
                 stream.sync(STATE, ctx, stream.tap_stream_id)
             else:
                 STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
