@@ -104,8 +104,8 @@ ENDPOINTS = {
     "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
 
-    "custom_objects":        "/crm/v3/schemas",
-    "custom_object_record": "/crm/v3/objects/p_{object_name}"
+    "custom_objects_schema":        "/crm/v3/schemas",
+    "custom_objects": "/crm/v3/objects/p_{object_name}"
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
@@ -1139,7 +1139,7 @@ def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
     """
     mdata = metadata.to_map(catalog.get('metadata'))
     if stream_id.startswith("custom_"):
-        url = get_url("custom_object_record", object_name=stream_id[len("custom_"):])
+        url = get_url("custom_objects", object_name=stream_id[len("custom_"):])
     else:
         url = get_url(stream_id)
     max_bk_value = bookmark_value = utils.strptime_with_tz(
@@ -1162,10 +1162,7 @@ def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
             # is greater than or equal to defined previous bookmark value
             if modified_time and modified_time >= bookmark_value:
                 # transforms the data and filters out the selected fields from the catalog
-                if stream_id == "custom_objects":
-                    record = transformer.transform(row, schema, mdata)
-                else:
-                    record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record(stream_id, record, catalog.get(
                     'stream_alias'), time_extracted=utils.now())
             if modified_time and modified_time >= max_bk_value:
@@ -1224,15 +1221,15 @@ STREAMS = [
 
 
 def add_custom_streams(mode):
-    custom_objects_url = get_url("custom_objects")
+    custom_objects_schema_url = get_url("custom_objects_schema")
     # Load Hubspot's shared schemas
     refs = load_shared_schema_refs()
     try:
-        for custom_object in gen_request_custom_objects("custom_objects", custom_objects_url, {}, 'results', "paging"):
+        for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
             stream_id = "custom_" + custom_object["name"]
             STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
             if mode == "DISCOVER":
-                schema = utils.load_json(get_abs_path('schemas/shared/custom_object_record.json'))
+                schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
                 custom_schema = parse_custom_schema(stream_id, custom_object["properties"])
                 schema["properties"]["properties"] = {
                     "type": "object",
