@@ -1134,7 +1134,9 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
             params['after'] = data.get(more_key).get('next').get('after')
 
 def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
-    
+    """
+    Synchronize records from a data source
+    """
     mdata = metadata.to_map(catalog.get('metadata'))
     if stream_id.startswith("custom_") and stream_id != "custom_objects":
         url = get_url("custom_object_record", object_name=stream_id[len("custom_"):])
@@ -1186,7 +1188,6 @@ def sync_custom_objects(STATE, ctx):
     bookmark_key = "updatedAt"
 
     params = {'limit': 100,
-              'associations': 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets',
               'archived': False
               }
     return sync_records(stream_id,primary_key,bookmark_key, catalog, STATE, params)
@@ -1194,7 +1195,7 @@ def sync_custom_objects(STATE, ctx):
 
 def sync_custom_object_records(STATE, ctx, stream_id):
     """
-    Function to sync record for each `custom_object` stream
+    Function to sync records for each `custom_object` stream
     """
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -1391,7 +1392,6 @@ def load_discovered_schema(stream):
 
 def discover_schemas():
     result = {'streams': []}
-    # TODO: Add the custom streams in the existing stream.
     add_custom_streams(mode="DISCOVER")
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
