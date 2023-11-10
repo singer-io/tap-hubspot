@@ -42,6 +42,8 @@ setup(name='tap-hubspot',
               "workflows.json",
           ],
           'tap_hubspot/schemas/shared': [
+              "associations_schema.json",
+              "custom_objects.json",
           ]
       },
       include_package_data=True,
