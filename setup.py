@@ -41,6 +41,8 @@ setup(name='tap-hubspot',
               "subscription_changes.json",
               "workflows.json",
           ],
+          'tap_hubspot/schemas/shared': [
+          ]
       },
       include_package_data=True,
 )

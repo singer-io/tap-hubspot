@@ -19,7 +19,6 @@ from singer import (transform,
                     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
                     Transformer, _transform_datetime)
 
-
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
