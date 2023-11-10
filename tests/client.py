@@ -1006,7 +1006,7 @@ class TestClient():
                     "color": random.choice(["white", "red", "black", "orange", "green"]),
                     "mileage": random.choice([10, 20, 30, 40, 15, 25, 35, 12, 22, 28]),
                     "price": random.choice([10000, 20000, 30000, 40000, 50000, 60000, 70000]),
-                    "notes": random.chice(["Excellent condition.", "Bad Condition"])
+                    "notes": random.choice(["Excellent condition.", "Bad Condition"])
                 }
             }
         elif object_name == "co_firsts":
@@ -1443,7 +1443,7 @@ class TestClient():
         elif stream == 'tickets':
             return self.update_tickets(record_id)
         elif stream.startswith('custom_'):
-            return self.update_custom_object_record(record_id, stream)
+            return self.update_custom_object_record(stream, record_id)
         else:
             raise NotImplementedError(f"Test client does not have an update method for {stream}")
 
