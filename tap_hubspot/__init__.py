@@ -1188,7 +1188,7 @@ def sync_custom_object_records(STATE, ctx, stream_id):
               'properties': get_selected_property_fields(catalog, mdata),
               'archived': False
               }
-    return sync_records(stream_id,primary_key,bookmark_key, catalog, STATE, params)
+    return sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params)
 
 
 @attr.s
