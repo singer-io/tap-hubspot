@@ -8,11 +8,11 @@ import tap_tester.runner      as runner
 
 from base import HubspotBaseTest
 from client import TestClient
+from tap_tester import LOGGER
 
 
 STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
 STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
-
 
 class TestHubspotBookmarks(HubspotBaseTest):
     """Ensure tap replicates new and upated records based on the replication method of a given stream.
@@ -30,7 +30,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-
         expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
 
         return expected_streams.difference({
@@ -48,24 +47,32 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.test_client = TestClient(self.get_properties()['start_date'])
 
     def create_test_data(self, expected_streams):
+        """
+        Creating more records(5) instead of 3 to get the update time to build the histogram - tdl-20939
+        Excluding workflows as it results in assertion failures with expected_pk and sync_pk at line#261
+        """
 
         self.expected_records = {stream: []
                                  for stream in expected_streams}
-
         for stream in expected_streams - {'contacts_by_company'}:
-            if stream == 'email_events':
-                email_records = self.test_client.create(stream, times=3)
+            if stream == 'contacts': 
+                self.times=10
+            else:
+                self.times =3
+
+            if stream in 'email_events':
+                email_records = self.test_client.create(stream, self.times)
                 self.expected_records['email_events'] += email_records
             else:
                 # create records, one will be updated between syncs
-                for _ in range(3):
+                for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
             contact_records = self.expected_records['contacts']
-            for i in range(3):
+            for i in range(self.times):
                 record = self.test_client.create_contacts_by_company(
                     company_ids=company_ids, contact_records=contact_records
                 )
@@ -246,3 +253,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                               'email_events'}: # BUG | https://jira.talendforge.org/browse/TDL-15706
                     continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
+
+    def tearDown(self):
+        """Print histogram of Create time difference - tdl-20939"""
+        self.test_client.print_histogram_data()
