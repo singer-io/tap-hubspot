@@ -53,7 +53,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                                  for stream in expected_streams}
 
         for stream in expected_streams - {'contacts_by_company'}:
-            """ Create custom properties for contacts """
+            # Create custom properties for contacts
             if stream == 'contacts':
                 self.test_client.create_custom_contact_properties()
             if stream == 'email_events':

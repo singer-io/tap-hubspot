@@ -868,7 +868,7 @@ class TestClient():
               },
               {
                 "label": "Option C",
-      "          value": "option_c"
+                "value": "option_c"
               }
             ],
             "formField": True

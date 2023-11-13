@@ -286,12 +286,8 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
 
                         self.assertSetEqual(expected_keys_adjusted, actual_keys_adjusted)
 
-    ##########################################################################
-    # Tests To Skip
-    ##########################################################################
-
-    @unittest.skip("Skip till all cards of missing fields are fixed. TDL-16145 ")
-    def test_all_fields_for_streams_are_replicated(self):
+    """
+    Below code to be included in test_all_fields_for_streams_are_replicated once all cards of missing fields are fixed. TDL-16145 
         for stream in self.test_streams:
             with self.subTest(stream=stream):
 
@@ -305,6 +301,10 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
                 # test the combination of all records
                 self.assertSetEqual(fields_replicated, expected_all_keys,
                                     logging=f"verify all fields are replicated for stream {stream}")
+    """
+    ##########################################################################
+    # Tests To Skip
+    ##########################################################################
 
     @unittest.skip("Random selection doesn't always sync records")
     def test_all_streams_sync_records(self):
