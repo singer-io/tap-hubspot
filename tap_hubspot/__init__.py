@@ -1066,7 +1066,7 @@ def sync_engagements(STATE, ctx):
     singer.write_state(STATE)
 
     url = get_url("engagements_all")
-    params = {'limit': 250}
+    params = {'limit': int(CONFIG.get('engagements_page_size') or 190)}
     top_level_key = "results"
     engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
 
