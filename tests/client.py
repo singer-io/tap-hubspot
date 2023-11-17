@@ -17,6 +17,7 @@ class TestClient():
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     record_create_times = {}
+    contacts_added = []
 
     ##########################################################################
     ### CORE METHODS
@@ -749,6 +750,10 @@ class TestClient():
             return self.create_companies()
         elif stream == 'contact_lists':
             return self.create_contact_lists()
+        elif stream == 'static_contact_lists':
+            static_list = self.create_contact_lists(False)
+            #records =  self.create_contacts()
+            #record = self.add_contact_to_contact_list(list_id, contact_email)
         elif stream == 'contacts_by_company':
             return self.create_contacts_by_company(company_ids, times=times)
         elif stream == 'engagements':
@@ -784,13 +789,14 @@ class TestClient():
         Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/create_contact
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
+        value = f"{record_uuid}@stitchdata.com"
 
         url = f"{BASE_URL}/contacts/v1/contact"
         data = {
             "properties": [
                 {
                     "property": "email",
-                    "value": f"{record_uuid}@stitchdata.com"
+                    "value": value
                 },
                 {
                     "property": "firstname",
@@ -851,6 +857,9 @@ class TestClient():
         get_resp['versionTimestamp'] = converted_versionTimestamp
         records = self.denest_properties('contacts', [get_resp])
 
+        # Add the email to add it to the contact list
+        self.contacts_added.add(value)
+
         return records
 
     def create_campaigns(self):
@@ -884,7 +893,7 @@ class TestClient():
         records = [response]
         return records
 
-    def create_contact_lists(self):
+    def create_contact_lists(self, dynamic=True):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
 
@@ -893,18 +902,41 @@ class TestClient():
             using different filters would result in any new fields.
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
+        value = f"@hubspot{record_uuid}"
 
         url = f"{BASE_URL}/contacts/v1/lists/"
         data = {
             "name": f"tweeters{record_uuid}",
-            "dynamic": True,
+            "dynamic": dynamic,
             "filters": [
                 [{
                     "operator": "EQ",
-                    "value": f"@hubspot{record_uuid}",
+                    "value": value,
                     "property": "twitterhandle",
                     "type": "string"
                 }]
+            ]
+        }
+        # generate a record
+        response = self.post(url, data)
+        records = [response]
+        return records
+
+    def add_contact_to_contact_list(self, list_id, contact_email):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
+
+        NB: This generates a list based on a 'twitterhandle' filter. There are many
+            different filters, but at the time of implementation it did not seem that
+            using different filters would result in any new fields.
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        value = f"@hubspot{record_uuid}"
+
+        url = f"{BASE_URL}/contacts/v1/lists/{list_id}/add"
+        data = {
+            "emails": [
+               contact_email
             ]
         }
         # generate a record

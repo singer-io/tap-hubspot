@@ -30,11 +30,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
+        """expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
 
         return expected_streams.difference({
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        })
+        })"""
+        return {'contact_lists'}
 
     def get_properties(self):
         return {
@@ -64,6 +65,9 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 email_records = self.test_client.create(stream, self.times)
                 self.expected_records['email_events'] += email_records
             else:
+                if stream in 'contact_lists':
+                    static_list = self.test_client.create('static_contact_lists')
+                    #self.expected_records[stream] += static_list
                 # create records, one will be updated between syncs
                 for _ in range(self.times):
                     record = self.test_client.create(stream)
