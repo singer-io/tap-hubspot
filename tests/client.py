@@ -7,6 +7,7 @@ import backoff
 import requests
 from base import HubspotBaseTest
 from tap_tester import LOGGER
+from copy import deepcopy
 
 DEBUG = False
 BASE_URL = "https://api.hubapi.com"
@@ -37,6 +38,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
+
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
         response = requests.get(url, params=params, headers=self.HEADERS)
@@ -778,6 +780,103 @@ class TestClient():
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
+    def create_custom_contact_properties(self):
+        """Create custom contact properties of all the types"""
+
+        url = f"{BASE_URL}/properties/v1/contacts/properties"
+        data = []
+        property = {
+            "name": "custom_string",
+            "label": "A New String Custom Property",
+            "description": "A new string property for you",
+            "groupName": "contactinformation",
+            "type": "string",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 6,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "custom_number",
+            "label": "A New Number Custom Property",
+            "description": "A new number property for you",
+            "groupName": "contactinformation",
+            "type": "number",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 7,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "custom_date",
+            "label": "A New Date Custom Property",
+            "description": "A new date property for you",
+            "groupName": "contactinformation",
+            "type": "date",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 9,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "custom_datetime",
+            "label": "A New Datetime Custom Property",
+            "description": "A new datetime property for you",
+            "groupName": "contactinformation",
+            "type": "datetime",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 10,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "multi_pick",
+            "label": "multi pick",
+            "description": "multi select picklist test",
+            "groupName": "contactinformation",
+            "type": "enumeration",
+            "fieldType": "checkbox",
+            "hidden": False,
+            "options": [
+              {
+                "label": "Option A",
+                "value": "option_a"
+              },
+              {
+                "label": "Option B",
+                "value": "option_b"
+              },
+              {
+                "label": "Option C",
+                "value": "option_c"
+              }
+            ],
+            "formField": True
+        }
+        data.append(deepcopy(property))
+        # generate a contacts record
+
+        for current_data in data:
+            try:
+                response = self.post(url, current_data)
+                LOGGER.info("response is %s", response)
+            except Exception as e:
+                LOGGER.info("Data already exists for %s", current_data)
+                pass
+
+
     def create_contacts(self):
         """
         Generate a single contacts record.
@@ -788,6 +887,14 @@ class TestClient():
         url = f"{BASE_URL}/contacts/v1/contact"
         data = {
             "properties": [
+                {
+                    "property": "custom_string",
+                    "value": "custom_string_value"
+                },
+                {
+                    "property": "custom_number",
+                    "value": 1567
+                },
                 {
                     "property": "email",
                     "value": f"{record_uuid}@stitchdata.com"

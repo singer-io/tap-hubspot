@@ -57,6 +57,8 @@ class TestHubspotBookmarks(HubspotBaseTest):
         for stream in expected_streams - {'contacts_by_company'}:
             if stream == 'contacts': 
                 self.times=10
+                # Create custom properties for contacts
+                self.test_client.create_custom_contact_properties()
             else:
                 self.times =3
 
