@@ -1018,7 +1018,7 @@ def sync_owners(STATE, ctx):
 
     params = {}
     if CONFIG.get('include_inactives'):
-        params['includeInactives'] = "true"
+        params['includeInactive'] = "true"
     data = request(get_url("owners"), params).json()
 
     time_extracted = utils.now()
