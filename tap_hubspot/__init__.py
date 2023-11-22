@@ -1140,7 +1140,7 @@ def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
     """
     mdata = metadata.to_map(catalog.get('metadata'))
     if stream_id.startswith("custom_"):
-        url = get_url("custom_objects", object_name=stream_id[len("custom_"):])
+        url = get_url("custom_objects", object_name=stream_id.split("custom_")[1])
     else:
         url = get_url(stream_id)
     max_bk_value = bookmark_value = utils.strptime_with_tz(
@@ -1221,15 +1221,15 @@ STREAMS = [
 ]
 
 
-def add_custom_streams(mode):
-    custom_objects_schema_url = get_url("custom_objects_schema")
-    # Load Hubspot's shared schemas
-    refs = load_shared_schema_refs()
-    try:
-        for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
-            stream_id = "custom_" + custom_object["name"]
-            STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
-            if mode == "DISCOVER":
+def add_custom_streams(mode, catalog = None):
+    if mode == "DISCOVER":
+        custom_objects_schema_url = get_url("custom_objects_schema")
+        # Load Hubspot's shared schemas
+        refs = load_shared_schema_refs()
+        try:
+            for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
+                stream_id = "custom_" + custom_object["name"]
+                STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
                 schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
                 custom_schema = parse_custom_schema(stream_id, custom_object["properties"])
                 schema["properties"]["properties"] = {
@@ -1248,9 +1248,13 @@ def add_custom_streams(mode):
                 with open(custom_schema_path, 'w') as json_file:
                     json.dump(final_schema, json_file)
 
-    except SourceUnavailableException as ex:
-        warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
-        LOGGER.warning(warning_message)
+        except SourceUnavailableException as ex:
+            warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+            LOGGER.warning(warning_message)
+
+    elif mode == "SYNC":
+        for stream in catalog["streams"]:
+            STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
 
 def load_shared_schema_refs():
     shared_schemas_path = get_abs_path('schemas/shared')
@@ -1286,7 +1290,7 @@ def get_selected_streams(remaining_streams, ctx):
     return selected_streams
 
 def do_sync(STATE, catalog):
-    add_custom_streams(mode="SYNC")
+    add_custom_streams(mode="SYNC", catalog=catalog)
     # Clear out keys that are no longer used
     clean_state(STATE)
 
