@@ -41,6 +41,7 @@ class StateFields:
 BASE_URL = "https://api.hubapi.com"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
+SUBSCRIPTION_TYPES = "subscription_types"
 
 DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
 
@@ -1039,6 +1040,7 @@ STREAMS = [
     Stream('deals', sync_deals, ["dealId"], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
+    
 ]
 
 def get_streams_to_sync(streams, state):
@@ -1154,18 +1156,27 @@ def discover_schemas():
             missing_scope = error_msg['errors'][0]['context']['requiredScopes']
             LOGGER.warning(f"Failed to load: {stream.tap_stream_id}, missing scope {missing_scope}")
         result['streams'].append({'stream': stream.tap_stream_id,
-                                  'tap_stream_id': stream.tap_stream_id,
-                                  'schema': schema,
-                                  'metadata': mdata})
+                                'tap_stream_id': stream.tap_stream_id,
+                                'schema': schema,
+                                'metadata': mdata})
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
     contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
     schema, mdata = load_discovered_schema(contacts_by_company)
 
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
-                              'tap_stream_id': CONTACTS_BY_COMPANY,
-                              'schema': schema,
-                              'metadata': mdata})
+                            'tap_stream_id': CONTACTS_BY_COMPANY,
+                            'schema': schema,
+                            'metadata': mdata})
+    
+    LOGGER.info('Loading schema for subscription types')
+    subscription_types = Stream('subscription_types', _sync_subscription_types, ['subscriber_email'], None, 'FULL_TABLE')
+    schema, mdata = load_discovered_schema(subscription_types)
+
+    result['streams'].append({'stream': SUBSCRIPTION_TYPES,
+                            'tap_stream_id': SUBSCRIPTION_TYPES,
+                            'schema': schema,
+                            'metadata': mdata})
 
     return result
 
@@ -1176,10 +1187,10 @@ def do_discover():
 def main_impl():
     args = utils.parse_args(
         ["redirect_uri",
-         "client_id",
-         "client_secret",
-         "refresh_token",
-         "start_date"])
+        "client_id",
+        "client_secret",
+        "refresh_token",
+        "start_date"])
 
     CONFIG.update(args.config)
     STATE = {}
