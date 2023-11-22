@@ -1130,7 +1130,9 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
 
             if not data.get(more_key):
                 break
-            params['after'] = data.get(more_key).get('next').get('after')
+            params['after'] = data.get(more_key, {}).get('next', {}).get('after', None)
+            if params['after'] is None:
+                break
 
 def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
     """
