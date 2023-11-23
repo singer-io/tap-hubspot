@@ -1221,7 +1221,7 @@ STREAMS = [
 ]
 
 
-def add_custom_streams(mode, catalog = None):
+def add_custom_streams(mode, catalog=None):
     if mode == "DISCOVER":
         custom_objects_schema_url = get_url("custom_objects_schema")
         # Load Hubspot's shared schemas
