@@ -12,12 +12,6 @@ from tap_tester import LOGGER
 
 class HubspotBaseCase(BaseCase):
 
-    BASIC_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
-    EXPECTED_PAGE_SIZE = "expected-page-size"
-    OBEYS_START_DATE = "obey-start-date"
-    PARENT_STREAM = "parent-stream"
-
     # set the default start date which can be overridden in the tests.
     start_date = BaseCase.timedelta_formatted(dt.utcnow(), delta=timedelta(days=-1))
 
