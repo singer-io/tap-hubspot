@@ -200,16 +200,17 @@ def get_field_schema(field_type, extras=False):
             }
         }
 
-def parse_custom_schema(entity_name, data):
+def parse_custom_schema(entity_name, data, isCustomObject=False):
+    
+    if isCustomObject:
+        return {
+            field['name']: get_field_type_schema(field['type'])
+            for field in data
+        }
     if entity_name == "tickets":
         return {
             field['name']: get_field_type_schema(field['type'])
             for field in data["results"]
-        }
-    elif entity_name.startswith("custom_"):
-        return {
-            field['name']: get_field_type_schema(field['type'])
-            for field in data
         }
 
     return {
@@ -1134,13 +1135,13 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
             if params['after'] is None:
                 break
 
-def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params):
+def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, isCustomObject=False):
     """
     Synchronize records from a data source
     """
     mdata = metadata.to_map(catalog.get('metadata'))
-    if stream_id.startswith("custom_"):
-        url = get_url("custom_objects", object_name=stream_id.split("custom_")[1])
+    if isCustomObject:
+        url = get_url("custom_objects", object_name=stream_id)
     else:
         url = get_url(stream_id)
     max_bk_value = bookmark_value = utils.strptime_with_tz(
@@ -1190,7 +1191,7 @@ def sync_custom_object_records(STATE, ctx, stream_id):
               'properties': get_selected_property_fields(catalog, mdata),
               'archived': False
               }
-    return sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params)
+    return sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, isCustomObject=True)
 
 
 @attr.s
@@ -1222,16 +1223,16 @@ STREAMS = [
 
 
 def add_custom_streams(mode, catalog=None):
+    custom_objects_schema_url = get_url("custom_objects_schema")
     if mode == "DISCOVER":
-        custom_objects_schema_url = get_url("custom_objects_schema")
         # Load Hubspot's shared schemas
         refs = load_shared_schema_refs()
         try:
             for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
-                stream_id = "custom_" + custom_object["name"]
+                stream_id = custom_object["name"]
                 STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
                 schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
-                custom_schema = parse_custom_schema(stream_id, custom_object["properties"])
+                custom_schema = parse_custom_schema(stream_id, custom_object["properties"], isCustomObject=True)
                 schema["properties"]["properties"] = {
                     "type": "object",
                     "properties": custom_schema,
@@ -1253,8 +1254,11 @@ def add_custom_streams(mode, catalog=None):
             LOGGER.warning(warning_message)
 
     elif mode == "SYNC":
+        custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
         for stream in catalog["streams"]:
-            STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
+            if stream["tap_stream_id"] in custom_objects:
+                STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
+        return custom_objects
 
 def load_shared_schema_refs():
     shared_schemas_path = get_abs_path('schemas/shared')
@@ -1290,7 +1294,7 @@ def get_selected_streams(remaining_streams, ctx):
     return selected_streams
 
 def do_sync(STATE, catalog):
-    add_custom_streams(mode="SYNC", catalog=catalog)
+    custom_objects = add_custom_streams(mode="SYNC", catalog=catalog)
     # Clear out keys that are no longer used
     clean_state(STATE)
 
@@ -1307,7 +1311,7 @@ def do_sync(STATE, catalog):
         singer.write_state(STATE)
 
         try:
-            if stream.tap_stream_id.startswith("custom_"):
+            if stream.tap_stream_id in custom_objects:
                 stream.sync(STATE, ctx, stream.tap_stream_id)
             else:
                 STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
