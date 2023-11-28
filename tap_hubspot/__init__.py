@@ -211,11 +211,6 @@ def parse_custom_schema(entity_name, data, is_custom_object=False):
             field['name']: get_field_type_schema(field['type'])
             for field in data["results"]
         }
-    elif entity_name.startswith("custom_"):
-        return {
-            field['name']: get_field_type_schema(field['type'])
-            for field in data
-        }
 
     return {
         field['name']: get_field_schema(field['type'], entity_name != 'contacts')
