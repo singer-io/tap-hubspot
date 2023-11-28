@@ -200,9 +200,8 @@ def get_field_schema(field_type, extras=False):
             }
         }
 
-def parse_custom_schema(entity_name, data, isCustomObject=False):
-    
-    if isCustomObject:
+def parse_custom_schema(entity_name, data, is_custom_object=False):
+    if is_custom_object:
         return {
             field['name']: get_field_type_schema(field['type'])
             for field in data
@@ -1135,12 +1134,12 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
             if params['after'] is None:
                 break
 
-def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, isCustomObject=False):
+def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=False):
     """
     Synchronize records from a data source
     """
     mdata = metadata.to_map(catalog.get('metadata'))
-    if isCustomObject:
+    if is_custom_object:
         url = get_url("custom_objects", object_name=stream_id)
     else:
         url = get_url(stream_id)
@@ -1191,7 +1190,7 @@ def sync_custom_object_records(STATE, ctx, stream_id):
               'properties': get_selected_property_fields(catalog, mdata),
               'archived': False
               }
-    return sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, isCustomObject=True)
+    return sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=True)
 
 
 @attr.s
@@ -1232,7 +1231,7 @@ def add_custom_streams(mode, catalog=None):
                 stream_id = custom_object["name"]
                 STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
                 schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
-                custom_schema = parse_custom_schema(stream_id, custom_object["properties"], isCustomObject=True)
+                custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
                 schema["properties"]["properties"] = {
                     "type": "object",
                     "properties": custom_schema,
@@ -1252,6 +1251,8 @@ def add_custom_streams(mode, catalog=None):
         except SourceUnavailableException as ex:
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
+        
+        return
 
     elif mode == "SYNC":
         custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
