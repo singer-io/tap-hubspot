@@ -5,8 +5,8 @@ from tap_hubspot import add_custom_streams, STREAMS, sync_custom_object_records,
 MOCK_CATALOG = {
     "streams": [
         {
-            "stream": "custom_cars",
-            "tap_stream_id": "custom_cars",
+            "stream": "cars",
+            "tap_stream_id": "cars",
             "schema": {
                 "type": "object",
                 "properties": {
@@ -105,7 +105,7 @@ class TestAddCustomStreams(unittest.TestCase):
         mock_load_shared_schema_refs.assert_called_once()
         mock_get_url.assert_called_once_with("custom_objects_schema")
         mock_parse_custom_schema.assert_called_once_with(
-            "custom_fake_object", {"prop1": "type1", "prop2": "type2"}
+            "fake_object", {"prop1": "type1", "prop2": "type2"}, isCustomObject=True
         )
         mock_resolve_schema.assert_called_once_with(
             {
@@ -135,9 +135,9 @@ class TestAddCustomStreams(unittest.TestCase):
         """
 
         # Set up mocks and fake data
-        STATE = {"currently_syncing": "custom_cars"}
+        STATE = {"currently_syncing": "cars"}
         ctx = Context(MOCK_CATALOG)
-        stream_id = "custom_cars"
+        stream_id = "cars"
         mock_custom_objects.return_value = [
             {
                 "id": "11111",
@@ -146,8 +146,8 @@ class TestAddCustomStreams(unittest.TestCase):
             }
         ]
         expected_output = {
-            "currently_syncing": "custom_cars",
-            "bookmarks": {"custom_cars": {"updatedAt": "2023-11-09T13:14:22.956000Z"}},
+            "currently_syncing": "cars",
+            "bookmarks": {"cars": {"updatedAt": "2023-11-09T13:14:22.956000Z"}},
         }
 
         # Call the function
