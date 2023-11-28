@@ -182,9 +182,6 @@ class HubspotBaseCase(BaseCase):
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
-    def expected_check_streams(self):
-        return set(self.expected_metadata().keys())
-
     @classmethod
     def expected_metadata(cls):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""
@@ -221,7 +218,7 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.API_LIMIT: 100,
                 BaseCase.OBEYS_START_DATE: True,
-                HubspotBaseCase.PARENT_STREAM: 'companies'
+                BaseCase.PARENT_STREAM: 'companies'
             },
             "deal_pipelines": {
                 BaseCase.PRIMARY_KEYS: {"pipelineId"},
