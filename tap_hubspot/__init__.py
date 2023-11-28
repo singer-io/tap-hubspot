@@ -1220,7 +1220,7 @@ STREAMS = [
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
-
+# pylint: disable=inconsistent-return-statements
 def add_custom_streams(mode, catalog=None):
     """
     - In DISCOVER mode, fetch the custom schema from the API endpoint and set the schema for the custom objects.
@@ -1262,7 +1262,7 @@ def add_custom_streams(mode, catalog=None):
         except SourceUnavailableException as ex:
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
-        return []  # Return an empty list instead of None to handle pylint
+        return
 
     elif mode == "SYNC":
         custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
