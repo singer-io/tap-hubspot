@@ -213,7 +213,7 @@ class TestClient():
             return self.get_subscription_changes(since, pagination)
         elif stream == "tickets":
             return self.get_tickets(pagination)
-        elif stream.startswith("custom_"):
+        elif stream in ["cars", "co_firsts"]:
             return self.get_custom_objects(stream)
         else:
             raise NotImplementedError
@@ -758,14 +758,13 @@ class TestClient():
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
         """
         page_size = self.BaseTest.expected_metadata().get(stream,{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        object_name = stream[len("custom_"):]
-        url = f"{BASE_URL}/crm/v3/objects/p_{object_name}"
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
         replication_key = list(self.replication_keys[stream])[0]
         records = []
 
         # response = self.get(url)
         associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
-        params = {"limit": page_size, "associations": associations, 'properties': self.get_custom_objects_properties(object_name)}
+        params = {"limit": page_size, "associations": associations, 'properties': self.get_custom_objects_properties(stream)}
         while True:
             response = self.get(url, params=params)
 
@@ -827,7 +826,7 @@ class TestClient():
             return self.create_subscription_changes(subscriptions, times)
         elif stream == 'tickets':
             return self.create_tickets()
-        elif stream.startswith('custom_'):
+        elif stream in ["cars", "co_firsts"]:
             return self.create_custom_object_record(stream)
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
@@ -1002,10 +1001,9 @@ class TestClient():
         return records
 
     def create_custom_object_record(self, stream):
-        object_name = stream[len("custom_"):]
-        url = f"{BASE_URL}/crm/v3/objects/p_{object_name}"
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
 
-        if object_name == "cars":
+        if stream == "cars":
             data = {
                 "properties": {
                     "condition": random.choice(["used", "new"]),
@@ -1020,7 +1018,7 @@ class TestClient():
                     "notes": random.choice(["Excellent condition.", "Bad Condition"])
                 }
             }
-        elif object_name == "co_firsts":
+        elif stream == "co_firsts":
             data = {
                 "properties": {
                     "id": random.randint(1, 100000),
@@ -1700,8 +1698,7 @@ class TestClient():
         :param id: The primary key value of the custom object record to update.
         :return: The updated custom object record.
         """
-        object_name = stream[len("custom_"):]
-        url = f"{BASE_URL}/crm/v3/objects/p_{object_name}/{id}"
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}/{id}"
 
         record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
@@ -1712,7 +1709,7 @@ class TestClient():
 
         self.patch(url, data)
 
-        return self._get_custom_object_record_by_pk(object_name, id)
+        return self._get_custom_object_record_by_pk(stream, id)
 
     ##########################################################################
     ### Deletes
