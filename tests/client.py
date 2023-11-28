@@ -1,6 +1,7 @@
 import datetime
 import random
 import uuid
+import sys
 
 import backoff
 import requests
@@ -15,6 +16,7 @@ class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+    record_create_times = {}
 
     ##########################################################################
     ### CORE METHODS
@@ -810,7 +812,10 @@ class TestClient():
         elif stream == 'workflows':
             return self.create_workflows()
         elif stream == 'contacts':
-            return self.create_contacts()
+            if stream not in self.record_create_times.keys():
+                self.record_create_times[stream]=[]
+            records =  self.create_contacts()
+            return records
         elif stream == 'deal_pipelines':
             return self.create_deal_pipelines()
         elif stream == 'email_events':
@@ -876,6 +881,10 @@ class TestClient():
             ]
         }
 
+        # Get the current time in seconds
+        date = datetime.datetime.utcnow()
+        seconds = datetime.datetime.timestamp(date)
+
         # generate a contacts record
         response = self.post(url, data)
         records = [response]
@@ -884,9 +893,11 @@ class TestClient():
         params = {'includeVersion': True}
         get_resp = self.get(get_url, params=params)
 
+        #Get the created time and the difference to monitor the time difference - tdl-20939
         created_time = get_resp.get('properties').get('createdate').get('value')
         ts=int(created_time)/1000
         LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
+        self.record_create_times["contacts"].append(ts-seconds)
 
         converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
             get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT
@@ -1819,3 +1830,9 @@ class TestClient():
                 delete_count = int(max_record_count / 2)
                 self.cleanup(stream, records, delete_count)
                 LOGGER.info(f"TEST CLIENT | {delete_count} records deleted from {stream}")
+
+    def print_histogram_data(self):
+        for stream, recorded_times in self.record_create_times.items():
+            LOGGER.info("Time taken for stream {} is total: {}, avg: {}, minimum: {}, maximum: {}".
+                    format(stream, sum(recorded_times), sum(recorded_times)/len(recorded_times), min(recorded_times), max(recorded_times) ))
+
