@@ -105,7 +105,7 @@ class TestAddCustomStreams(unittest.TestCase):
         mock_load_shared_schema_refs.assert_called_once()
         mock_get_url.assert_called_once_with("custom_objects_schema")
         mock_parse_custom_schema.assert_called_once_with(
-            "fake_object", {"prop1": "type1", "prop2": "type2"}, isCustomObject=True
+            "fake_object", {"prop1": "type1", "prop2": "type2"}, is_custom_object=True
         )
         mock_resolve_schema.assert_called_once_with(
             {
