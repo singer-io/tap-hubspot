@@ -1222,6 +1222,17 @@ STREAMS = [
 
 
 def add_custom_streams(mode, catalog=None):
+    """
+    - In DISCOVER mode, fetch the custom schema from the API endpoint and set the schema for the custom objects.
+    - In SYNC mode, extend STREAMS for the custom objects.
+
+    Args:
+        mode (str): The mode indicating whether to DISCOVER or SYNC custom streams.
+        catalog (dict): The catalog containing stream information.
+
+    Returns:
+        None or List[str]: Returns None in DISCOVER mode and a list of custom object names in SYNC mode.
+    """
     custom_objects_schema_url = get_url("custom_objects_schema")
     if mode == "DISCOVER":
         # Load Hubspot's shared schemas
@@ -1251,8 +1262,7 @@ def add_custom_streams(mode, catalog=None):
         except SourceUnavailableException as ex:
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
-        
-        return
+        return []  # Return an empty list instead of None to handle pylint
 
     elif mode == "SYNC":
         custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
