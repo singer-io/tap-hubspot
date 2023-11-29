@@ -1221,7 +1221,7 @@ STREAMS = [
 ]
 
 # pylint: disable=inconsistent-return-statements
-def add_custom_streams(mode, catalog=None):
+def generate_custom_streams(mode, catalog=None):
     """
     - In DISCOVER mode, fetch the custom schema from the API endpoint and set the schema for the custom objects.
     - In SYNC mode, extend STREAMS for the custom objects.
@@ -1231,16 +1231,16 @@ def add_custom_streams(mode, catalog=None):
         catalog (dict): The catalog containing stream information.
 
     Returns:
-        None or List[str]: Returns None in DISCOVER mode and a list of custom object names in SYNC mode.
+        List[dict] or List[str]: Returns list of custom streams (contains dictionary) in DISCOVER mode and a list of custom object names in SYNC mode.
     """
     custom_objects_schema_url = get_url("custom_objects_schema")
     if mode == "DISCOVER":
+        custom_streams = []
         # Load Hubspot's shared schemas
         refs = load_shared_schema_refs()
         try:
             for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
                 stream_id = custom_object["name"]
-                STREAMS.append(Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
                 schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
                 custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
                 schema["properties"]["properties"] = {
@@ -1253,16 +1253,13 @@ def add_custom_streams(mode, catalog=None):
                 schema['properties'].update(custom_schema_top_level)
 
                 final_schema = singer.resolve_schema_references(schema, refs)
-                custom_schema_path = get_abs_path('schemas/{}.json'.format(stream_id))
-
-                # Write data to the JSON file
-                with open(custom_schema_path, 'w') as json_file:
-                    json.dump(final_schema, json_file)
+                custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'), 
+                                       "schema": final_schema})
 
         except SourceUnavailableException as ex:
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
-        return
+        return custom_streams
 
     elif mode == "SYNC":
         custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
@@ -1305,7 +1302,7 @@ def get_selected_streams(remaining_streams, ctx):
     return selected_streams
 
 def do_sync(STATE, catalog):
-    custom_objects = add_custom_streams(mode="SYNC", catalog=catalog)
+    custom_objects = generate_custom_streams(mode="SYNC", catalog=catalog)
     # Clear out keys that are no longer used
     clean_state(STATE)
 
@@ -1367,8 +1364,7 @@ def validate_dependencies(ctx):
     if errs:
         raise DependencyException(" ".join(errs))
 
-def load_discovered_schema(stream):
-    schema = load_schema(stream.tap_stream_id)
+def get_metadata(stream, schema):
     mdata = metadata.new()
 
     mdata = metadata.write(mdata, (), 'table-key-properties', stream.key_properties)
@@ -1387,12 +1383,16 @@ def load_discovered_schema(stream):
     if stream.tap_stream_id == "engagements":
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
         mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
+    return metadata.to_list(mdata)
 
-    return schema, metadata.to_list(mdata)
+def load_discovered_schema(stream):
+    schema = load_schema(stream.tap_stream_id)
+    mdata = get_metadata(stream, schema)
+
+    return schema, mdata
 
 def discover_schemas():
     result = {'streams': []}
-    add_custom_streams(mode="DISCOVER")
     for stream in STREAMS:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         try:
@@ -1405,6 +1405,14 @@ def discover_schemas():
             # Skip the discovery mode on the streams were the required scopes are missing
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
+    
+    for custom_stream in generate_custom_streams(mode="DISCOVER"):
+        LOGGER.info('Loading schema for Custom Object - %s', custom_stream["stream"].tap_stream_id)
+        result['streams'].append({'stream': custom_stream["stream"].tap_stream_id,
+                                  'tap_stream_id': custom_stream["stream"].tap_stream_id,
+                                  'schema': custom_stream["schema"],
+                                  'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
+        
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
     contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
