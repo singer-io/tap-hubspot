@@ -776,7 +776,9 @@ class TestClient():
                 break
             if page_size and len(records) > page_size+10:
                 break
-            params["after"] = response.get("paging").get("next").get("after")
+            params['after'] = response.get("paging", {}).get('next', {}).get('after', None)
+            if params['after'] is None:
+                break
         
         records = self.denest_properties(stream, records)
         return records
@@ -1451,7 +1453,7 @@ class TestClient():
             return self.update_engagements(record_id)
         elif stream == 'tickets':
             return self.update_tickets(record_id)
-        elif stream.startswith('custom_'):
+        elif stream in ["cars", "co_firsts"]:
             return self.update_custom_object_record(stream, record_id)
         else:
             raise NotImplementedError(f"Test client does not have an update method for {stream}")
