@@ -1253,7 +1253,7 @@ def generate_custom_streams(mode, catalog=None):
                 schema['properties'].update(custom_schema_top_level)
 
                 final_schema = singer.resolve_schema_references(schema, refs)
-                custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'), 
+                custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'),
                                        "schema": final_schema})
 
         except SourceUnavailableException as ex:
@@ -1405,14 +1405,14 @@ def discover_schemas():
             # Skip the discovery mode on the streams were the required scopes are missing
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
-    
+
     for custom_stream in generate_custom_streams(mode="DISCOVER"):
         LOGGER.info('Loading schema for Custom Object - %s', custom_stream["stream"].tap_stream_id)
         result['streams'].append({'stream': custom_stream["stream"].tap_stream_id,
                                   'tap_stream_id': custom_stream["stream"].tap_stream_id,
                                   'schema': custom_stream["schema"],
                                   'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
-        
+
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
     contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
