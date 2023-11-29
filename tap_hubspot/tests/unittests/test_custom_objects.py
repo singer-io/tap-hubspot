@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from tap_hubspot import add_custom_streams, STREAMS, sync_custom_object_records, Context
+from tap_hubspot import generate_custom_streams, Stream, sync_custom_object_records, Context
 
 MOCK_CATALOG = {
     "streams": [
@@ -43,7 +43,8 @@ MOCK_CATALOG = {
 }
 
 
-class TestAddCustomStreams(unittest.TestCase):
+class TestGenerateCustomStreams(unittest.TestCase):
+    @patch("tap_hubspot.sync_custom_object_records")
     @patch("tap_hubspot.get_url", return_value="fake_custom_objects_schema_url")
     @patch("tap_hubspot.load_shared_schema_refs", return_value="fake_refs")
     @patch("tap_hubspot.gen_request_custom_objects")
@@ -52,7 +53,7 @@ class TestAddCustomStreams(unittest.TestCase):
     @patch("tap_hubspot.singer.resolve_schema_references")
     @patch("builtins.open", create=True)
     @patch("tap_hubspot.LOGGER.warning")
-    def test_add_custom_streams(
+    def test_generate_custom_streams(
         self,
         mock_warning,
         mock_open,
@@ -62,13 +63,14 @@ class TestAddCustomStreams(unittest.TestCase):
         mock_gen_request_custom_objects,
         mock_load_shared_schema_refs,
         mock_get_url,
+        mock_sync_custom_records
     ):
         """
-        test the flow of definition add_custom_streams
+        test the flow of definition generate_custom_streams
         """
 
         # Set up mocks and fake data
-        fake_mode = "DISCOVER"
+        mode = "DISCOVER"
         fake_custom_object = {
             "name": "fake_object",
             "properties": {"prop1": "type1", "prop2": "type2"},
@@ -78,6 +80,9 @@ class TestAddCustomStreams(unittest.TestCase):
             "type": "object",
             "properties": {"property_fake_object": "fake_value"},
         }
+        expected_value = [
+            {'stream': Stream(tap_stream_id='fake_object', sync=mock_sync_custom_records, key_properties=['id'], replication_key='updatedAt', replication_method='INCREMENTAL'), 
+             'schema': {'type': 'object', 'properties': {'property_fake_object': 'fake_value'}}}]
 
         # Set up mock return values
         mock_gen_request_custom_objects.return_value = [fake_custom_object]
@@ -89,11 +94,8 @@ class TestAddCustomStreams(unittest.TestCase):
         mock_resolve_schema.return_value = fake_final_schema
         mock_get_url.return_value = fake_custom_objects_schema_url
 
-        initial_streams_len = len(STREAMS)
         # Call the function
-        add_custom_streams(fake_mode)
-
-        post_streams_len = len(STREAMS)
+        actual_value = generate_custom_streams(mode)
         # Verify the expected calls
         mock_gen_request_custom_objects.assert_called_once_with(
             "custom_objects_schema",
@@ -122,7 +124,7 @@ class TestAddCustomStreams(unittest.TestCase):
             "fake_refs",
         )
         mock_warning.assert_not_called()  # No warning should be issued in this case
-        self.assertGreater(post_streams_len, initial_streams_len)
+        self.assertEqual(actual_value, expected_value)
 
     @patch("tap_hubspot.gen_request_custom_objects")
     @patch("tap_hubspot.get_start", return_value="2023-07-07T00:00:00Z")
