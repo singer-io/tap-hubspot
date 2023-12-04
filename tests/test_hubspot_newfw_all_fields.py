@@ -4,20 +4,6 @@ from tap_tester.logger import LOGGER
 from base_hubspot import HubspotBaseCase
 from client import TestClient
 
-def get_matching_actual_record_by_pk(expected_primary_key_dict, actual_records):
-    ret_records = []
-    can_save = True
-    for record in actual_records:
-        for key, value in expected_primary_key_dict.items():
-            actual_value = record[key]
-            if actual_value != value:
-                can_save = False
-                break
-        if can_save:
-            ret_records.append(record)
-        can_save = True
-    return ret_records
-
 class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
     """Hubspot all fields test implementation """
     EXTRA_FIELDS = HubspotBaseCase.EXTRA_FIELDS
