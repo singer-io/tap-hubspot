@@ -23,138 +23,19 @@ class HubspotBaseCase(BaseCase):
         # In the 2nd call, vids collected from the 1st call will be used to retrieve the whole contact record.
         # Here, the records collected for detailed contact information do not contain the versionTimestamp field.
         # So, we add the versionTimestamp field(fetched from 1st call records) explicitly in the record of 2nd call.
-        "contacts": { "versionTimestamp" }
+        #"contacts": { "versionTimestamp" }
     }
     
-    KNOWN_EXTRA_FIELDS = {
+    EXTRA_FIELDS = {
         'deals': {
             # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
             #                 Has an value of object with key 'value' and value 'Null'
             'property_hs_date_entered_1258834',
             'property_hs_time_in_example_stage1660743867503491_315775040'
         },
+        "contacts": { "versionTimestamp" }
     }
     
-    KNOWN_MISSING_FIELDS = {
-        'contacts':{ # BUG https://jira.talendforge.org/browse/TDL-16016
-            'property_hs_latest_source',
-            'property_hs_latest_source_data_1',
-            'property_hs_latest_source_data_2',
-            'property_hs_latest_source_timestamp',
-            'property_hs_timezone',
-            'property_hs_v2_cumulative_time_in_lead',
-            'property_hs_v2_cumulative_time_in_opportunity',
-            'property_hs_v2_cumulative_time_in_subscriber',
-            'property_hs_v2_date_entered_customer',
-            'property_hs_v2_date_entered_lead',
-            'property_hs_v2_date_entered_opportunity',
-            'property_hs_v2_date_entered_subscriber',
-            'property_hs_v2_date_exited_lead',
-            'property_hs_v2_date_exited_opportunity',
-            'property_hs_v2_date_exited_subscriber',
-            'property_hs_v2_latest_time_in_lead',
-            'property_hs_v2_latest_time_in_opportunity',
-            'property_hs_v2_latest_time_in_subscriber',
-        },
-        'contact_lists': {  # BUG https://jira.talendforge.org/browse/TDL-14996
-            'authorId',
-            'teamIds',
-            'internal',
-            'ilsFilterBranch',
-            'limitExempt',
-        },
-        'email_events': {  # BUG https://jira.talendforge.org/browse/TDL-14997
-            'portalSubscriptionStatus',
-            'attempt',
-            'source',
-            'subscriptions',
-            'sourceId',
-            'replyTo',
-            'suppressedMessage',
-            'bcc',
-            'suppressedReason',
-            'cc',
-         },
-        'engagements': {  # BUG https://jira.talendforge.org/browse/TDL-14997
-            'scheduledTasks',
-         },
-        'workflows': {  # BUG https://jira.talendforge.org/browse/TDL-14998
-            'migrationStatus',
-            'updateSource',
-            'description',
-            'originalAuthorUserId',
-            'lastUpdatedByUserId',
-            'creationSource',
-            'portalId',
-            'contactCounts',
-        },
-        'owners': {  # BUG https://jira.talendforge.org/browse/TDL-15000
-            'activeSalesforceId'
-        },
-        'forms': {  # BUG https://jira.talendforge.org/browse/TDL-15001
-            'alwaysCreateNewCompany',
-            'themeColor',
-            'publishAt',
-            'editVersion',
-            'embedVersion',
-            'themeName',
-            'style',
-            'thankYouMessageJson',
-            'createMarketableContact',
-            'kickbackEmailWorkflowId',
-            'businessUnitId',
-            'portableKey',
-            'parentId',
-            'kickbackEmailsJson',
-            'unpublishAt',
-            'internalUpdatedAt',
-            'multivariateTest',
-            'publishedAt',
-            'customUid',
-            'isPublished',
-            'paymentSessionTemplateIds',
-            'selectedExternalOptions',
-        },
-        'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
-            'mergeAudits',
-            'stateChanges',
-            'isDeleted',
-            'additionalDomains',
-            'property_hs_analytics_latest_source',
-            'property_hs_analytics_latest_source_data_2',
-            'property_hs_analytics_latest_source_data_1',
-            'property_hs_analytics_latest_source_timestamp',
-        },
-        'campaigns': {  # BUG https://jira.talendforge.org/browse/TDL-15003
-            'lastProcessingStateChangeAt',
-            'lastProcessingFinishedAt',
-            'processingState',
-            'lastProcessingStartedAt',
-        },
-        'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
-            'imports',
-            'property_hs_num_associated_deal_splits',
-            'property_hs_is_deal_split',
-            'stateChanges',
-            'property_hs_num_associated_active_deal_registrations',
-            'property_hs_num_associated_deal_registrations',
-            'property_hs_analytics_latest_source',
-            'property_hs_analytics_latest_source_timestamp_contact',
-            'property_hs_analytics_latest_source_data_1_contact',
-            'property_hs_analytics_latest_source_timestamp',
-            'property_hs_analytics_latest_source_data_1',
-            'property_hs_analytics_latest_source_contact',
-            'property_hs_analytics_latest_source_company',
-            'property_hs_analytics_latest_source_data_1_company',
-            'property_hs_analytics_latest_source_data_2_company',
-            'property_hs_analytics_latest_source_data_2',
-            'property_hs_analytics_latest_source_data_2_contact',
-        },
-        'subscription_changes':{
-            'normalizedEmailId'
-        }
-    }
-
     def setUp(self):
         missing_envs = [x for x in [
             'TAP_HUBSPOT_REDIRECT_URI',
@@ -174,7 +55,7 @@ class HubspotBaseCase(BaseCase):
         return "tap-hubspot"
 
     def get_properties(self):
-        return {'start_date': self.start_date }
+        return {'start_date': self.start_date}
 
     def get_credentials(self):
         return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),
