@@ -16,12 +16,6 @@ class HubspotBaseCase(BaseCase):
     start_date = BaseCase.timedelta_formatted(dt.utcnow(), delta=timedelta(days=-1))
 
     EXTRA_FIELDS = {
-        'deals': {
-            # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
-            #                 Has an value of object with key 'value' and value 'Null'
-            'property_hs_date_entered_1258834',
-            'property_hs_time_in_example_stage1660743867503491_315775040'
-        },
         "contacts": { "versionTimestamp" }
     }
     
