@@ -48,7 +48,6 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
 
     def convert_datatype(self, expected_records):
         # Convert the time stamp data type, Get keys with data and with no data 
-        self.keys_with_data={}
         for stream, records in expected_records.items():
             expected_keys = set()
             for record in records:
@@ -61,8 +60,7 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
                     if timestamp:
                         record[key]=self.datetime_from_timestamp(timestamp/1000, str_format=self.BASIC_DATE_FORMAT)
 
-            self.keys_with_data[stream] = expected_keys
-            self.keys_with_no_data[stream] = self.selected_fields.get(stream).difference(expected_keys)
+            self.KEYS_WITH_NO_DATA[stream] = self.selected_fields.get(stream).difference(expected_keys)
 
         return expected_records
 
@@ -72,22 +70,24 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
         #     would prove useful to an end user. The ones that we replicated with the test client are specific
         #     to our test data. We have determined that the filtering of these fields is an expected behavior.
         # deals workaround for 'property_hs_date_entered_<property>' fields
+        # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
+        #                 Has an value of object with key 'value' and value 'Null'
         if stream == 'deals':
             bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_', 'property_hs_time_in'}
             bad_keys = set()
             for key in self.expected_all_keys:
                 for bad_prefix in bad_key_prefixes:
-                   if key.startswith(bad_prefix):
+                   if key.startswith(bad_prefix) and key not in self.fields_replicated:
                         bad_keys.add(key)
             for key in self.fields_replicated:
                 for bad_prefix in bad_key_prefixes:
-                   if key.startswith(bad_prefix):
+                   if key.startswith(bad_prefix) and key not in self.expected_all_keys:
                         bad_keys.add(key)
 
             for key in bad_keys:
                 if key in self.expected_all_keys:
                     self.expected_all_keys.remove(key)
-                if key in self.fields_replicated:
+                elif key in self.fields_replicated:
                     self.fields_replicated.remove(key)
 
     ##########################################################################
