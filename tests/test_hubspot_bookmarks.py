@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from time import sleep
+import time
 
 
 import tap_tester.connections as connections
@@ -65,10 +65,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 email_records = self.test_client.create(stream, self.times)
                 self.expected_records['email_events'] += email_records
             else:
+                # create records, one will be updated between syncs
+                # create one static list and the rest dynamic list
                 if stream in 'contact_lists':
                     static_list = self.test_client.create('static_contact_lists')
-                    #self.expected_records[stream] += static_list
-                # create records, one will be updated between syncs
+                    self.expected_records[stream] += static_list
+                    self.times = self.times-1
                 for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
@@ -112,6 +114,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
         for stream in expected_streams - {'contacts_by_company'}:
             record = self.test_client.create(stream)
             self.expected_records[stream] += record
+
         if 'contacts_by_company' in expected_streams:
             company_ids = [record['companyId'] for record in self.expected_records['companies'][:-1]]
             contact_records = self.expected_records['contacts'][-1:]
@@ -120,11 +123,13 @@ class TestHubspotBookmarks(HubspotBaseTest):
             )
             self.expected_records['contacts_by_company'] += record
 
-
         # Update 1 record from the test seutp for each stream that has an update endpoint
+        # Update the last record that was initially created, instead of first record
+        # - Workaround for https://jira.talendforge.org/browse/TDL-24615
         for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
             primary_key = list(self.expected_primary_keys()[stream])[0]
-            record_id = self.expected_records[stream][0][primary_key]
+            index_to_update = len(self.expected_records[stream])-1
+            record_id = self.expected_records[stream][index_to_update][primary_key]
             record = self.test_client.update(stream, record_id)
             self.expected_records[stream].append(record)
 

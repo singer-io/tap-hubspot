@@ -7,6 +7,7 @@ import backoff
 import requests
 from base import HubspotBaseTest
 from tap_tester import LOGGER
+import time 
 
 DEBUG = False
 BASE_URL = "https://api.hubapi.com"
@@ -751,9 +752,12 @@ class TestClient():
         elif stream == 'contact_lists':
             return self.create_contact_lists()
         elif stream == 'static_contact_lists':
-            static_list = self.create_contact_lists(False)
-            #records =  self.create_contacts()
-            #record = self.add_contact_to_contact_list(list_id, contact_email)
+            staticlist = self.create_contact_lists(False)
+            if stream not in self.record_create_times.keys():
+                self.record_create_times['contacts']=[]
+            records =  self.create_contacts()
+            self.add_contact_to_contact_list()
+            return staticlist
         elif stream == 'contacts_by_company':
             return self.create_contacts_by_company(company_ids, times=times)
         elif stream == 'engagements':
@@ -765,8 +769,9 @@ class TestClient():
         elif stream == 'workflows':
             return self.create_workflows()
         elif stream == 'contacts':
+            LOGGER.info("self.record_create_times is %s", self.record_create_times)
             if stream not in self.record_create_times.keys():
-                self.record_create_times[stream]=[]
+                self.record_create_times['contacts']=[]
             records =  self.create_contacts()
             return records
         elif stream == 'deal_pipelines':
@@ -789,14 +794,14 @@ class TestClient():
         Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/create_contact
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
-        value = f"{record_uuid}@stitchdata.com"
+        self.contact_email = f"{record_uuid}@stitchdata.com"
 
         url = f"{BASE_URL}/contacts/v1/contact"
         data = {
             "properties": [
                 {
                     "property": "email",
-                    "value": value
+                    "value": self.contact_email
                 },
                 {
                     "property": "firstname",
@@ -858,7 +863,7 @@ class TestClient():
         records = self.denest_properties('contacts', [get_resp])
 
         # Add the email to add it to the contact list
-        self.contacts_added.add(value)
+        self.contacts_added.append(self.contact_email)
 
         return records
 
@@ -919,10 +924,12 @@ class TestClient():
         }
         # generate a record
         response = self.post(url, data)
+        self.list_id = response.get("listId")
         records = [response]
+        LOGGER.info("dynamic contact list is %s", records)
         return records
 
-    def add_contact_to_contact_list(self, list_id, contact_email):
+    def add_contact_to_contact_list(self):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
 
@@ -933,15 +940,17 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
         value = f"@hubspot{record_uuid}"
 
-        url = f"{BASE_URL}/contacts/v1/lists/{list_id}/add"
+        url = f"{BASE_URL}/contacts/v1/lists/{self.list_id}/add"
         data = {
             "emails": [
-               contact_email
+               self.contact_email
             ]
         }
         # generate a record
+        LOGGER.info("Post URL is %s", url)
         response = self.post(url, data)
         records = [response]
+        LOGGER.info("updated contact_list is %s", records)
         return records
 
     def create_contacts_by_company(self, company_ids=[], contact_records=[], times=1):
