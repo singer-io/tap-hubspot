@@ -1134,7 +1134,7 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
             if params['after'] is None:
                 break
 
-def sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=False):
+def sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=False):
     """
     Synchronize records from a data source
     """
@@ -1190,7 +1190,7 @@ def sync_custom_object_records(STATE, ctx, stream_id):
               'properties': get_selected_property_fields(catalog, mdata),
               'archived': False
               }
-    return sync_records(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=True)
+    return sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=True)
 
 
 @attr.s
