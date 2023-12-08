@@ -1320,7 +1320,7 @@ def do_sync(STATE, catalog):
 
         try:
             if stream.tap_stream_id in custom_objects:
-                stream.sync(STATE, ctx, stream.tap_stream_id)
+                STATE = stream.sync(STATE, ctx, stream.tap_stream_id)
             else:
                 STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException as ex:
