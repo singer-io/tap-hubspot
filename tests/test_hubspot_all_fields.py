@@ -37,7 +37,7 @@ KNOWN_EXTRA_FIELDS = {
         # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
         #                 Has an value of object with key 'value' and value 'Null'
         'property_hs_date_entered_1258834',
-        'property_hs_time_in_example_stage1660743867503491_315775040'
+        'property_hs_time_in_example_stage1660743867503491_315775040',
     },
 }
 
@@ -155,6 +155,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_analytics_latest_source_data_2_company',
         'property_hs_analytics_latest_source_data_2',
         'property_hs_analytics_latest_source_data_2_contact',
+        'property_hs_deal_score',
     },
     'subscription_changes':{
         'normalizedEmailId'
