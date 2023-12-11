@@ -1116,23 +1116,28 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
     """
     Cursor-based API Pagination : Used in custom_objects stream implementation
     """
-    with metrics.record_counter(tap_stream_id) as counter:
-        while True:
-            data = request(url, params).json()
+    try:
+        with metrics.record_counter(tap_stream_id) as counter:
+            while True:
+                data = request(url, params).json()
 
-            if data.get(path) is None:
-                raise RuntimeError(
-                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+                if data.get(path) is None:
+                    raise RuntimeError(
+                        "Unexpected API response: {} not in {}".format(path, data.keys()))
 
-            for row in data[path]:
-                counter.increment()
-                yield row
+                for row in data[path]:
+                    counter.increment()
+                    yield row
 
-            if not data.get(more_key):
-                break
-            params['after'] = data.get(more_key, {}).get('next', {}).get('after', None)
-            if params['after'] is None:
-                break
+                if not data.get(more_key):
+                    break
+                params['after'] = data.get(more_key, {}).get('next', {}).get('after', None)
+                if params['after'] is None:
+                    break
+    except SourceUnavailableException as ex:
+        warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+        LOGGER.warning(warning_message)
+        return []
 
 def sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=False):
     """
@@ -1238,34 +1243,31 @@ def generate_custom_streams(mode, catalog=None):
         custom_streams = []
         # Load Hubspot's shared schemas
         refs = load_shared_schema_refs()
-        try:
-            for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
-                stream_id = custom_object["name"]
-                schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
-                custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
-                schema["properties"]["properties"] = {
-                    "type": "object",
-                    "properties": custom_schema,
-                }
+        for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
+            stream_id = custom_object["name"]
+            schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
+            custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
+            schema["properties"]["properties"] = {
+                "type": "object",
+                "properties": custom_schema,
+            }
 
-                # Move properties to top level
-                custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
-                schema['properties'].update(custom_schema_top_level)
+            # Move properties to top level
+            custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
+            schema['properties'].update(custom_schema_top_level)
 
-                final_schema = singer.resolve_schema_references(schema, refs)
-                custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'),
-                                       "schema": final_schema})
+            final_schema = singer.resolve_schema_references(schema, refs)
+            custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'),
+                                   "schema": final_schema})
 
-        except SourceUnavailableException as ex:
-            warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
-            LOGGER.warning(warning_message)
         return custom_streams
 
     elif mode == "SYNC":
         custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
-        for stream in catalog["streams"]:
-            if stream["tap_stream_id"] in custom_objects:
-                STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
+        if len(custom_object) > 0:
+            for stream in catalog["streams"]:
+                if stream["tap_stream_id"] in custom_objects:
+                    STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
         return custom_objects
 
 def load_shared_schema_refs():
