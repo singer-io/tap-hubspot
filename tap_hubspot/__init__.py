@@ -1264,7 +1264,7 @@ def generate_custom_streams(mode, catalog=None):
 
     elif mode == "SYNC":
         custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
-        if len(custom_object) > 0:
+        if len(custom_objects) > 0:
             for stream in catalog["streams"]:
                 if stream["tap_stream_id"] in custom_objects:
                     STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
