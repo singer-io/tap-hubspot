@@ -30,12 +30,11 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        """expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
+        expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
 
         return expected_streams.difference({
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        })"""
-        return {'contact_lists'}
+        }) 
 
     def get_properties(self):
         return {
@@ -58,6 +57,8 @@ class TestHubspotBookmarks(HubspotBaseTest):
         for stream in expected_streams - {'contacts_by_company'}:
             if stream == 'contacts': 
                 self.times=10
+            elif stream == 'contact_lists':
+                self.times=2
             else:
                 self.times =3
 
@@ -67,13 +68,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
             else:
                 # create records, one will be updated between syncs
                 # create one static list and the rest dynamic list
-                if stream in 'contact_lists':
-                    static_list = self.test_client.create('static_contact_lists')
-                    self.expected_records[stream] += static_list
-                    self.times = self.times-1
                 for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
+                if stream in 'contact_lists':
+                    static_list = self.test_client.create('static_contact_lists')
+                    self.expected_records[stream] += static_list
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
@@ -124,12 +124,9 @@ class TestHubspotBookmarks(HubspotBaseTest):
             self.expected_records['contacts_by_company'] += record
 
         # Update 1 record from the test seutp for each stream that has an update endpoint
-        # Update the last record that was initially created, instead of first record
-        # - Workaround for https://jira.talendforge.org/browse/TDL-24615
         for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
             primary_key = list(self.expected_primary_keys()[stream])[0]
-            index_to_update = len(self.expected_records[stream])-1
-            record_id = self.expected_records[stream][index_to_update][primary_key]
+            record_id = self.expected_records[stream][0][primary_key]
             record = self.test_client.update(stream, record_id)
             self.expected_records[stream].append(record)
 

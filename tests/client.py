@@ -18,7 +18,6 @@ class TestClient():
     V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     record_create_times = {}
-    contacts_added = []
 
     ##########################################################################
     ### CORE METHODS
@@ -753,10 +752,10 @@ class TestClient():
             return self.create_contact_lists()
         elif stream == 'static_contact_lists':
             staticlist = self.create_contact_lists(False)
-            if stream not in self.record_create_times.keys():
-                self.record_create_times['contacts']=[]
-            records =  self.create_contacts()
-            self.add_contact_to_contact_list()
+            listId = staticlist[0].get('listId')
+            records =  self.create('contacts')
+            contact_email =  records[0].get('properties').get('email').get('value')
+            self.add_contact_to_contact_list(listId, contact_email)
             return staticlist
         elif stream == 'contacts_by_company':
             return self.create_contacts_by_company(company_ids, times=times)
@@ -794,14 +793,13 @@ class TestClient():
         Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/create_contact
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
-        self.contact_email = f"{record_uuid}@stitchdata.com"
 
         url = f"{BASE_URL}/contacts/v1/contact"
         data = {
             "properties": [
                 {
                     "property": "email",
-                    "value": self.contact_email
+                    "value": f"{record_uuid}@stitchdata.com"
                 },
                 {
                     "property": "firstname",
@@ -862,9 +860,6 @@ class TestClient():
         get_resp['versionTimestamp'] = converted_versionTimestamp
         records = self.denest_properties('contacts', [get_resp])
 
-        # Add the email to add it to the contact list
-        self.contacts_added.append(self.contact_email)
-
         return records
 
     def create_campaigns(self):
@@ -924,12 +919,11 @@ class TestClient():
         }
         # generate a record
         response = self.post(url, data)
-        self.list_id = response.get("listId")
         records = [response]
         LOGGER.info("dynamic contact list is %s", records)
         return records
 
-    def add_contact_to_contact_list(self):
+    def add_contact_to_contact_list(self, list_id, contact_email):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
 
@@ -940,10 +934,10 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
         value = f"@hubspot{record_uuid}"
 
-        url = f"{BASE_URL}/contacts/v1/lists/{self.list_id}/add"
+        url = f"{BASE_URL}/contacts/v1/lists/{list_id}/add"
         data = {
             "emails": [
-               self.contact_email
+               contact_email
             ]
         }
         # generate a record
