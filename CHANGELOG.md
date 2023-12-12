@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.13.0
+  * HubSpot Custom CRM Objects Support [#242](https://github.com/singer-io/tap-hubspot/pull/242)
+
 ## 2.12.2
   * Use engagements_page_size advanced option [#234](https://github.com/singer-io/tap-hubspot/pull/234)
   * 
