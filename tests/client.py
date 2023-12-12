@@ -874,7 +874,10 @@ class TestClient():
                 LOGGER.info("response is %s", response)
             except Exception as e:
                 LOGGER.info("Data already exists for %s", current_data)
-                pass
+                if '409' in str(e):
+                    pass
+                else:
+                    response.raise_for_status()
 
 
     def create_contacts(self):
