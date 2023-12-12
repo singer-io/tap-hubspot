@@ -213,6 +213,8 @@ class TestClient():
             return self.get_subscription_changes(since, pagination)
         elif stream == "tickets":
             return self.get_tickets(pagination)
+        elif stream in ["cars", "co_firsts"]:
+            return self.get_custom_objects(stream)
         else:
             raise NotImplementedError
 
@@ -729,6 +731,57 @@ class TestClient():
         
         records = self.denest_properties('tickets', records)
         return records
+    
+    def _get_custom_object_record_by_pk(self, object_name, id):
+        """
+        Get a specific custom object record by pk value
+        HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+        """
+        associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
+        url = f"{BASE_URL}/crm/v3/objects/p_{object_name}/{id}?associations={associations}"
+        response = self.get(url)
+        return response
+    
+    def get_custom_objects_properties(self, object_name):
+        """
+        Get custom object properties.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+        """
+        url = f"{BASE_URL}/crm/v3/properties/p_{object_name}"
+        records = self.get(url)
+
+        return ",".join([record["name"] for record in records["results"]])
+
+    def get_custom_objects(self, stream):
+        """
+        Get all custom_object records.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+        """
+        page_size = self.BaseTest.expected_metadata().get(stream,{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
+        replication_key = list(self.replication_keys[stream])[0]
+        records = []
+
+        # response = self.get(url)
+        associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
+        params = {"limit": page_size, "associations": associations, 'properties': self.get_custom_objects_properties(stream)}
+        while True:
+            response = self.get(url, params=params)
+
+            records.extend([record
+                    for record in response["results"]
+                    if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
+
+            if not response.get("paging"):
+                break
+            if page_size and len(records) > page_size+10:
+                break
+            params['after'] = response.get("paging", {}).get('next', {}).get('after', None)
+            if params['after'] is None:
+                break
+        
+        records = self.denest_properties(stream, records)
+        return records
 
     ##########################################################################
     ### CREATE
@@ -775,6 +828,8 @@ class TestClient():
             return self.create_subscription_changes(subscriptions, times)
         elif stream == 'tickets':
             return self.create_tickets()
+        elif stream in ["cars", "co_firsts"]:
+            return self.create_custom_object_record(stream)
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
@@ -946,6 +1001,37 @@ class TestClient():
                     break
 
         return records
+
+    def create_custom_object_record(self, stream):
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
+
+        if stream == "cars":
+            data = {
+                "properties": {
+                    "condition": random.choice(["used", "new"]),
+                    "date_received": random.choice([1197590400000, 1554854400000, 1337990400000, 1543708800000]),
+                    "year": random.choice([2000, 2001, 2002, 2003, 2020, 2021, 2022, 2023]),
+                    "make": random.choice([ "bmw", "hyundai", "kia", "tata", "toyota", "mercedes", "porsche"]),
+                    "model": random.choice(["sporty", "normal"]),
+                    "vin": str(uuid.uuid4()).replace('-', ''),
+                    "color": random.choice(["white", "red", "black", "orange", "green"]),
+                    "mileage": random.choice([10, 20, 30, 40, 15, 25, 35, 12, 22, 28]),
+                    "price": random.choice([10000, 20000, 30000, 40000, 50000, 60000, 70000]),
+                    "notes": random.choice(["Excellent condition.", "Bad Condition"])
+                }
+            }
+        elif stream == "co_firsts":
+            data = {
+                "properties": {
+                    "id": random.randint(1, 100000),
+                    "name": "test name",
+                    "country": random.choice(["USA", "India", "France", "UK"])
+                }
+            }
+
+        # generate a record
+        response = self.post(url, data)
+        return [response]
 
     def create_deal_pipelines(self):
         """
@@ -1367,6 +1453,8 @@ class TestClient():
             return self.update_engagements(record_id)
         elif stream == 'tickets':
             return self.update_tickets(record_id)
+        elif stream in ["cars", "co_firsts"]:
+            return self.update_custom_object_record(stream, record_id)
         else:
             raise NotImplementedError(f"Test client does not have an update method for {stream}")
 
@@ -1602,6 +1690,28 @@ class TestClient():
         self.patch(url, data)
 
         return self._get_tickets_by_pk(ticket_id)
+    
+    def update_custom_object_record(self, stream, id):
+        """
+        Updates a custom object record using the HubSpot CRM API.
+        https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+
+        :param stream: The custom object stream identifier, e.g., 'custom_objects'.
+        :param id: The primary key value of the custom object record to update.
+        :return: The updated custom object record.
+        """
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}/{id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "properties": {
+                "notes": f"update record for testing - {record_uuid}"
+            }
+        }
+
+        self.patch(url, data)
+
+        return self._get_custom_object_record_by_pk(stream, id)
 
     ##########################################################################
     ### Deletes
