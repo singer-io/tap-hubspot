@@ -55,11 +55,11 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         if original:
             return {
-                'start_date' : self.timedelta_formatted(utc_today, days=-8)
+                'start_date' : self.timedelta_formatted(utc_today, days=-20)
             }
         else:
             return {
-                'start_date': self.timedelta_formatted(utc_today, days=-4)
+                'start_date': self.timedelta_formatted(utc_today, days=-5)
             }
 
     def test_run(self):

@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='tap-hubspot',
-      version='2.12.2',
+      version='2.13.0',
       description='Singer.io tap for extracting data from the HubSpot API',
       author='Stitch',
       url='http://singer.io',
@@ -29,18 +29,9 @@ setup(name='tap-hubspot',
       packages=['tap_hubspot'],
       package_data = {
           'tap_hubspot/schemas': [
-              "campaigns.json",
-              "companies.json",
-              "contact_lists.json",
-              "contacts.json",
-              "deals.json",
-              "email_events.json",
-              "forms.json",
-              "keywords.json",
-              "owners.json",
-              "subscription_changes.json",
-              "workflows.json",
-          ],
+                "schemas/*.json",
+                "schemas/shared/*.json"
+              ]
       },
       include_package_data=True,
 )

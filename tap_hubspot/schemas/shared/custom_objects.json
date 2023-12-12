@@ -1,0 +1,44 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": [
+                "null",
+                "string"
+            ]
+        },
+        "createdAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+        },
+        "archived": {
+            "type": [
+                "null",
+                "boolean"
+            ]
+        },
+        "associations": {
+            "type": [
+                "null",
+                "object"
+            ],
+            "properties": {
+                "emails": {"$ref": "associations_schema.json"},
+                "meetings": {"$ref": "associations_schema.json"},
+                "notes": {"$ref": "associations_schema.json"},
+                "tasks": {"$ref": "associations_schema.json"},
+                "calls": {"$ref": "associations_schema.json"},
+                "conversation_session": {"$ref": "associations_schema.json"},
+                "companies": {"$ref": "associations_schema.json"},
+                "contacts": {"$ref": "associations_schema.json"},
+                "deals": {"$ref": "associations_schema.json"},
+                "products": {"$ref": "associations_schema.json"},
+                "tickets": {"$ref": "associations_schema.json"}
+            }
+        }
+    }
+}
