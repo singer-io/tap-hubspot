@@ -148,7 +148,6 @@ class TestHubspotStartDate(HubspotBaseTest):
                 self.assertGreater(second_sync_count, 0,
                                    msg='start date usage is not confirmed when no records are replicated')
 
-
 class TestHubspotStartDateStatic(TestHubspotStartDate):
     @staticmethod
     def name():
