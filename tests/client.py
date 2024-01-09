@@ -804,7 +804,7 @@ class TestClient():
         elif stream == 'contact_lists':
             return self.create_contact_lists()
         elif stream == 'static_contact_lists':
-            staticlist = self.create_contact_lists(False)
+            staticlist = self.create_contact_lists(dynamic=False)
             listId = staticlist[0].get('listId')
             records =  self.create('contacts')
             contact_email =  records[0].get('properties').get('email').get('value')
