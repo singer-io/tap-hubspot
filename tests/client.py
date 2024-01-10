@@ -927,9 +927,10 @@ class TestClient():
             try:
                 response = self.post(url, current_data)
                 LOGGER.info("response is %s", response)
-            except Exception as e:
+            # Setting up the property is a one time task, If exception occurs because, it already exists, ignore
+            except Exception as DataAlreadyExistsExcp:
                 LOGGER.info("Data already exists for %s", current_data)
-                if '409' in str(e):
+                if '409' in str(DataAlreadyExistsExcp):
                     pass
                 else:
                     response.raise_for_status()
