@@ -928,9 +928,9 @@ class TestClient():
                 response = self.post(url, current_data)
                 LOGGER.info("response is %s", response)
             # Setting up the property is a one time task, If exception occurs because, it already exists, ignore
-            except Exception as DataAlreadyExistsExcp:
+            except requests.exceptions.HTTPError as err:
                 LOGGER.info("Data already exists for %s", current_data)
-                if '409' in str(DataAlreadyExistsExcp):
+                if '409' in str(err):
                     pass
                 else:
                     response.raise_for_status()
@@ -1940,6 +1940,9 @@ class TestClient():
                 delete_count = int(max_record_count / 2)
                 self.cleanup(stream, records, delete_count)
                 LOGGER.info(f"TEST CLIENT | {delete_count} records deleted from {stream}")
+
+        # Create custom properties for contacts
+        self.create_custom_contact_properties()
 
     def print_histogram_data(self):
         for stream, recorded_times in self.record_create_times.items():

@@ -45,8 +45,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.maxDiff = None  # see all output in failure
 
         self.test_client = TestClient(self.get_properties()['start_date'])
-        # Create custom properties for contacts
-        self.test_client.create_custom_contact_properties()
 
     def create_test_data(self, expected_streams):
         """
