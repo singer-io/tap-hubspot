@@ -77,7 +77,7 @@ ENDPOINTS = {
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
     "contacts_by_company":  "/companies/v2/companies/{company_id}/vids",
-    "contacts_by_company_v3_batch_read": "/crm/v3/associations/company/contact/batch/read",
+    "contacts_by_company_v3": "/crm/v3/associations/company/contact/batch/read",
 
     "deals_properties":     "/properties/v1/deals/properties",
     "deals_all":            "/deals/v1/deal/paged",
@@ -565,14 +565,12 @@ def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
     schema = load_schema(CONTACTS_BY_COMPANY)
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
-    url = get_url("contacts_by_company_v3_batch_read")
+    url = get_url("contacts_by_company_v3")
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
-            data = {'inputs': []}
-            [data['inputs'].append({'id': company_id}) for company_id in company_ids]
-            contacts_to_company_rows = post_search_endpoint(url, data).json()
-
+            body = {'inputs': [{'id': company_id} for company_id in company_ids]}
+            contacts_to_company_rows = post_search_endpoint(url, body).json()
             for row in contacts_to_company_rows['results']:
                 for contact in row['to']:
                     counter.increment()
@@ -589,8 +587,7 @@ def sync_company_details(companies, catalog, mdata, schema, start):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for company in companies:
             if not company['modified_time'] or company['modified_time'] >= start:
-                record = request(get_url("companies_detail",
-                                company_id=company['id'])).json()
+                record = request(get_url("companies_detail", company_id=company['id'])).json()
                 record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
@@ -648,7 +645,8 @@ def sync_companies(STATE, ctx):
                 sync_company_details(companies, catalog, mdata, schema, start)
 
                 if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                    _sync_contacts_by_company_batch_read(STATE, ctx, [company['id'] for company in companies])
+                    company_ids = [company['id'] for company in companies]
+                    _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
 
                 companies = []
 
@@ -657,7 +655,8 @@ def sync_companies(STATE, ctx):
     sync_company_details(companies, catalog, mdata, schema, start)
 
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-        _sync_contacts_by_company_batch_read(STATE, ctx, [company['id'] for company in companies])
+        company_ids = [company['id'] for company in companies]
+        _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
@@ -1271,7 +1270,7 @@ def discover_schemas():
             LOGGER.warning(warning_message)
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
-    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
+    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE')
     schema, mdata = load_discovered_schema(contacts_by_company)
 
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
