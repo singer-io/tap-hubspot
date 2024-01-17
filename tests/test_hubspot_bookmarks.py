@@ -62,7 +62,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
             else:
                 self.times =3
 
-            if stream in 'email_events':
+            if stream == 'email_events':
                 email_records = self.test_client.create(stream, self.times)
                 self.expected_records['email_events'] += email_records
             else:
@@ -71,7 +71,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
-                if stream in 'contact_lists':
+                if stream == 'contact_lists':
                     static_list = self.test_client.create('static_contact_lists')
                     self.expected_records[stream] += static_list
 
