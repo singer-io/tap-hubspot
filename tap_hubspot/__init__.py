@@ -647,8 +647,8 @@ def sync_companies(STATE, ctx):
                 company_ids.append(row['companyId'])
                 # Process the company and contacts_by_ompany records once list size reaches default limit (=250)
                 if len(company_ids) >= default_company_params['limit']:
-                    _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
-                    company_ids = []
+                        _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+                        company_ids = []
 
     # Stream may have less the default limit (=250) records, also last batch may have less records than the limit set
     # Following code will handle those remaining company records
