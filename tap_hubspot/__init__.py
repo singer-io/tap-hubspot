@@ -103,6 +103,9 @@ ENDPOINTS = {
 
     "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
+
+    "custom_objects_schema":        "/crm/v3/schemas",
+    "custom_objects": "/crm/v3/objects/p_{object_name}"
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
@@ -198,7 +201,12 @@ def get_field_schema(field_type, extras=False):
             }
         }
 
-def parse_custom_schema(entity_name, data):
+def parse_custom_schema(entity_name, data, is_custom_object=False):
+    if is_custom_object:
+        return {
+            field['name']: get_field_type_schema(field['type'])
+            for field in data
+        }
     if entity_name == "tickets":
         return {
             field['name']: get_field_type_schema(field['type'])
@@ -583,13 +591,6 @@ default_company_params = {
     'limit': 250, 'properties': ["createdate", "hs_lastmodifieddate"]
 }
 
-def sync_company_details(companies, catalog, mdata, schema, start):
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for company in companies:
-            record = request(get_url("companies_detail", company_id=company['id'])).json()
-            record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-            singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
-
 def sync_companies(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -620,7 +621,7 @@ def sync_companies(STATE, ctx):
 
     # We will process the companies and contacts_by_cmpany records in batches of default limit size
     # This list will store the company records until bucket size is reached and records finished
-    companies = []
+    company_ids = []
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
             row_properties = row['properties']
@@ -638,24 +639,20 @@ def sync_companies(STATE, ctx):
                 max_bk_value = modified_time
 
             if not modified_time or modified_time >= start:
-                companies.append({'id': row['companyId'], 'modified_time': modified_time})
+                record = request(get_url("companies_detail", company_id=row['companyId'])).json()
+                record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
+                singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
-            # Process the company and contacts_by_ompany records once list size reaches default limit (=250)
-            if len(companies) >= default_company_params['limit']:
-                sync_company_details(companies, catalog, mdata, schema, start)
-
-                if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                    company_ids = [company['id'] for company in companies]
+            if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
+                company_ids.append(row['companyId'])
+                # Process the company and contacts_by_ompany records once list size reaches default limit (=250)
+                if len(company_ids) >= default_company_params['limit']:
                     _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
-
-                companies = []
+                    company_ids = []
 
     # Stream may have less the default limit (=250) records, also last batch may have less records than the limit set
     # Following code will handle those remaining company records
-    sync_company_details(companies, catalog, mdata, schema, start)
-
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-        company_ids = [company['id'] for company in companies]
         _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
@@ -1125,6 +1122,92 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
+    """
+    Cursor-based API Pagination : Used in custom_objects stream implementation
+    """
+    try:
+        with metrics.record_counter(tap_stream_id) as counter:
+            while True:
+                data = request(url, params).json()
+
+                if data.get(path) is None:
+                    raise RuntimeError(
+                        "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+                for row in data[path]:
+                    counter.increment()
+                    yield row
+
+                if not data.get(more_key):
+                    break
+                params['after'] = data.get(more_key, {}).get('next', {}).get('after', None)
+                if params['after'] is None:
+                    break
+    except SourceUnavailableException as ex:
+        warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+        LOGGER.warning(warning_message)
+        return []
+
+def sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=False):
+    """
+    Synchronize records from a data source
+    """
+    mdata = metadata.to_map(catalog.get('metadata'))
+    if is_custom_object:
+        url = get_url("custom_objects", object_name=stream_id)
+    else:
+        url = get_url(stream_id)
+    max_bk_value = bookmark_value = utils.strptime_with_tz(
+        get_start(STATE, stream_id, bookmark_key))
+
+    LOGGER.info(f"Sync record for {stream_id} from {bookmark_value}")
+    schema = catalog.get('schema')
+    singer.write_schema(stream_id, schema, [primary_key],
+                        [bookmark_key], catalog.get('stream_alias'))
+
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
+        # To handle records updated between start of the table sync and the end,
+        # store the current sync start in the state and not move the bookmark past this value.
+        sync_start_time = utils.now()
+        for row in gen_request_custom_objects(stream_id, url, params, 'results', "paging"):
+            # parsing the string formatted date to datetime object
+            modified_time = utils.strptime_to_utc(row[bookmark_key])
+
+            # Checking the bookmark value is present on the record and it
+            # is greater than or equal to defined previous bookmark value
+            if modified_time and modified_time >= bookmark_value:
+                # transforms the data and filters out the selected fields from the catalog
+                record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                singer.write_record(stream_id, record, catalog.get(
+                    'stream_alias'), time_extracted=utils.now())
+            if modified_time and modified_time >= max_bk_value:
+                max_bk_value = modified_time
+
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
+    return STATE
+
+
+def sync_custom_object_records(STATE, ctx, stream_id):
+    """
+    Function to sync records for each `custom_object` stream
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    primary_key = "id"
+    bookmark_key = "updatedAt"
+
+    params = {'limit': 100,
+              'associations': 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets',
+              'properties': get_selected_property_fields(catalog, mdata),
+              'archived': False
+              }
+    return sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, params, is_custom_object=True)
+
+
 @attr.s
 class Stream:
     tap_stream_id = attr.ib()
@@ -1152,6 +1235,64 @@ STREAMS = [
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
 ]
 
+# pylint: disable=inconsistent-return-statements
+def generate_custom_streams(mode, catalog=None):
+    """
+    - In DISCOVER mode, fetch the custom schema from the API endpoint and set the schema for the custom objects.
+    - In SYNC mode, extend STREAMS for the custom objects.
+
+    Args:
+        mode (str): The mode indicating whether to DISCOVER or SYNC custom streams.
+        catalog (dict): The catalog containing stream information.
+
+    Returns:
+        List[dict] or List[str]: Returns list of custom streams (contains dictionary) in DISCOVER mode and a list of custom object names in SYNC mode.
+    """
+    custom_objects_schema_url = get_url("custom_objects_schema")
+    if mode == "DISCOVER":
+        custom_streams = []
+        # Load Hubspot's shared schemas
+        refs = load_shared_schema_refs()
+        for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
+            stream_id = custom_object["name"]
+            schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
+            custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
+            schema["properties"]["properties"] = {
+                "type": "object",
+                "properties": custom_schema,
+            }
+
+            # Move properties to top level
+            custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
+            schema['properties'].update(custom_schema_top_level)
+
+            final_schema = singer.resolve_schema_references(schema, refs)
+            custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'),
+                                   "schema": final_schema})
+
+        return custom_streams
+
+    elif mode == "SYNC":
+        custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
+        if len(custom_objects) > 0:
+            for stream in catalog["streams"]:
+                if stream["tap_stream_id"] in custom_objects:
+                    STREAMS.append(Stream(stream["tap_stream_id"], sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'))
+        return custom_objects
+
+def load_shared_schema_refs():
+    shared_schemas_path = get_abs_path('schemas/shared')
+
+    shared_file_names = [f for f in os.listdir(shared_schemas_path)
+                         if os.path.isfile(os.path.join(shared_schemas_path, f))]
+
+    shared_schema_refs = {}
+    for shared_file in shared_file_names:
+        with open(os.path.join(shared_schemas_path, shared_file)) as data_file:
+            shared_schema_refs[shared_file] = json.load(data_file)
+
+    return shared_schema_refs
+
 def get_streams_to_sync(streams, state):
     target_stream = singer.get_currently_syncing(state)
     result = streams
@@ -1173,6 +1314,7 @@ def get_selected_streams(remaining_streams, ctx):
     return selected_streams
 
 def do_sync(STATE, catalog):
+    custom_objects = generate_custom_streams(mode="SYNC", catalog=catalog)
     # Clear out keys that are no longer used
     clean_state(STATE)
 
@@ -1189,7 +1331,10 @@ def do_sync(STATE, catalog):
         singer.write_state(STATE)
 
         try:
-            STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
+            if stream.tap_stream_id in custom_objects:
+                STATE = stream.sync(STATE, ctx, stream.tap_stream_id)
+            else:
+                STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException as ex:
             error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.error(error_message)
@@ -1231,8 +1376,7 @@ def validate_dependencies(ctx):
     if errs:
         raise DependencyException(" ".join(errs))
 
-def load_discovered_schema(stream):
-    schema = load_schema(stream.tap_stream_id)
+def get_metadata(stream, schema):
     mdata = metadata.new()
 
     mdata = metadata.write(mdata, (), 'table-key-properties', stream.key_properties)
@@ -1251,8 +1395,13 @@ def load_discovered_schema(stream):
     if stream.tap_stream_id == "engagements":
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
         mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
+    return metadata.to_list(mdata)
 
-    return schema, metadata.to_list(mdata)
+def load_discovered_schema(stream):
+    schema = load_schema(stream.tap_stream_id)
+    mdata = get_metadata(stream, schema)
+
+    return schema, mdata
 
 def discover_schemas():
     result = {'streams': []}
@@ -1268,6 +1417,14 @@ def discover_schemas():
             # Skip the discovery mode on the streams were the required scopes are missing
             warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
             LOGGER.warning(warning_message)
+
+    for custom_stream in generate_custom_streams(mode="DISCOVER"):
+        LOGGER.info('Loading schema for Custom Object - %s', custom_stream["stream"].tap_stream_id)
+        result['streams'].append({'stream': custom_stream["stream"].tap_stream_id,
+                                  'tap_stream_id': custom_stream["stream"].tap_stream_id,
+                                  'schema': custom_stream["schema"],
+                                  'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
+
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
     contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE')
