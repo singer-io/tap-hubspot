@@ -586,10 +586,9 @@ default_company_params = {
 def sync_company_details(companies, catalog, mdata, schema, start):
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for company in companies:
-            if not company['modified_time'] or company['modified_time'] >= start:
-                record = request(get_url("companies_detail", company_id=company['id'])).json()
-                record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-                singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
+            record = request(get_url("companies_detail", company_id=company['id'])).json()
+            record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
+            singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
 def sync_companies(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
@@ -638,7 +637,8 @@ def sync_companies(STATE, ctx):
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
-            companies.append({'id': row['companyId'], 'modified_time': modified_time})
+            if not modified_time or modified_time >= start:
+                companies.append({'id': row['companyId'], 'modified_time': modified_time})
 
             # Process the company and contacts_by_ompany records once list size reaches default limit (=250)
             if len(companies) >= default_company_params['limit']:
