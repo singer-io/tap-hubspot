@@ -1,2 +1,3 @@
 include LICENSE
 include tap_hubspot/schemas/*.json
+include tap_hubspot/schemas/shared/*.json

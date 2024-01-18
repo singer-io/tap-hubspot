@@ -55,11 +55,11 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         if original:
             return {
-                'start_date' : self.timedelta_formatted(utc_today, days=-8)
+                'start_date' : self.timedelta_formatted(utc_today, days=-20)
             }
         else:
             return {
-                'start_date': self.timedelta_formatted(utc_today, days=-4)
+                'start_date': self.timedelta_formatted(utc_today, days=-5)
             }
 
     def test_run(self):
@@ -147,7 +147,6 @@ class TestHubspotStartDate(HubspotBaseTest):
                                    msg='start date usage is not confirmed when no records are replicated')
                 self.assertGreater(second_sync_count, 0,
                                    msg='start date usage is not confirmed when no records are replicated')
-
 
 class TestHubspotStartDateStatic(TestHubspotStartDate):
     @staticmethod
