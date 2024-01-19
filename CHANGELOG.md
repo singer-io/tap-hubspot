@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.14.0
+  * Updates to run on python 3.11.7 [#249](https://github.com/singer-io/tap-hubspot/pull/249mag)
+
 ## 2.13.0
   * HubSpot Custom CRM Objects Support [#242](https://github.com/singer-io/tap-hubspot/pull/242)
 
