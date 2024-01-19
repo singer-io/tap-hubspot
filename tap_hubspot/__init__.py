@@ -587,6 +587,10 @@ def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
                     record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
                     singer.write_record("contacts_by_company", record, time_extracted=utils.now())
 
+    STATE = singer.set_offset(STATE, "contacts_by_company", 'offset', company_ids[-1])
+    singer.write_state(STATE)
+    return STATE
+
 default_company_params = {
     'limit': 250, 'properties': ["createdate", "hs_lastmodifieddate"]
 }
@@ -617,10 +621,25 @@ def sync_companies(STATE, ctx):
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
         contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
-        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
+        singer.write_schema('contacts_by_company', contacts_by_company_schema, ["company-id", "contact-id"])
 
-    # We will process the companies and contacts_by_cmpany records in batches of default limit size
-    # This list will store the company records until bucket size is reached and records finished
+        # This code handles the interrutped sync. When sync is interrupted,
+        # last batch of `contacts_by_company` extraction may get interrupted.
+        # So before ressuming, we should check between `companies` and `contacts_by_company`
+        # whose offset is lagging behind and set that as an offset value for `companies`.
+        # Note, few of the records may get duplicated.
+        if singer.get_offset(STATE, 'contacts_by_company', {}).get('offset'):
+            companies_offset = singer.get_offset(STATE, 'companies', {}).get('offset')
+            contacts_by_company_offset = singer.get_offset(STATE, 'contacts_by_company').get('offset')
+            if companies_offset:
+                offset = min(companies_offset, contacts_by_company_offset)
+            else:
+                offset = contacts_by_company_offset
+
+            STATE = singer.set_offset(STATE, 'companies', 'offset', offset)
+            singer.write_state(STATE)
+
+    # This list collects the recently modified company ids to extract `contacts_by_company` records in batch
     company_ids = []
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
@@ -644,16 +663,19 @@ def sync_companies(STATE, ctx):
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
 
             if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                company_ids.append(row['companyId'])
-                # Process the company and contacts_by_ompany records once list size reaches default limit (=250)
-                if len(company_ids) >= default_company_params['limit']:
-                        _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
-                        company_ids = []
+                # Collect the recently modified company id
+                if not modified_time or modified_time >= start:
+                    company_ids.append(row['companyId'])
 
-    # Stream may have less the default limit (=250) records, also last batch may have less records than the limit set
-    # Following code will handle those remaining company records
+                # Once batch size reaches set limit, extract the `contacts_by_company` for company ids collected
+                if len(company_ids) >= default_company_params['limit']:
+                    STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+                    company_ids = []    # reset the list
+
+    # Extract the records for last remaining company ids
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-        _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+        STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+        STATE = singer.clear_offset(STATE, "contacts_by_company")
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
