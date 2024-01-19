@@ -6,7 +6,7 @@ import os
 import re
 import sys
 import json
-# pylint: disable=import-error
+# pylint: disable=import-error,too-many-statements
 import attr
 import backoff
 import requests
@@ -574,7 +574,6 @@ def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     url = get_url("contacts_by_company_v3")
-
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
             body = {'inputs': [{'id': company_id} for company_id in company_ids]}
@@ -586,7 +585,6 @@ def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
                               'contact-id' : contact['id']}
                     record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
                     singer.write_record("contacts_by_company", record, time_extracted=utils.now())
-
     STATE = singer.set_offset(STATE, "contacts_by_company", 'offset', company_ids[-1])
     singer.write_state(STATE)
     return STATE
