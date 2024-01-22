@@ -76,7 +76,6 @@ ENDPOINTS = {
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
-    "contacts_by_company":  "/companies/v2/companies/{company_id}/vids",
     "contacts_by_company_v3": "/crm/v3/associations/company/contact/batch/read",
 
     "deals_properties":     "/properties/v1/deals/properties",
