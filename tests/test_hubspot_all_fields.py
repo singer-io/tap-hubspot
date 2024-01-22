@@ -140,6 +140,7 @@ KNOWN_MISSING_FIELDS = {
     'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
         'imports',
         'property_hs_num_associated_deal_splits',
+        'property_hs_is_active_shared_deal', #https://jira.talendforge.org/browse/TDL-24758
         'property_hs_is_deal_split',
         'stateChanges',
         'property_hs_num_associated_active_deal_registrations',
