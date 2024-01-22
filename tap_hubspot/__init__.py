@@ -852,8 +852,7 @@ def sync_contact_lists(STATE, ctx):
         for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
-            if record[bookmark_key] >= start:
-                singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
+            singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
