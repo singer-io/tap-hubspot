@@ -140,6 +140,7 @@ KNOWN_MISSING_FIELDS = {
     'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
         'imports',
         'property_hs_num_associated_deal_splits',
+        'property_hs_is_active_shared_deal', #https://jira.talendforge.org/browse/TDL-24758
         'property_hs_is_deal_split',
         'stateChanges',
         'property_hs_num_associated_active_deal_registrations',
@@ -298,7 +299,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                         #     to our test data. We have determined that the filtering of these fields is an expected behavior.
 
                         # deals workaround for 'property_hs_date_entered_<property>' fields
-                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_',
+                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_v2_date_entered_', 'property_hs_date_exited_',
                                             'property_hs_time_in'}
                         bad_keys = set()
                         for key in expected_keys_adjusted:
