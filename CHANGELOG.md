@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.13.1
+  * Optimise contacts_by_company implementation [#250](https://github.com/singer-io/tap-hubspot/pull/250)
+
 ## 2.13.0
   * HubSpot Custom CRM Objects Support [#242](https://github.com/singer-io/tap-hubspot/pull/242)
 

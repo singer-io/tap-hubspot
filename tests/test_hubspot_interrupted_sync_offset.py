@@ -12,6 +12,8 @@ from client import TestClient
 
 class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
+    synced_records = None
+
     @staticmethod
     def name():
         return "tt_hubspot_interrupt_contact_lists"
@@ -20,7 +22,6 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
         """expected streams minus the streams not under test"""
         untested = {
             # Streams tested elsewhere
-            'companies', # covered in TestHubspotInterruptedSync1
             'engagements', # covered in TestHubspotInterruptedSync1
             # Feature Request | TDL-16095: [tap-hubspot] All incremental
             #                   streams should implement the interruptible sync feature
@@ -31,7 +32,6 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
             'deal_pipelines', # interruptible does not apply, child of deals
             'campaigns', # unable to manually find a partial state with our test data
             'email_events', # unable to manually find a partial state with our test data
-            'contacts_by_company', # interruptible does not apply, child of 'companies'
             'subscription_changes', # BUG_TDL-14938
             'tickets' # covered in TestHubspotInterruptedSync1
         }
@@ -41,8 +41,9 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
     def stream_to_interrupt(self):
         return 'contact_lists'
 
-    def state_to_inject(self):
-        return {'offset': {'offset': 250}}
+    def state_to_inject(self, new_state):
+        new_state['bookmarks']['contact_lists'] = {'offset': {'offset': 250}}
+        return new_state
 
     def get_properties(self):
         return {
@@ -79,14 +80,15 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
 
         # Run sync 1
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
-        synced_records = runner.get_records_from_target_output()
+        self.synced_records = runner.get_records_from_target_output()
         state_1 = menagerie.get_state(conn_id)
 
         # Update state to simulate a bookmark
         stream = self.stream_to_interrupt()
         new_state = copy.deepcopy(state_1)
-        new_state['bookmarks'][stream] = self.state_to_inject()
+        new_state = self.state_to_inject(new_state)
         new_state['currently_syncing'] = stream
+
         menagerie.set_state(conn_id, new_state)
 
         # run second sync
@@ -98,10 +100,21 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
         # since newly created test records may get updated while stream is syncing
         replication_keys = self.expected_replication_keys()
         for stream in state_1.get('bookmarks'):
-            replication_key = list(replication_keys[stream])[0]
-            self.assertLessEqual(state_1["bookmarks"][stream].get(replication_key),
-                                 state_2["bookmarks"][stream].get(replication_key),
-                                 msg="First sync bookmark should not be greater than the second bookmark.")
+
+            if self.stream_to_interrupt() == 'companies' and stream == 'companies':
+                    replication_key = list(replication_keys[stream])[0]
+                    self.assertLessEqual(new_state.get('bookmarks')[stream].get('current_sync_start'),
+                                        state_2["bookmarks"][stream].get(replication_key),
+                                        msg="First sync bookmark should not be greater than the second bookmark.")
+            elif stream == 'contacts_by_company':
+                self.assertEquals(state_1["bookmarks"][stream], {"offset": {}})
+                self.assertEquals(state_2["bookmarks"][stream], {"offset": {}})
+
+            else:
+                replication_key = list(replication_keys[stream])[0]
+                self.assertLessEqual(state_1["bookmarks"][stream].get(replication_key),
+                                    state_2["bookmarks"][stream].get(replication_key),
+                                    msg="First sync bookmark should not be greater than the second bookmark.")
 
 
 class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
@@ -119,8 +132,9 @@ class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetC
     def stream_to_interrupt(self):
         return 'contacts'
 
-    def state_to_inject(self):
-        return {'offset': {'vidOffset': 3502}}
+    def state_to_inject(self, new_state):
+        new_state['bookmarks']['contacts'] = {'offset': {'vidOffset': 3502}}
+        return new_state
 
 class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetContactLists):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
@@ -136,6 +150,41 @@ class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetCont
     def stream_to_interrupt(self):
         return 'deals'
 
-    def state_to_inject(self):
-        return  {'property_hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
-                 'offset': {'offset': 3442973342}}
+    def state_to_inject(self, new_state):
+        new_state['bookmarks']['deals'] = {'property_hs_lastmodifieddate': '2021-10-13T08:32:08.383000Z',
+                                           'offset': {'offset': 3442973342}}
+        return new_state
+
+
+class TestHubspotInterruptedSyncOffsetCompanies(TestHubspotInterruptedSyncOffsetContactLists):
+    """Testing interrupted syncs for streams that implement unique bookmarking logic."""
+    @staticmethod
+    def name():
+        return "tt_hubspot_interrupt_companies"
+
+    def get_properties(self):
+        return {
+            'start_date' : '2023-12-31T00:00:00Z'
+        }
+
+    def stream_to_interrupt(self):
+        return 'companies'
+
+    def state_to_inject(self, new_state):
+        companies_records = self.synced_records['companies']['messages']
+        contacts_by_company_records = self.synced_records['contacts_by_company']['messages']
+
+        company_record_index = int(len(companies_records)/2)
+        contact_record_index = int(3*len(contacts_by_company_records)/4)
+
+        last_modified_value = companies_records[-1]['data'][list(self.expected_replication_keys()['companies'])[0]]['value']
+        current_sync_start = companies_records[company_record_index]['data'][list(self.expected_replication_keys()['companies'])[0]]['value']
+        offset_1 = companies_records[company_record_index]['data']['companyId']
+        offset_2 = contacts_by_company_records[contact_record_index]['data']['company-id']
+
+        new_state['bookmarks']['companies'] = {'property_hs_lastmodifieddate': last_modified_value,
+                                               'current_sync_start': current_sync_start,
+                                               'offset': {'offset': offset_1}}
+        new_state['bookmarks']['contacts_by_company'] = {'offset': {'offset': offset_2}}
+
+        return new_state
