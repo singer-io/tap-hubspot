@@ -160,8 +160,3 @@ class HubspotBaseCase(BaseCase):
             }
 
         }
-
-    def expected_page_limits(self):
-        return {table: properties.get(BaseCase.EXPECTED_PAGE_SIZE, set())
-                for table, properties
-                in self.expected_metadata().items()}
