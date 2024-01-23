@@ -18,7 +18,7 @@ setup(name='tap-hubspot',
       ],
       extras_require= {
           'dev': [
-              'pylint==2.5.3',
+              'pylint==3.0.3',
               'nose==1.3.7',
           ]
       },
