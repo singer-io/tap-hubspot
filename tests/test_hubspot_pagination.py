@@ -20,7 +20,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
         #     """
         streams_with_page_limits =  {
             stream
-            for stream, limit in self.expected_page_limits().items()
+            for stream, limit in self.expected_page_size().items()
             if limit
         }
         streams_to_test = streams_with_page_limits.difference({
@@ -46,7 +46,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
 
         # gather expectations
         existing_records = dict()
-        limits = self.expected_page_limits()
+        limits = self.expected_page_size()
         streams = self.streams_to_test()
 
         # order the creation of test data for streams based on the streams under test
