@@ -6,7 +6,7 @@ import os
 import re
 import sys
 import json
-# pylint: disable=import-error
+# pylint: disable=import-error,too-many-statements
 import attr
 import backoff
 import requests
@@ -76,7 +76,7 @@ ENDPOINTS = {
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
-    "contacts_by_company":  "/companies/v2/companies/{company_id}/vids",
+    "contacts_by_company_v3": "/crm/v3/associations/company/contact/batch/read",
 
     "deals_properties":     "/properties/v1/deals/properties",
     "deals_all":            "/deals/v1/deal/paged",
@@ -568,26 +568,24 @@ def use_recent_companies_endpoint(response):
 default_contacts_by_company_params = {'count' : 100}
 
 # NB> to do: support stream aliasing and field selection
-def _sync_contacts_by_company(STATE, ctx, company_id):
+def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
     schema = load_schema(CONTACTS_BY_COMPANY)
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
-    url = get_url("contacts_by_company", company_id=company_id)
-    path = 'vids'
+    url = get_url("contacts_by_company_v3")
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
-            data = request(url, default_contacts_by_company_params).json()
-
-            if data.get(path) is None:
-                raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
-
-            for row in data[path]:
-                counter.increment()
-                record = {'company-id' : company_id,
-                          'contact-id' : row}
-                record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-                singer.write_record("contacts_by_company", record, time_extracted=utils.now())
-
+            body = {'inputs': [{'id': company_id} for company_id in company_ids]}
+            contacts_to_company_rows = post_search_endpoint(url, body).json()
+            for row in contacts_to_company_rows['results']:
+                for contact in row['to']:
+                    counter.increment()
+                    record = {'company-id' : row['from']['id'],
+                              'contact-id' : contact['id']}
+                    record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
+                    singer.write_record("contacts_by_company", record, time_extracted=utils.now())
+    STATE = singer.set_offset(STATE, "contacts_by_company", 'offset', company_ids[-1])
+    singer.write_state(STATE)
     return STATE
 
 default_company_params = {
@@ -620,8 +618,26 @@ def sync_companies(STATE, ctx):
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
         contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
-        singer.write_schema("contacts_by_company", contacts_by_company_schema, ["company-id", "contact-id"])
+        singer.write_schema('contacts_by_company', contacts_by_company_schema, ["company-id", "contact-id"])
 
+        # This code handles the interrutped sync. When sync is interrupted,
+        # last batch of `contacts_by_company` extraction may get interrupted.
+        # So before ressuming, we should check between `companies` and `contacts_by_company`
+        # whose offset is lagging behind and set that as an offset value for `companies`.
+        # Note, few of the records may get duplicated.
+        if singer.get_offset(STATE, 'contacts_by_company', {}).get('offset'):
+            companies_offset = singer.get_offset(STATE, 'companies', {}).get('offset')
+            contacts_by_company_offset = singer.get_offset(STATE, 'contacts_by_company').get('offset')
+            if companies_offset:
+                offset = min(companies_offset, contacts_by_company_offset)
+            else:
+                offset = contacts_by_company_offset
+
+            STATE = singer.set_offset(STATE, 'companies', 'offset', offset)
+            singer.write_state(STATE)
+
+    # This list collects the recently modified company ids to extract `contacts_by_company` records in batch
+    company_ids = []
     with bumble_bee:
         for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
             row_properties = row['properties']
@@ -642,8 +658,21 @@ def sync_companies(STATE, ctx):
                 record = request(get_url("companies_detail", company_id=row['companyId'])).json()
                 record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
                 singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                    STATE = _sync_contacts_by_company(STATE, ctx, record['companyId'])
+
+            if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
+                # Collect the recently modified company id
+                if not modified_time or modified_time >= start:
+                    company_ids.append(row['companyId'])
+
+                # Once batch size reaches set limit, extract the `contacts_by_company` for company ids collected
+                if len(company_ids) >= default_company_params['limit']:
+                    STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+                    company_ids = []    # reset the list
+
+    # Extract the records for last remaining company ids
+    if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
+        STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+        STATE = singer.clear_offset(STATE, "contacts_by_company")
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
@@ -1417,7 +1446,7 @@ def discover_schemas():
 
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
-    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company, ['company-id', 'contact-id'], None, 'FULL_TABLE')
+    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE')
     schema, mdata = load_discovered_schema(contacts_by_company)
 
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
