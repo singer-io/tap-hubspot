@@ -18,7 +18,7 @@ class HubspotBaseCase(BaseCase):
     EXTRA_FIELDS = {
         "contacts": { "versionTimestamp" }
     }
-    
+
     def setUp(self):
         missing_envs = [x for x in [
             'TAP_HUBSPOT_REDIRECT_URI',
@@ -140,5 +140,23 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
                 BaseCase.API_LIMIT: 100,
                 BaseCase.OBEYS_START_DATE: True
+            },
+            # below are the custom_objects stream
+            "cars": {
+                BaseCase.PRIMARY_KEYS: {"id"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"updatedAt"},
+                BaseCase.API_LIMIT: 100,
+                BaseCase.EXPECTED_PAGE_SIZE: 100,
+                BaseCase.OBEYS_START_DATE: True
+            },
+            "co_firsts": {
+                BaseCase.PRIMARY_KEYS: {"id"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"updatedAt"},
+                BaseCase.API_LIMIT: 100,
+                BaseCase.EXPECTED_PAGE_SIZE: 100,
+                BaseCase.OBEYS_START_DATE: True
             }
+
         }

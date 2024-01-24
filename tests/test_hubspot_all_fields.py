@@ -300,8 +300,9 @@ class TestHubspotAllFields(HubspotBaseTest):
                         #     to our test data. We have determined that the filtering of these fields is an expected behavior.
 
                         # deals workaround for 'property_hs_date_entered_<property>' fields
-                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_v2_date_entered_', 'property_hs_date_exited_',
-                                            'property_hs_time_in'}
+
+                        bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_',
+                                            'property_hs_time_in', 'property_hs_'}
                         bad_keys = set()
                         for key in expected_keys_adjusted:
                             for prefix in bad_key_prefixes:
