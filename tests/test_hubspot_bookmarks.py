@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from time import sleep
+import time
 
 
 import tap_tester.connections as connections
@@ -34,7 +34,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         return expected_streams.difference({
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        })
+        }) 
 
     def get_properties(self):
         return {
@@ -57,17 +57,23 @@ class TestHubspotBookmarks(HubspotBaseTest):
         for stream in expected_streams - {'contacts_by_company'}:
             if stream == 'contacts': 
                 self.times=10
+            elif stream == 'contact_lists':
+                self.times=2
             else:
                 self.times =3
 
-            if stream in 'email_events':
+            if stream == 'email_events':
                 email_records = self.test_client.create(stream, self.times)
                 self.expected_records['email_events'] += email_records
             else:
                 # create records, one will be updated between syncs
+                # create one static list and the rest dynamic list
                 for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
+                if stream == 'contact_lists':
+                    static_list = self.test_client.create('static_contact_lists')
+                    self.expected_records[stream] += static_list
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
@@ -108,6 +114,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
         for stream in expected_streams - {'contacts_by_company'}:
             record = self.test_client.create(stream)
             self.expected_records[stream] += record
+
         if 'contacts_by_company' in expected_streams:
             company_ids = [record['companyId'] for record in self.expected_records['companies'][:-1]]
             contact_records = self.expected_records['contacts'][-1:]
@@ -115,7 +122,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 company_ids=company_ids, contact_records=contact_records
             )
             self.expected_records['contacts_by_company'] += record
-
 
         # Update 1 record from the test seutp for each stream that has an update endpoint
         for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
