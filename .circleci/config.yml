@@ -46,7 +46,7 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             pip install nose2 parameterized nose2[coverage_plugin]>=0.6.5
-            nose2 --with-coverage -v -s tests/unittests
+            nose2 --with-coverage -v -s tap_hubspot/tests/unittests
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
