@@ -569,10 +569,15 @@ default_contacts_by_company_params = {'count' : 100}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
+    # Return state as it is if company ids list is empty
+    if len(company_ids) == 0:
+        return STATE
+
     schema = load_schema(CONTACTS_BY_COMPANY)
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     url = get_url("contacts_by_company_v3")
+
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         with metrics.record_counter(CONTACTS_BY_COMPANY) as counter:
             body = {'inputs': [{'id': company_id} for company_id in company_ids]}
