@@ -142,6 +142,7 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_num_associated_deal_splits',
         'property_hs_is_active_shared_deal', #https://jira.talendforge.org/browse/TDL-24758
         'property_hs_is_deal_split',
+        'property_hs_is_active_shared_deal',
         'stateChanges',
         'property_hs_num_associated_active_deal_registrations',
         'property_hs_num_associated_deal_registrations',
