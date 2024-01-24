@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.13.2
+  * Fix out-of-index error [#253](https://github.com/singer-io/tap-hubspot/pull/253)
+
 ## 2.13.1
   * Optimise contacts_by_company implementation [#250](https://github.com/singer-io/tap-hubspot/pull/250)
 
