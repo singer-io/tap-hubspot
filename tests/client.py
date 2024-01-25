@@ -7,8 +7,8 @@ import backoff
 import requests
 from base import HubspotBaseTest
 from tap_tester import LOGGER
-from copy import deepcopy
 import time
+from copy import deepcopy
 
 DEBUG = False
 BASE_URL = "https://api.hubapi.com"
