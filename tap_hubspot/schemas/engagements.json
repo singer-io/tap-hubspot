@@ -172,6 +172,12 @@
         },
         "disposition": {
           "type": ["null", "string"]
+        },
+        "activityType": {
+          "type": ["null", "string"]
+        },
+        "meetingOutcome": {
+          "type": ["null", "string"]
         }
       }
     }
