@@ -1121,7 +1121,7 @@ def sync_products(STATE, ctx):
               'properties': ['name', 'description', 'price', 'hs_lastmodifieddate']}
     
     schema = load_schema("products")
-    singer.write_schema("products", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
+    singer.write_schema("products", schema, ["objectId"], [bookmark_key], catalog.get('stream_alias'))
 
     # Check if we should  include associations
     for key in mdata.keys():
@@ -1218,7 +1218,7 @@ def sync_line_items(STATE, ctx):
               'properties': ['name', 'description', 'price', 'hs_lastmodifieddate', 'hs_product_id']}
     
     schema = load_schema("line_items")
-    singer.write_schema("line_items", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
+    singer.write_schema("line_items", schema, ["objectId"], [bookmark_key], catalog.get('stream_alias'))
 
     # Check if we should  include associations
     for key in mdata.keys():
@@ -1324,8 +1324,8 @@ STREAMS = [
     Stream('lead', sync_lead, ["id"], 'updatedAt', 'INCREMENTAL'),
     # Do these last as they are full table
     Stream('associations_line_items_deals_v3', sync_associations_line_items_deals_v3, ['id'], 'updatedAt', 'FULL_TABLE'),
-    Stream('line_items', sync_line_items, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
-    Stream('products', sync_products, ['id'], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    Stream('line_items', sync_line_items, ['objectId'], 'hs_lastmodifieddate', 'FULL_TABLE'),
+    Stream('products', sync_products, ['objectId'], 'hs_lastmodifieddate', 'FULL_TABLE'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
     Stream('owners', sync_owners, ['id'], 'updatedAt', 'FULL_TABLE'),
