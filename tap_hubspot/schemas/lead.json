@@ -522,8 +522,26 @@
         "tipo_da_negociacao": {
           "type": ["null", "string"]
         },
-        "tipo_do_lead": {
+        "impacto_de_email_marketing_em_mql__abertura_": {
           "type": ["null", "string"]
+        },
+        "impacto_de_email_marketing_em_mql__clique_": {
+          "type": ["null", "string"]
+        },
+        "intencao_de_compra": {
+          "type": ["null", "string"]
+        },
+        "edcorp__macro_motivo_de_perda": {
+          "type": ["null", "string"]
+        },
+        "r_s__macro_motivo_de_perda": {
+          "type": ["null", "string"]
+        },
+        "adm__macro_motivo_de_perda": {
+          "type": ["null", "string"]
+        },
+        "property_c_e___negocio__quantidade_de_licencas": {
+          "type": ["null", "number", "string"]
         }
       }
     },
