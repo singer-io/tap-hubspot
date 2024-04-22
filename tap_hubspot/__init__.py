@@ -687,7 +687,7 @@ def sync_companies(STATE, ctx):
     return STATE
 
 def has_selected_custom_field(mdata):
-    top_level_custom_props = [x for x in mdata if len(x) == 2 and 'property_' in x[1]]
+    top_level_custom_props = [x for x in mdata if len(x) >= 2 and 'property_' in x[1]]
     for prop in top_level_custom_props:
         # Return 'True' if the custom field is automatic.
         if (mdata.get(prop, {}).get('selected') is True) or (mdata.get(prop, {}).get('inclusion') == "automatic"):
