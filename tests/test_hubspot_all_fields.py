@@ -95,7 +95,8 @@ KNOWN_MISSING_FIELDS = {
         'contactCounts',
     },
     'owners': {  # BUG https://jira.talendforge.org/browse/TDL-15000
-        'activeSalesforceId'
+        'activeSalesforceId',
+        'userIdIncludingInactive'
     },
     'forms': {  # BUG https://jira.talendforge.org/browse/TDL-15001
         'alwaysCreateNewCompany',
@@ -103,6 +104,7 @@ KNOWN_MISSING_FIELDS = {
         'publishAt',
         'editVersion',
         'embedVersion',
+        'enrichable',
         'themeName',
         'style',
         'thankYouMessageJson',
@@ -212,8 +214,10 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def convert_datatype(self, expected_records):
         for stream, records in expected_records.items():
-            for record in records:
+            if 'results' in records:
+                records = records['results']
 
+            for record in records:
                 # convert timestamps to string formatted datetime
                 timestamp_keys = {'timestamp'}
                 for key in timestamp_keys:
@@ -258,8 +262,12 @@ class TestHubspotAllFields(HubspotBaseTest):
                                   for message in synced_records[stream]['messages']
                                   if message['action'] == 'upsert']
 
-                for expected_record in self.expected_records[stream]:
+                if 'results' in self.expected_records[stream]:
+                    expected_records = self.expected_records[stream]['results']
+                else:
+                    expected_records = self.expected_records[stream]
 
+                for expected_record in expected_records:
                     primary_key_dict = {primary_key: expected_record[primary_key] for primary_key in primary_keys}
                     primary_key_values = list(primary_key_dict.values())
 
@@ -323,10 +331,15 @@ class TestHubspotAllFields(HubspotBaseTest):
                         # Future Testing | TDL-16145
                         # self.assertDictEqual(expected_record, actual_record)
 
+                if 'results' in self.expected_records[stream]:
+                    expected_records = self.expected_records[stream]['results']
+                else:
+                    expected_records = self.expected_records[stream]
+
                 # Toss out a warn if tap is replicating more than the expected records were replicated
                 expected_primary_key_values = {tuple([record[primary_key]
                                                       for primary_key in primary_keys])
-                                               for record in self.expected_records[stream]}
+                                               for record in expected_records}
                 actual_records_primary_key_values = {tuple([record[primary_key]
                                                             for primary_key in primary_keys])
                                                      for record in actual_records}
