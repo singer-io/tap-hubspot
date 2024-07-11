@@ -116,7 +116,7 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.OBEYS_START_DATE: True
             },
             "owners": {
-                BaseCase.PRIMARY_KEYS: {"ownerId"},
+                BaseCase.PRIMARY_KEYS: {"id"},
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
                 BaseCase.OBEYS_START_DATE: True  # TODO is this a BUG?

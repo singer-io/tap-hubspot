@@ -95,7 +95,10 @@ KNOWN_MISSING_FIELDS = {
         'contactCounts',
     },
     'owners': {  # BUG https://jira.talendforge.org/browse/TDL-15000
-        'activeSalesforceId'
+        'activeSalesforceId',
+
+        # Field is returned by API but not listed in official Hubspot documentation
+        'userIdIncludingInactive'
     },
     'forms': {  # BUG https://jira.talendforge.org/browse/TDL-15001
         'alwaysCreateNewCompany',
@@ -103,6 +106,7 @@ KNOWN_MISSING_FIELDS = {
         'publishAt',
         'editVersion',
         'embedVersion',
+        'enrichable',
         'themeName',
         'style',
         'thankYouMessageJson',
