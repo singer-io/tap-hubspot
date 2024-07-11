@@ -167,9 +167,6 @@ class TestClient():
             'owners': {'createdAt', 'updatedAt'},
         }
         if stream in datetime_columns.keys():
-            if 'results' in records:
-                records = records['results']
-
             for record in records:
                 for column in record.keys():
                     if column in datetime_columns[stream] and isinstance(datetime_columns[stream], int):
@@ -632,7 +629,7 @@ class TestClient():
         """
         url = f"{BASE_URL}/crm/v3/owners"
         records = self.get(url)
-        transformed_records = self.datatype_transformations('owners', records)
+        transformed_records = self.datatype_transformations('owners', records['results'])
         return transformed_records
 
     def get_subscription_changes(self, since='', pagination=False):
