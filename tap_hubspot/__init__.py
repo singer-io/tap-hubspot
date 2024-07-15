@@ -800,7 +800,7 @@ def get_v3_records(tap_stream_id, url, params, path, more_key):
                 break
             params['after'] = data.get(more_key).get('next').get('after')
 
-def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key = "updatedAt"):
+def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt"):
     """
     Function to sync streams that are using v3 endpoints
     """
@@ -1224,14 +1224,14 @@ STREAMS = [
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
-
-    # Do these last as they are full table
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
-    Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
-    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL')
+    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
+
+    # Do these last as they are full table
+    Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE')
 ]
 
 # pylint: disable=inconsistent-return-statements
