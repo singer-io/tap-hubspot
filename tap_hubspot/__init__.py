@@ -1226,12 +1226,12 @@ STREAMS = [
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
-    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
+    Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
+    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
+    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
     Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
-    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
+    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL')
 ]
 
 # pylint: disable=inconsistent-return-statements
