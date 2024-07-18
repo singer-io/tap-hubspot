@@ -1055,8 +1055,9 @@ def sync_owners(STATE, ctx):
     primary_key = "id"
     bookmark_key = "updatedAt"
 
-    max_bk_value = bookmark_value = utils.strptime_with_tz(
+    bookmark_value = utils.strptime_with_tz(
         get_start(STATE, stream_id, bookmark_key))
+    max_bk_value = bookmark_value
     LOGGER.info(f"sync {stream_id} from %s", bookmark_value)
 
     params = {'limit': 500}
@@ -1072,18 +1073,18 @@ def sync_owners(STATE, ctx):
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
         for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
-            # parsing the string formatted date to datetime object
+            # Parsing the string formatted date to datetime object
             modified_time = utils.strptime_to_utc(row[bookmark_key])
 
             # Checking the bookmark value is present on the record and it
             # is greater than or equal to defined previous bookmark value
             if modified_time and modified_time >= bookmark_value:
-                # transforms the data and filters out the selected fields from the catalog
+                # Transforms the data and filters out the selected fields from the catalog
                 record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record(stream_id, record, catalog.get(
                     'stream_alias'), time_extracted=utils.now())
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
+                if modified_time >= max_bk_value:
+                    max_bk_value = modified_time
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
