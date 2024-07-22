@@ -122,7 +122,7 @@ class TestTickets(unittest.TestCase):
 
     @patch('tap_hubspot.request', return_value=MockResponse(mock_response_data))
     @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00Z')
-    @patch('tap_hubspot.gen_request_tickets')
+    @patch('tap_hubspot.get_v3_records')
     def test_ticket_params_are_validated(self, mocked_gen_request, mocked_get_start,
                                          mock_request_response):
         """
