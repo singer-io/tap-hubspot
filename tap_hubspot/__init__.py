@@ -98,7 +98,7 @@ ENDPOINTS = {
     "contact_lists":        "/contacts/v1/lists",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
-    "owners":               "/owners/v2/owners",
+    "owners":               "/crm/v3/owners/",
 
     "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
@@ -780,7 +780,7 @@ def sync_deals(STATE, ctx):
     return STATE
 
 
-def gen_request_tickets(tap_stream_id, url, params, path, more_key):
+def get_v3_records(tap_stream_id, url, params, path, more_key):
     """
     Cursor-based API Pagination : Used in tickets stream implementation
     """
@@ -800,25 +800,17 @@ def gen_request_tickets(tap_stream_id, url, params, path, more_key):
                 break
             params['after'] = data.get(more_key).get('next').get('after')
 
-def sync_tickets(STATE, ctx):
+def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt"):
     """
-    Function to sync `tickets` stream records
+    Function to sync streams that are using v3 endpoints
     """
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
-    stream_id = "tickets"
-    primary_key = "id"
-    bookmark_key = "updatedAt"
 
-    max_bk_value = bookmark_value = utils.strptime_with_tz(
+    bookmark_value = utils.strptime_with_tz(
         get_start(STATE, stream_id, bookmark_key))
-    LOGGER.info("sync_tickets from %s", bookmark_value)
-
-    params = {'limit': 100,
-              'associations': 'contact,company,deals',
-              'properties': get_selected_property_fields(catalog, mdata),
-              'archived': False
-              }
+    max_bk_value = bookmark_value
+    LOGGER.info(f"Sync {stream_id} from %s", bookmark_value)
 
     schema = load_schema(stream_id)
     singer.write_schema(stream_id, schema, [primary_key],
@@ -830,19 +822,19 @@ def sync_tickets(STATE, ctx):
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in gen_request_tickets(stream_id, url, params, 'results', "paging"):
-            # parsing the string formatted date to datetime object
+        for row in get_v3_records(stream_id, url, params, 'results', "paging"):
+            # Parsing the string formatted date to datetime object
             modified_time = utils.strptime_to_utc(row[bookmark_key])
 
             # Checking the bookmark value is present on the record and it
             # is greater than or equal to defined previous bookmark value
             if modified_time and modified_time >= bookmark_value:
-                # transforms the data and filters out the selected fields from the catalog
+                # Transforms the data and filters out the selected fields from the catalog
                 record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record(stream_id, record, catalog.get(
                     'stream_alias'), time_extracted=utils.now())
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
+                if modified_time >= max_bk_value:
+                    max_bk_value = modified_time
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
@@ -850,6 +842,19 @@ def sync_tickets(STATE, ctx):
     singer.write_state(STATE)
     return STATE
 
+def sync_tickets(STATE, ctx):
+    """
+    Function to sync `tickets` stream records
+    """
+    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
+    mdata = metadata.to_map(catalog.get('metadata'))
+    stream_id = "tickets"
+    params = {'limit': 100,
+              'associations': 'contact,company,deals',
+              'properties': get_selected_property_fields(catalog, mdata),
+              'archived': False
+              }
+    return sync_v3_stream(STATE, ctx, stream_id, params)
 
 # NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
 def sync_campaigns(STATE, ctx):
@@ -1047,41 +1052,12 @@ def sync_workflows(STATE, ctx):
     return STATE
 
 def sync_owners(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get('metadata'))
-    schema = load_schema("owners")
-    bookmark_key = 'updatedAt'
-
-    singer.write_schema("owners", schema, ["ownerId"], [bookmark_key], catalog.get('stream_alias'))
-    start = get_start(STATE, "owners", bookmark_key)
-    max_bk_value = start
-
-    LOGGER.info("sync_owners from %s", start)
-
-    params = {}
-    if CONFIG.get('include_inactives'):
-        params['includeInactives'] = "true"
-    data = request(get_url("owners"), params).json()
-
-    time_extracted = utils.now()
-
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        for row in data:
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-            if record[bookmark_key] >= start:
-                singer.write_record("owners", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-
-    # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-    STATE = singer.write_bookmark(STATE, 'owners', bookmark_key, utils.strftime(new_bookmark))
-    singer.write_state(STATE)
-    return STATE
+    """
+    Function to sync `owners` stream records
+    """
+    stream_id = "owners"
+    params = {'limit': 500}
+    return sync_v3_stream(STATE, ctx, stream_id, params)
 
 def sync_engagements(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
@@ -1248,15 +1224,15 @@ STREAMS = [
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
+    Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
+    Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
+    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
+    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
+    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
 
     # Do these last as they are full table
-    Stream('forms', sync_forms, ['guid'], 'updatedAt', 'FULL_TABLE'),
-    Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'FULL_TABLE'),
-    Stream('owners', sync_owners, ["ownerId"], 'updatedAt', 'FULL_TABLE'),
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
-    Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'FULL_TABLE')
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE')
 ]
 
 # pylint: disable=inconsistent-return-statements

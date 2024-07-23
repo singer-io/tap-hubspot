@@ -169,10 +169,10 @@ class TestClient():
         if stream in datetime_columns.keys():
             for record in records:
                 for column in record.keys():
-                    if column in datetime_columns[stream]:
-                        record[column] = self.BaseTest.datetime_from_timestamp(
-                            record[column] / 1000, self.BOOKMARK_DATE_FORMAT
-                        )
+                    if column in datetime_columns[stream] and isinstance(datetime_columns[stream], int):
+                            record[column] = self.BaseTest.datetime_from_timestamp(
+                                record[column] / 1000, self.BOOKMARK_DATE_FORMAT
+                            )
 
         LOGGER.info(
             f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
@@ -627,9 +627,9 @@ class TestClient():
         """
         Get all owners.
         """
-        url = f"{BASE_URL}/owners/v2/owners"
+        url = f"{BASE_URL}/crm/v3/owners"
         records = self.get(url)
-        transformed_records = self.datatype_transformations('owners', records)
+        transformed_records = self.datatype_transformations('owners', records['results'])
         return transformed_records
 
     def get_subscription_changes(self, since='', pagination=False):
