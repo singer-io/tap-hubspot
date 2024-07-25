@@ -113,6 +113,7 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.PRIMARY_KEYS: {"guid"},
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
+                BaseCase.API_LIMIT: 100,
                 BaseCase.OBEYS_START_DATE: True
             },
             "owners": {
