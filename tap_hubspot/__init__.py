@@ -1001,9 +1001,7 @@ def sync_forms(STATE, ctx):
         sync_start_time = utils.now()
 
         # Check for pagination
-        params = {'formTypes': 'ALL',
-                  'limit': 100,
-                  'offset': 0}
+        params = {'limit': 100, 'offset': 0}
         while True:
             LOGGER.info("Limit: %d, Offset: %d", params['limit'], params['offset'])
             # Get next page URL
@@ -1018,10 +1016,11 @@ def sync_forms(STATE, ctx):
                 if record[bookmark_key] >= max_bk_value:
                     max_bk_value = record[bookmark_key]
 
-            if len(data) == 100:
-                params['offset'] += 100
-            else:
+            # Stop pagination if paginated response returns less records than page limit
+            if len(data) < params['limit']:
                 break
+
+            params['offset'] += 100
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
