@@ -995,20 +995,32 @@ def sync_forms(STATE, ctx):
 
     LOGGER.info("sync_forms from %s", start)
 
-    data = request(get_url("forms")).json()
-    time_extracted = utils.now()
-
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in data:
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
-            if record[bookmark_key] >= start:
-                singer.write_record("forms", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
+        # Check for pagination
+        params = {'limit': 100, 'offset': 0}
+        while True:
+            LOGGER.info("Limit: %d, Offset: %d", params['limit'], params['offset'])
+            # Get next page URL
+            data = request(get_url("forms"), params).json()
+            time_extracted = utils.now()
+
+            for row in data:
+                record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+
+                if record[bookmark_key] >= start:
+                    singer.write_record("forms", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                if record[bookmark_key] >= max_bk_value:
+                    max_bk_value = record[bookmark_key]
+
+            # Stop pagination if paginated response returns less records than page limit
+            if len(data) < params['limit']:
+                break
+
+            params['offset'] += 100
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)

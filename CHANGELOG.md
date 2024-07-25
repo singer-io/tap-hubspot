@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.0
+  * Implement pagination for Forms API endpoint [#260](https://github.com/singer-io/tap-hubspot/pull/260)
+
 ## 3.0.0
   * Upgrade Owners API endpoint [#256](https://github.com/singer-io/tap-hubspot/pull/256)
 
