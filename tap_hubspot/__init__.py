@@ -1155,7 +1155,7 @@ def sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, pa
     """
     mdata = metadata.to_map(catalog.get('metadata'))
     if is_custom_object:
-        url = get_url("custom_objects", object_name=stream_id)
+        url = get_url("custom_objects", object_name=catalog["stream_alias"])
     else:
         url = get_url(stream_id)
     max_bk_value = bookmark_value = utils.strptime_with_tz(
@@ -1249,12 +1249,14 @@ def generate_custom_streams(mode, catalog=None):
         List[dict] or List[str]: Returns list of custom streams (contains dictionary) in DISCOVER mode and a list of custom object names in SYNC mode.
     """
     custom_objects_schema_url = get_url("custom_objects_schema")
+    standard_streams = [stream.tap_stream_id for stream in STREAMS]
     if mode == "DISCOVER":
         custom_streams = []
         # Load Hubspot's shared schemas
         refs = load_shared_schema_refs()
         for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging"):
-            stream_id = custom_object["name"]
+            custom_object_name = custom_object["name"]
+            stream_id = f'custom_object_{custom_object_name}' if custom_object_name in standard_streams else custom_object_name
             schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
             custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
             schema["properties"]["properties"] = {
@@ -1267,13 +1269,15 @@ def generate_custom_streams(mode, catalog=None):
             schema['properties'].update(custom_schema_top_level)
 
             final_schema = singer.resolve_schema_references(schema, refs)
-            custom_streams.append({"stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'),
+            custom_streams.append({"custom_object_name": custom_object_name,
+                                   "stream": Stream(stream_id, sync_custom_object_records, ['id'], 'updatedAt', 'INCREMENTAL'),
                                    "schema": final_schema})
 
         return custom_streams
 
     elif mode == "SYNC":
-        custom_objects = [custom_object["name"] for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
+        rename_stream = lambda stream: f'custom_object_{stream}' if stream in standard_streams else stream
+        custom_objects = [rename_stream(custom_object["name"]) for custom_object in gen_request_custom_objects("custom_objects_schema", custom_objects_schema_url, {}, 'results', "paging")]
         if len(custom_objects) > 0:
             for stream in catalog["streams"]:
                 if stream["tap_stream_id"] in custom_objects:
@@ -1422,6 +1426,7 @@ def discover_schemas():
         LOGGER.info('Loading schema for Custom Object - %s', custom_stream["stream"].tap_stream_id)
         result['streams'].append({'stream': custom_stream["stream"].tap_stream_id,
                                   'tap_stream_id': custom_stream["stream"].tap_stream_id,
+                                  "stream_alias": custom_stream["custom_object_name"],
                                   'schema': custom_stream["schema"],
                                   'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
 
