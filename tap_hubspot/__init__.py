@@ -1155,7 +1155,7 @@ def sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, pa
     """
     mdata = metadata.to_map(catalog.get('metadata'))
     if is_custom_object:
-        url = get_url("custom_objects", object_name=catalog["stream_alias"])
+        url = get_url("custom_objects", object_name=catalog["table_name"])
     else:
         url = get_url(stream_id)
     max_bk_value = bookmark_value = utils.strptime_with_tz(
@@ -1180,7 +1180,7 @@ def sync_custom_objects(stream_id, primary_key, bookmark_key, catalog, STATE, pa
                 # transforms the data and filters out the selected fields from the catalog
                 record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
                 singer.write_record(stream_id, record, catalog.get(
-                    'stream_alias'), time_extracted=utils.now())
+                    'stream'), time_extracted=utils.now())
             if modified_time and modified_time >= max_bk_value:
                 max_bk_value = modified_time
 
@@ -1426,7 +1426,7 @@ def discover_schemas():
         LOGGER.info('Loading schema for Custom Object - %s', custom_stream["stream"].tap_stream_id)
         result['streams'].append({'stream': custom_stream["stream"].tap_stream_id,
                                   'tap_stream_id': custom_stream["stream"].tap_stream_id,
-                                  "stream_alias": custom_stream["custom_object_name"],
+                                  "table_name": custom_stream["custom_object_name"],
                                   'schema': custom_stream["schema"],
                                   'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
 

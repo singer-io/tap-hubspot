@@ -1,7 +1,7 @@
 import datetime
 import random
 import uuid
-import sys
+import string
 
 import backoff
 import requests
@@ -839,7 +839,7 @@ class TestClient():
             return self.create_subscription_changes(subscriptions, times)
         elif stream == 'tickets':
             return self.create_tickets()
-        elif stream in ["cars", "co_firsts"]:
+        elif stream in ["cars", "co_firsts", "custom_object_contacts", "custom_object_campaigns"]:
             return self.create_custom_object_record(stream)
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
@@ -1148,6 +1148,11 @@ class TestClient():
 
         return records
 
+    def generate_random_string(self, length):
+        characters = string.ascii_letters + string.digits
+        random_string = ''.join(random.choice(characters) for _ in range(length))
+        return random_string
+
     def create_custom_object_record(self, stream):
         url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
 
@@ -1170,6 +1175,23 @@ class TestClient():
             data = {
                 "properties": {
                     "id": random.randint(1, 100000),
+                    "name": "test name",
+                    "country": random.choice(["USA", "India", "France", "UK"])
+                }
+            }
+        elif stream == "custom_object_campaigns":
+            url = f"{BASE_URL}/crm/v3/objects/p_campaigns"
+            data = {
+                "properties": {
+                    "co_campaign_id": random.randint(1, 100000),
+                    "name": "test name",
+                    "country": random.choice(["USA", "India", "France", "UK"])
+                }
+            }
+        elif stream == "custom_object_contacts":
+            data = {
+                "properties": {
+                    "co_contact_id": random.randint(1, 100000),
                     "name": "test name",
                     "country": random.choice(["USA", "India", "France", "UK"])
                 }
