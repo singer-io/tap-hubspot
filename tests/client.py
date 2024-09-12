@@ -1185,7 +1185,7 @@ class TestClient():
                     "country": random.choice(["USA", "India", "France", "UK"])
                 }
             }
-        elif stream == "custom_object_campaigns":
+        elif stream == "campaigns":
             url = f"{BASE_URL}/crm/v3/objects/p_campaigns"
             data = {
                 "properties": {
