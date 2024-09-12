@@ -98,7 +98,8 @@ KNOWN_MISSING_FIELDS = {
         'activeSalesforceId',
 
         # Field is returned by API but not listed in official Hubspot documentation
-        'userIdIncludingInactive'
+        'userIdIncludingInactive',
+        'type'
     },
     'forms': {  # BUG https://jira.talendforge.org/browse/TDL-15001
         'alwaysCreateNewCompany',
@@ -167,7 +168,8 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_v2_date_exited_appointmentscheduled',
         'property_hs_v2_latest_time_in_appointmentscheduled',
         'property_hs_v2_cumulative_time_in_appointmentscheduled',
-        'property_hs_v2_date_entered_qualifiedtobuy'
+        'property_hs_v2_date_entered_qualifiedtobuy',
+        'property_deal_currency_code'
     },
     'subscription_changes':{
         'normalizedEmailId'

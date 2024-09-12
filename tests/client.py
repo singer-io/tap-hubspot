@@ -216,8 +216,11 @@ class TestClient():
             return self.get_subscription_changes(since, pagination)
         elif stream == "tickets":
             return self.get_tickets(pagination)
-        elif stream in ["cars", "co_firsts"]:
+        elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
             return self.get_custom_objects(stream)
+        elif stream == "custom_object_campaigns":
+            # Custom object endpoints must be accessed using the names specified in the source.
+            return self.get_custom_objects("custom_object_campaigns", source_name="campaigns")
         else:
             raise NotImplementedError
 
@@ -745,29 +748,29 @@ class TestClient():
         response = self.get(url)
         return response
     
-    def get_custom_objects_properties(self, object_name):
+    def get_custom_objects_properties(self, object_name, source_name):
         """
         Get custom object properties.
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
         """
-        url = f"{BASE_URL}/crm/v3/properties/p_{object_name}"
+        url = f"{BASE_URL}/crm/v3/properties/p_{source_name or object_name}"
         records = self.get(url)
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_custom_objects(self, stream):
+    def get_custom_objects(self, stream, source_name=None):
         """
         Get all custom_object records.
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
         """
         page_size = self.BaseTest.expected_metadata().get(stream,{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
+        url = f"{BASE_URL}/crm/v3/objects/p_{source_name or stream}"
         replication_key = list(self.replication_keys[stream])[0]
         records = []
 
         # response = self.get(url)
         associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
-        params = {"limit": page_size, "associations": associations, 'properties': self.get_custom_objects_properties(stream)}
+        params = {"limit": page_size, "associations": associations, 'properties': self.get_custom_objects_properties(stream, source_name)}
         while True:
             response = self.get(url, params=params)
 
@@ -839,8 +842,11 @@ class TestClient():
             return self.create_subscription_changes(subscriptions, times)
         elif stream == 'tickets':
             return self.create_tickets()
-        elif stream in ["cars", "co_firsts", "custom_object_contacts", "custom_object_campaigns"]:
+        elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
             return self.create_custom_object_record(stream)
+        elif stream == "custom_object_campaigns":
+            # Custom object endpoints must be accessed using the names specified in the source.
+            return self.create_custom_object_record("campaigns")
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
 
@@ -1621,8 +1627,11 @@ class TestClient():
             return self.update_engagements(record_id)
         elif stream == 'tickets':
             return self.update_tickets(record_id)
-        elif stream in ["cars", "co_firsts"]:
+        elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
             return self.update_custom_object_record(stream, record_id)
+        elif stream == "custom_object_campaigns":
+            # Custom object endpoints must be accessed using the names specified in the source.
+            return self.update_custom_object_record("campaigns", record_id)
         else:
             raise NotImplementedError(f"Test client does not have an update method for {stream}")
 
