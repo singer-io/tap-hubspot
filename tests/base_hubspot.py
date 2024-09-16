@@ -157,6 +157,22 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.API_LIMIT: 100,
                 BaseCase.EXPECTED_PAGE_SIZE: 100,
                 BaseCase.OBEYS_START_DATE: True
+            },
+            "custom_object_campaigns": {
+                BaseCase.PRIMARY_KEYS: {"id"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"updatedAt"},
+                BaseCase.API_LIMIT: 100,
+                BaseCase.EXPECTED_PAGE_SIZE: 100,
+                BaseCase.OBEYS_START_DATE: True
+            },
+            "custom_object_contacts": {
+                BaseCase.PRIMARY_KEYS: {"id"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"updatedAt"},
+                BaseCase.API_LIMIT: 100,
+                BaseCase.EXPECTED_PAGE_SIZE: 100,
+                BaseCase.OBEYS_START_DATE: True
             }
 
         }
