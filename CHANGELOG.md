@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.0
+  * Renames custom object that shares name with standard objects [#263](https://github.com/singer-io/tap-hubspot/pull/263)
+
 ## 3.0.0
   * Upgrade Owners API endpoint [#256](https://github.com/singer-io/tap-hubspot/pull/256)
 
