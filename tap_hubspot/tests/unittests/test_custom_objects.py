@@ -7,6 +7,7 @@ MOCK_CATALOG = {
         {
             "stream": "cars",
             "tap_stream_id": "cars",
+            "table_name": "cars",
             "schema": {
                 "type": "object",
                 "properties": {
@@ -81,7 +82,8 @@ class TestGenerateCustomStreams(unittest.TestCase):
             "properties": {"property_fake_object": "fake_value"},
         }
         expected_value = [
-            {'stream': Stream(tap_stream_id='fake_object', sync=mock_sync_custom_records, key_properties=['id'], replication_key='updatedAt', replication_method='INCREMENTAL'), 
+            {'custom_object_name':'fake_object',
+             'stream': Stream(tap_stream_id='fake_object', sync=mock_sync_custom_records, key_properties=['id'], replication_key='updatedAt', replication_method='INCREMENTAL'), 
              'schema': {'type': 'object', 'properties': {'property_fake_object': 'fake_value'}}}]
 
         # Set up mock return values
