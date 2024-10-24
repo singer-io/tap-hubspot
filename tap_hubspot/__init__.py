@@ -440,7 +440,6 @@ def process_v3_deals_records(v3_data):
 def get_v3_deals(v3_fields, v1_data):
     v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
 
-    # Sending the first v3_field is enough to get them all
     v3_body = {'inputs': v1_ids,
                'properties': v3_fields}
     v3_url = get_url('deals_v3_batch_read')
