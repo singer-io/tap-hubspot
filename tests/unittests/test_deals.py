@@ -38,7 +38,7 @@ class TestDeals(unittest.TestCase):
         params = {'count': 250,
                   'includeAssociations': False,
                   'properties' : []}
-        v3_fields = ['hs_date_entered_appointmentscheduled']
+        v3_fields = ['hs_v2_date_entered_appointmentscheduled']
 
         records = list(
             gen_request(state, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields)
@@ -46,8 +46,8 @@ class TestDeals(unittest.TestCase):
 
         for record in records:
             # The test account has a deal stage called "appointment scheduled"
-            value = record.get('properties',{}).get('hs_date_entered_appointmentscheduled')
-            error_msg = ('Could not find "hs_date_entered_appointment_scheduled"'
+            value = record.get('properties',{}).get('hs_v2_date_entered_appointmentscheduled')
+            error_msg = ('Could not find "hs_v2_date_entered_appointment_scheduled"'
                          'in {}').format(record)
             self.assertIsNotNone(value, msg=error_msg)
 
@@ -56,13 +56,13 @@ class TestDeals(unittest.TestCase):
         data = [
             {'properties': {'field1': 'value1',
                             'field2': 'value2',
-                            'hs_date_entered_field3': 'value3',
-                            'hs_date_exited_field4': 'value4',}},
+                            'hs_v2_date_entered_field3': 'value3',
+                            'hs_v2_date_exited_field4': 'value4',}},
         ]
 
         expected = [
-            {'properties': {'hs_date_entered_field3': {'value': 'value3'},
-                            'hs_date_exited_field4':  {'value': 'value4'},}},
+            {'properties': {'hs_v2_date_entered_field3': {'value': 'value3'},
+                            'hs_v2_date_exited_field4':  {'value': 'value4'},}},
         ]
 
         actual = process_v3_deals_records(data)

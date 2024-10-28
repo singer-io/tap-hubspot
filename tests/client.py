@@ -16,7 +16,7 @@ BASE_URL = "https://api.hubapi.com"
 
 class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+    V3_DEALS_PROPERTY_PREFIXES = {'hs_v2_date_entered', 'hs_v2_date_exited', 'hs_v2_latest_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     record_create_times = {}
 
@@ -498,7 +498,7 @@ class TestClient():
 
         # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
         v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
-        v3_property = ['hs_date_entered_appointmentscheduled']
+        v3_property = ['hs_v2_date_entered_appointmentscheduled']
         v3_records = []
         for batch in batches:
             data = {'inputs': batch,
@@ -1205,6 +1205,10 @@ class TestClient():
 
         # generate a record
         response = self.post(url, data)
+        if "status" in response and response["status"] == "error":
+            LOGGER.debug("Error creating record: %s", response.get('message', ''))
+            return self.create_custom_object_record(stream)
+
         return [response]
 
     def create_deal_pipelines(self):

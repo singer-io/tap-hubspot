@@ -125,7 +125,9 @@ class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetC
 
     def get_properties(self):
         return {
-            'start_date' : '2021-10-01T00:00:00Z'
+            'start_date' : datetime.strftime(
+                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+            ),
         }
 
 
@@ -143,8 +145,10 @@ class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetCont
         return "tt_hubspot_interrupt_deals"
 
     def get_properties(self):
-        return {
-            'start_date' : '2021-10-10T00:00:00Z'
+        return  {
+            'start_date' : datetime.strftime(
+                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+            ),
         }
 
     def stream_to_interrupt(self):
@@ -164,7 +168,9 @@ class TestHubspotInterruptedSyncOffsetCompanies(TestHubspotInterruptedSyncOffset
 
     def get_properties(self):
         return {
-            'start_date' : '2023-12-31T00:00:00Z'
+            'start_date' : datetime.strftime(
+                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+            ),
         }
 
     def stream_to_interrupt(self):

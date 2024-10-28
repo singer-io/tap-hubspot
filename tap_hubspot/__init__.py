@@ -48,7 +48,7 @@ CONTACTS_BY_COMPANY = "contacts_by_company"
 
 DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
 
-V3_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+V3_PREFIXES = {'hs_v2_date_entered', 'hs_v2_date_exited', 'hs_v2_latest_time_in'}
 
 CONFIG = {
     "access_token": None,
@@ -424,8 +424,8 @@ def merge_responses(v1_data, v3_data):
 def process_v3_deals_records(v3_data):
     """
     This function:
-    1. filters out fields that don't contain 'hs_date_entered_*' and
-       'hs_date_exited_*'
+    1. filters out fields that don't contain 'hs_v2_date_entered_*' and
+       'hs_v2_date_exited_*'
     2. changes a key value pair in `properties` to a key paired to an
        object with a key 'value' and the original value
     """
@@ -440,9 +440,8 @@ def process_v3_deals_records(v3_data):
 def get_v3_deals(v3_fields, v1_data):
     v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
 
-    # Sending the first v3_field is enough to get them all
     v3_body = {'inputs': v1_ids,
-               'properties': [v3_fields[0]],}
+               'properties': v3_fields}
     v3_url = get_url('deals_v3_batch_read')
     v3_resp = post_search_endpoint(v3_url, v3_body)
     return v3_resp.json()['results']
@@ -742,7 +741,7 @@ def sync_deals(STATE, ctx):
         params['includeAllProperties'] = True
         params['allPropertiesFetchMode'] = 'latest_version'
 
-        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
+        # Grab selected `hs_v2_date_entered/exited` fields to call the v3 endpoint with
         v3_fields = [breadcrumb[1].replace('property_', '')
                      for breadcrumb, mdata_map in mdata.items()
                      if breadcrumb
