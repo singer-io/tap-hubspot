@@ -424,8 +424,8 @@ def merge_responses(v1_data, v3_data):
 def process_v3_deals_records(v3_data):
     """
     This function:
-    1. filters out fields that don't contain 'hs_date_entered_*' and
-       'hs_date_exited_*'
+    1. filters out fields that don't contain 'hs_v2_date_entered_*' and
+       'hs_v2_date_exited_*'
     2. changes a key value pair in `properties` to a key paired to an
        object with a key 'value' and the original value
     """
@@ -741,7 +741,7 @@ def sync_deals(STATE, ctx):
         params['includeAllProperties'] = True
         params['allPropertiesFetchMode'] = 'latest_version'
 
-        # Grab selected `hs_date_entered/exited` fields to call the v3 endpoint with
+        # Grab selected `hs_v2_date_entered/exited` fields to call the v3 endpoint with
         v3_fields = [breadcrumb[1].replace('property_', '')
                      for breadcrumb, mdata_map in mdata.items()
                      if breadcrumb
