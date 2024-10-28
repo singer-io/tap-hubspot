@@ -164,6 +164,9 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_analytics_latest_source_data_2_contact',
         'property_hs_deal_score',
         'property_hs_is_active_shared_deal',
+        'property_hs_v2_date_entered_appointmentscheduled',
+        'property_hs_v2_date_exited_appointmentscheduled',
+        'property_hs_v2_latest_time_in_appointmentscheduled',
         'property_hs_v2_cumulative_time_in_appointmentscheduled',
         'property_hs_v2_date_entered_qualifiedtobuy',
         'property_deal_currency_code'

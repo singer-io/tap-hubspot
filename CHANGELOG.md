@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.1.1
+  * Replace legacy properties for Contacts and Deals [#265](https://github.com/singer-io/tap-hubspot/pull/265)
+
 ## 3.1.0
   * Renames custom object that shares name with standard objects [#263](https://github.com/singer-io/tap-hubspot/pull/263)
 
