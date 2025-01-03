@@ -1,12 +1,14 @@
 import datetime
 import random
 import uuid
-import sys
+import string
 
 import backoff
 import requests
 from base import HubspotBaseTest
 from tap_tester import LOGGER
+import time
+from copy import deepcopy
 
 DEBUG = False
 BASE_URL = "https://api.hubapi.com"
@@ -14,7 +16,7 @@ BASE_URL = "https://api.hubapi.com"
 
 class TestClient():
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    V3_DEALS_PROPERTY_PREFIXES = {'hs_date_entered', 'hs_date_exited', 'hs_time_in'}
+    V3_DEALS_PROPERTY_PREFIXES = {'hs_v2_date_entered', 'hs_v2_date_exited', 'hs_v2_latest_time_in'}
     BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     record_create_times = {}
 
@@ -37,6 +39,7 @@ class TestClient():
                           jitter=None,
                           giveup=giveup,
                           interval=10)
+
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
         response = requests.get(url, params=params, headers=self.HEADERS)
@@ -166,10 +169,10 @@ class TestClient():
         if stream in datetime_columns.keys():
             for record in records:
                 for column in record.keys():
-                    if column in datetime_columns[stream]:
-                        record[column] = self.BaseTest.datetime_from_timestamp(
-                            record[column] / 1000, self.BOOKMARK_DATE_FORMAT
-                        )
+                    if column in datetime_columns[stream] and isinstance(datetime_columns[stream], int):
+                            record[column] = self.BaseTest.datetime_from_timestamp(
+                                record[column] / 1000, self.BOOKMARK_DATE_FORMAT
+                            )
 
         LOGGER.info(
             f"TEST CLIENT | Transforming (datatype conversions) {len(records)} {stream} records")
@@ -213,6 +216,11 @@ class TestClient():
             return self.get_subscription_changes(since, pagination)
         elif stream == "tickets":
             return self.get_tickets(pagination)
+        elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
+            return self.get_custom_objects(stream)
+        elif stream == "custom_object_campaigns":
+            # Custom object endpoints must be accessed using the names specified in the source.
+            return self.get_custom_objects("custom_object_campaigns", source_name="campaigns")
         else:
             raise NotImplementedError
 
@@ -490,7 +498,7 @@ class TestClient():
 
         # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
         v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
-        v3_property = ['hs_date_entered_appointmentscheduled']
+        v3_property = ['hs_v2_date_entered_appointmentscheduled']
         v3_records = []
         for batch in batches:
             data = {'inputs': batch,
@@ -622,9 +630,9 @@ class TestClient():
         """
         Get all owners.
         """
-        url = f"{BASE_URL}/owners/v2/owners"
+        url = f"{BASE_URL}/crm/v3/owners"
         records = self.get(url)
-        transformed_records = self.datatype_transformations('owners', records)
+        transformed_records = self.datatype_transformations('owners', records['results'])
         return transformed_records
 
     def get_subscription_changes(self, since='', pagination=False):
@@ -729,6 +737,57 @@ class TestClient():
         
         records = self.denest_properties('tickets', records)
         return records
+    
+    def _get_custom_object_record_by_pk(self, object_name, id):
+        """
+        Get a specific custom object record by pk value
+        HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+        """
+        associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
+        url = f"{BASE_URL}/crm/v3/objects/p_{object_name}/{id}?associations={associations}"
+        response = self.get(url)
+        return response
+    
+    def get_custom_objects_properties(self, object_name, source_name):
+        """
+        Get custom object properties.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+        """
+        url = f"{BASE_URL}/crm/v3/properties/p_{source_name or object_name}"
+        records = self.get(url)
+
+        return ",".join([record["name"] for record in records["results"]])
+
+    def get_custom_objects(self, stream, source_name=None):
+        """
+        Get all custom_object records.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+        """
+        page_size = self.BaseTest.expected_metadata().get(stream,{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        url = f"{BASE_URL}/crm/v3/objects/p_{source_name or stream}"
+        replication_key = list(self.replication_keys[stream])[0]
+        records = []
+
+        # response = self.get(url)
+        associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
+        params = {"limit": page_size, "associations": associations, 'properties': self.get_custom_objects_properties(stream, source_name)}
+        while True:
+            response = self.get(url, params=params)
+
+            records.extend([record
+                    for record in response["results"]
+                    if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
+
+            if not response.get("paging"):
+                break
+            if page_size and len(records) > page_size+10:
+                break
+            params['after'] = response.get("paging", {}).get('next', {}).get('after', None)
+            if params['after'] is None:
+                break
+        
+        records = self.denest_properties(stream, records)
+        return records
 
     ##########################################################################
     ### CREATE
@@ -749,6 +808,13 @@ class TestClient():
             return self.create_companies()
         elif stream == 'contact_lists':
             return self.create_contact_lists()
+        elif stream == 'static_contact_lists':
+            staticlist = self.create_contact_lists(dynamic=False)
+            listId = staticlist[0].get('listId')
+            records =  self.create('contacts')
+            contact_email =  records[0].get('properties').get('email').get('value')
+            self.add_contact_to_contact_list(listId, contact_email)
+            return staticlist
         elif stream == 'contacts_by_company':
             return self.create_contacts_by_company(company_ids, times=times)
         elif stream == 'engagements':
@@ -760,8 +826,9 @@ class TestClient():
         elif stream == 'workflows':
             return self.create_workflows()
         elif stream == 'contacts':
+            LOGGER.info("self.record_create_times is %s", self.record_create_times)
             if stream not in self.record_create_times.keys():
-                self.record_create_times[stream]=[]
+                self.record_create_times['contacts']=[]
             records =  self.create_contacts()
             return records
         elif stream == 'deal_pipelines':
@@ -775,8 +842,114 @@ class TestClient():
             return self.create_subscription_changes(subscriptions, times)
         elif stream == 'tickets':
             return self.create_tickets()
+        elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
+            return self.create_custom_object_record(stream)
+        elif stream == "custom_object_campaigns":
+            # Custom object endpoints must be accessed using the names specified in the source.
+            return self.create_custom_object_record("campaigns")
         else:
             raise NotImplementedError(f"There is no create_{stream} method in this dipatch!")
+
+    def create_custom_contact_properties(self):
+        """Create custom contact properties of all the types"""
+
+        url = f"{BASE_URL}/properties/v1/contacts/properties"
+        data = []
+        property = {
+            "name": "custom_string",
+            "label": "A New String Custom Property",
+            "description": "A new string property for you",
+            "groupName": "contactinformation",
+            "type": "string",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 6,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "custom_number",
+            "label": "A New Number Custom Property",
+            "description": "A new number property for you",
+            "groupName": "contactinformation",
+            "type": "number",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 7,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "custom_date",
+            "label": "A New Date Custom Property",
+            "description": "A new date property for you",
+            "groupName": "contactinformation",
+            "type": "date",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 9,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "custom_datetime",
+            "label": "A New Datetime Custom Property",
+            "description": "A new datetime property for you",
+            "groupName": "contactinformation",
+            "type": "datetime",
+            "fieldType": "text",
+            "formField": True,
+            "displayOrder": 10,
+            "options": [
+            ]
+        }
+        data.append(deepcopy(property))
+
+        property = {
+            "name": "multi_pick",
+            "label": "multi pick",
+            "description": "multi select picklist test",
+            "groupName": "contactinformation",
+            "type": "enumeration",
+            "fieldType": "checkbox",
+            "hidden": False,
+            "options": [
+              {
+                "label": "Option A",
+                "value": "option_a"
+              },
+              {
+                "label": "Option B",
+                "value": "option_b"
+              },
+              {
+                "label": "Option C",
+                "value": "option_c"
+              }
+            ],
+            "formField": True
+        }
+        data.append(deepcopy(property))
+        # generate a contacts record
+
+        for current_data in data:
+            try:
+                response = self.post(url, current_data)
+                LOGGER.info("response is %s", response)
+            # Setting up the property is a one time task, If exception occurs because, it already exists, ignore
+            except requests.exceptions.HTTPError as err:
+                LOGGER.info("Data already exists for %s", current_data)
+                if '409' in str(err):
+                    pass
+                else:
+                    response.raise_for_status()
+
 
     def create_contacts(self):
         """
@@ -788,6 +961,14 @@ class TestClient():
         url = f"{BASE_URL}/contacts/v1/contact"
         data = {
             "properties": [
+                {
+                    "property": "custom_string",
+                    "value": "custom_string_value"
+                },
+                {
+                    "property": "custom_number",
+                    "value": 1567
+                },
                 {
                     "property": "email",
                     "value": f"{record_uuid}@stitchdata.com"
@@ -884,7 +1065,7 @@ class TestClient():
         records = [response]
         return records
 
-    def create_contact_lists(self):
+    def create_contact_lists(self, dynamic=True):
         """
         HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
 
@@ -893,15 +1074,16 @@ class TestClient():
             using different filters would result in any new fields.
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
+        value = f"@hubspot{record_uuid}"
 
         url = f"{BASE_URL}/contacts/v1/lists/"
         data = {
             "name": f"tweeters{record_uuid}",
-            "dynamic": True,
+            "dynamic": dynamic,
             "filters": [
                 [{
                     "operator": "EQ",
-                    "value": f"@hubspot{record_uuid}",
+                    "value": value,
                     "property": "twitterhandle",
                     "type": "string"
                 }]
@@ -910,6 +1092,31 @@ class TestClient():
         # generate a record
         response = self.post(url, data)
         records = [response]
+        LOGGER.info("dynamic contact list is %s", records)
+        return records
+
+    def add_contact_to_contact_list(self, list_id, contact_email):
+        """
+        HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
+
+        NB: This generates a list based on a 'twitterhandle' filter. There are many
+            different filters, but at the time of implementation it did not seem that
+            using different filters would result in any new fields.
+        """
+        record_uuid = str(uuid.uuid4()).replace('-', '')
+        value = f"@hubspot{record_uuid}"
+
+        url = f"{BASE_URL}/contacts/v1/lists/{list_id}/add"
+        data = {
+            "emails": [
+               contact_email
+            ]
+        }
+        # generate a record
+        LOGGER.info("Post URL is %s", url)
+        response = self.post(url, data)
+        records = [response]
+        LOGGER.info("updated contact_list is %s", records)
         return records
 
     def create_contacts_by_company(self, company_ids=[], contact_records=[], times=1):
@@ -946,6 +1153,63 @@ class TestClient():
                     break
 
         return records
+
+    def generate_random_string(self, length):
+        characters = string.ascii_letters + string.digits
+        random_string = ''.join(random.choice(characters) for _ in range(length))
+        return random_string
+
+    def create_custom_object_record(self, stream):
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
+
+        if stream == "cars":
+            data = {
+                "properties": {
+                    "condition": random.choice(["used", "new"]),
+                    "date_received": random.choice([1197590400000, 1554854400000, 1337990400000, 1543708800000]),
+                    "year": random.choice([2000, 2001, 2002, 2003, 2020, 2021, 2022, 2023]),
+                    "make": random.choice([ "bmw", "hyundai", "kia", "tata", "toyota", "mercedes", "porsche"]),
+                    "model": random.choice(["sporty", "normal"]),
+                    "vin": str(uuid.uuid4()).replace('-', ''),
+                    "color": random.choice(["white", "red", "black", "orange", "green"]),
+                    "mileage": random.choice([10, 20, 30, 40, 15, 25, 35, 12, 22, 28]),
+                    "price": random.choice([10000, 20000, 30000, 40000, 50000, 60000, 70000]),
+                    "notes": random.choice(["Excellent condition.", "Bad Condition"])
+                }
+            }
+        elif stream == "co_firsts":
+            data = {
+                "properties": {
+                    "id": random.randint(1, 100000),
+                    "name": "test name",
+                    "country": random.choice(["USA", "India", "France", "UK"])
+                }
+            }
+        elif stream == "campaigns":
+            url = f"{BASE_URL}/crm/v3/objects/p_campaigns"
+            data = {
+                "properties": {
+                    "co_campaign_id": random.randint(1, 100000),
+                    "name": "test name",
+                    "country": random.choice(["USA", "India", "France", "UK"])
+                }
+            }
+        elif stream == "custom_object_contacts":
+            data = {
+                "properties": {
+                    "co_contact_id": random.randint(1, 100000),
+                    "name": "test name",
+                    "country": random.choice(["USA", "India", "France", "UK"])
+                }
+            }
+
+        # generate a record
+        response = self.post(url, data)
+        if "status" in response and response["status"] == "error":
+            LOGGER.debug("Error creating record: %s", response.get('message', ''))
+            return self.create_custom_object_record(stream)
+
+        return [response]
 
     def create_deal_pipelines(self):
         """
@@ -1367,6 +1631,11 @@ class TestClient():
             return self.update_engagements(record_id)
         elif stream == 'tickets':
             return self.update_tickets(record_id)
+        elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
+            return self.update_custom_object_record(stream, record_id)
+        elif stream == "custom_object_campaigns":
+            # Custom object endpoints must be accessed using the names specified in the source.
+            return self.update_custom_object_record("campaigns", record_id)
         else:
             raise NotImplementedError(f"Test client does not have an update method for {stream}")
 
@@ -1602,6 +1871,28 @@ class TestClient():
         self.patch(url, data)
 
         return self._get_tickets_by_pk(ticket_id)
+    
+    def update_custom_object_record(self, stream, id):
+        """
+        Updates a custom object record using the HubSpot CRM API.
+        https://developers.hubspot.com/docs/api/crm/crm-custom-objects
+
+        :param stream: The custom object stream identifier, e.g., 'custom_objects'.
+        :param id: The primary key value of the custom object record to update.
+        :return: The updated custom object record.
+        """
+        url = f"{BASE_URL}/crm/v3/objects/p_{stream}/{id}"
+
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
+        data = {
+            "properties": {
+                "notes": f"update record for testing - {record_uuid}"
+            }
+        }
+
+        self.patch(url, data)
+
+        return self._get_custom_object_record_by_pk(stream, id)
 
     ##########################################################################
     ### Deletes
@@ -1719,6 +2010,9 @@ class TestClient():
                 delete_count = int(max_record_count / 2)
                 self.cleanup(stream, records, delete_count)
                 LOGGER.info(f"TEST CLIENT | {delete_count} records deleted from {stream}")
+
+        # Create custom properties for contacts
+        self.create_custom_contact_properties()
 
     def print_histogram_data(self):
         for stream, recorded_times in self.record_create_times.items():

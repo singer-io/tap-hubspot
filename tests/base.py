@@ -131,7 +131,7 @@ class HubspotBaseTest(BaseCase):
                 self.OBEYS_START_DATE: True
             },
             "owners": {
-                self.PRIMARY_KEYS: {"ownerId"},
+                self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
                 self.OBEYS_START_DATE: True  # TODO is this a BUG?
@@ -150,6 +150,35 @@ class HubspotBaseTest(BaseCase):
                 self.OBEYS_START_DATE: True
             },
             "tickets": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
+            },
+            # below are the custom_objects stream
+            "cars": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
+            },
+            "co_firsts": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
+            },
+            "custom_object_campaigns": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
+            },
+            "custom_object_contacts": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},

@@ -37,7 +37,7 @@ KNOWN_EXTRA_FIELDS = {
         # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
         #                 Has an value of object with key 'value' and value 'Null'
         'property_hs_date_entered_1258834',
-        'property_hs_time_in_example_stage1660743867503491_315775040'
+        'property_hs_time_in_example_stage1660743867503491_315775040',
     },
 }
 
@@ -95,7 +95,11 @@ KNOWN_MISSING_FIELDS = {
         'contactCounts',
     },
     'owners': {  # BUG https://jira.talendforge.org/browse/TDL-15000
-        'activeSalesforceId'
+        'activeSalesforceId',
+
+        # Field is returned by API but not listed in official Hubspot documentation
+        'userIdIncludingInactive',
+        'type'
     },
     'forms': {  # BUG https://jira.talendforge.org/browse/TDL-15001
         'alwaysCreateNewCompany',
@@ -103,6 +107,7 @@ KNOWN_MISSING_FIELDS = {
         'publishAt',
         'editVersion',
         'embedVersion',
+        'enrichable',
         'themeName',
         'style',
         'thankYouMessageJson',
@@ -140,7 +145,9 @@ KNOWN_MISSING_FIELDS = {
     'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
         'imports',
         'property_hs_num_associated_deal_splits',
+        'property_hs_is_active_shared_deal', #https://jira.talendforge.org/browse/TDL-24758
         'property_hs_is_deal_split',
+        'property_hs_is_active_shared_deal',
         'stateChanges',
         'property_hs_num_associated_active_deal_registrations',
         'property_hs_num_associated_deal_registrations',
@@ -155,6 +162,14 @@ KNOWN_MISSING_FIELDS = {
         'property_hs_analytics_latest_source_data_2_company',
         'property_hs_analytics_latest_source_data_2',
         'property_hs_analytics_latest_source_data_2_contact',
+        'property_hs_deal_score',
+        'property_hs_is_active_shared_deal',
+        'property_hs_v2_date_entered_appointmentscheduled',
+        'property_hs_v2_date_exited_appointmentscheduled',
+        'property_hs_v2_latest_time_in_appointmentscheduled',
+        'property_hs_v2_cumulative_time_in_appointmentscheduled',
+        'property_hs_v2_date_entered_qualifiedtobuy',
+        'property_deal_currency_code'
     },
     'subscription_changes':{
         'normalizedEmailId'
@@ -291,8 +306,9 @@ class TestHubspotAllFields(HubspotBaseTest):
                         #     to our test data. We have determined that the filtering of these fields is an expected behavior.
 
                         # deals workaround for 'property_hs_date_entered_<property>' fields
+
                         bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_',
-                                            'property_hs_time_in'}
+                                            'property_hs_time_in', 'property_hs_'}
                         bad_keys = set()
                         for key in expected_keys_adjusted:
                             for prefix in bad_key_prefixes:

@@ -1,7 +1,25 @@
 # Changelog
 
-## 2.12.3
+## 3.1.2
   * Dependabot update [#228](https://github.com/singer-io/tap-hubspot/pull/228)
+
+## 3.1.1
+  * Replace legacy properties for Contacts and Deals [#265](https://github.com/singer-io/tap-hubspot/pull/265)
+
+## 3.1.0
+  * Renames custom object that shares name with standard objects [#263](https://github.com/singer-io/tap-hubspot/pull/263)
+
+## 3.0.0
+  * Upgrade Owners API endpoint [#256](https://github.com/singer-io/tap-hubspot/pull/256)
+
+## 2.13.2
+  * Fix out-of-index error [#253](https://github.com/singer-io/tap-hubspot/pull/253)
+
+## 2.13.1
+  * Optimise contacts_by_company implementation [#250](https://github.com/singer-io/tap-hubspot/pull/250)
+
+## 2.13.0
+  * HubSpot Custom CRM Objects Support [#242](https://github.com/singer-io/tap-hubspot/pull/242)
 
 ## 2.12.2
   * Use engagements_page_size advanced option [#234](https://github.com/singer-io/tap-hubspot/pull/234)
