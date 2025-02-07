@@ -1,7 +1,81 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from tap_hubspot import deselect_unselected_fields, do_sync, CONFIG
+from tap_hubspot import deselect_unselected_fields, do_sync, main_impl, CONFIG
 
+
+class TestMainImpl(unittest.TestCase):
+
+    @patch('tap_hubspot.utils.parse_args')
+    @patch('tap_hubspot.do_discover')
+    @patch('tap_hubspot.do_sync')
+    def test_main_impl_default_behavior(self, mock_do_sync, mock_do_discover, mock_parse_args):
+        """Test the default behavior of the main_impl function when select_fields_by_default is not set."""
+        mock_args = MagicMock()
+        mock_args.config = {}
+        mock_args.state = None
+        mock_args.discover = False
+        mock_args.properties = None
+        mock_parse_args.return_value = mock_args
+
+        main_impl()
+
+        self.assertTrue(CONFIG['select_fields_by_default'])
+        mock_do_discover.assert_not_called()
+        mock_do_sync.assert_not_called()
+
+    @patch('tap_hubspot.utils.parse_args')
+    @patch('tap_hubspot.do_discover')
+    @patch('tap_hubspot.do_sync')
+    def test_main_impl_select_fields_by_default_true(self, mock_do_sync, mock_do_discover, mock_parse_args):
+        """Test the behavior of the main_impl function when select_fields_by_default is set to true."""
+        mock_args = MagicMock()
+        mock_args.config = {'select_fields_by_default': 'true'}
+        mock_args.state = None
+        mock_args.discover = False
+        mock_args.properties = None
+        mock_parse_args.return_value = mock_args
+
+        main_impl()
+
+        self.assertTrue(CONFIG['select_fields_by_default'])
+        mock_do_discover.assert_not_called()
+        mock_do_sync.assert_not_called()
+
+    @patch('tap_hubspot.utils.parse_args')
+    @patch('tap_hubspot.do_discover')
+    @patch('tap_hubspot.do_sync')
+    def test_main_impl_select_fields_by_default_false(self, mock_do_sync, mock_do_discover, mock_parse_args):
+        """Test the behavior of the main_impl function when select_fields_by_default is set to false."""
+        mock_args = MagicMock()
+        mock_args.config = {'select_fields_by_default': 'false'}
+        mock_args.state = None
+        mock_args.discover = False
+        mock_args.properties = None
+        mock_parse_args.return_value = mock_args
+
+        main_impl()
+
+        self.assertFalse(CONFIG['select_fields_by_default'])
+        mock_do_discover.assert_not_called()
+        mock_do_sync.assert_not_called()
+
+    @patch('tap_hubspot.utils.parse_args')
+    @patch('tap_hubspot.do_discover')
+    @patch('tap_hubspot.do_sync')
+    def test_main_impl_invalid_select_fields_by_default(self, mock_do_sync, mock_do_discover, mock_parse_args):
+        """Test the behavior of the main_impl function when select_fields_by_default is set to an invalid value."""
+        mock_args = MagicMock()
+        mock_args.config = {'select_fields_by_default': 'invalid'}
+        mock_args.state = None
+        mock_args.discover = False
+        mock_args.properties = None
+        mock_parse_args.return_value = mock_args
+
+        with self.assertRaises(ValueError):
+            main_impl()
+
+        mock_do_discover.assert_not_called()
+        mock_do_sync.assert_not_called()
 
 class TestDoSync(unittest.TestCase):
 
@@ -50,7 +124,7 @@ class TestDoSync(unittest.TestCase):
         mock_generate_custom_streams.return_value = []
 
         # Mocking the catalog and state
-        CONFIG.update({'select_fields_by_default': True})
+        CONFIG.update({'select_fields_by_default': 'true'})
         catalog = {'streams': []}
         state = {}
 
@@ -78,7 +152,7 @@ class TestDoSync(unittest.TestCase):
         mock_generate_custom_streams.return_value = []
 
         # Mocking the catalog and state
-        CONFIG.update({'select_fields_by_default': False})
+        CONFIG.update({'select_fields_by_default': 'false'})
         catalog = {'streams': []}
         state = {}
 

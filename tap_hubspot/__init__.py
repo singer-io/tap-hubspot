@@ -1486,6 +1486,12 @@ def main_impl():
     CONFIG.update(args.config)
     STATE = {}
 
+    if str(CONFIG.get('select_fields_by_default')).lower() not in ['none', 'true', 'false']:
+            raise ValueError("Invalid value for select_fields_by_default. It should be either 'true' or 'false'.")
+
+    CONFIG['select_fields_by_default'] = (
+        str(CONFIG.get('select_fields_by_default', 'true')).lower() != 'false')
+
     if args.state:
         STATE.update(args.state)
 
