@@ -1333,7 +1333,7 @@ def deselect_unselected_fields(catalog):
 
 def do_sync(STATE, catalog):
     # If select_fields_by_default is not provided, default to True
-    if CONFIG.get('select_fields_by_default') == False:
+    if CONFIG.get('select_fields_by_default') is False:
         deselect_unselected_fields(catalog)
 
     custom_objects = generate_custom_streams(mode="SYNC", catalog=catalog)

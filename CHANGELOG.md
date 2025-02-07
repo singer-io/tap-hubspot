@@ -1,7 +1,7 @@
 # Changelog
 
-## 3.1.2
-  * Explicitly deselect unselected fields [#266](https://github.com/singer-io/tap-hubspot/pull/266)
+## 3.2.0
+  * Add support for `select_fields_by_default` config property [#266](https://github.com/singer-io/tap-hubspot/pull/266)
   * Fix dependabot issue
 
 ## 3.1.1
