@@ -64,6 +64,7 @@ CONFIG = {
     "start_date": None,
     "hapikey": None,
     "include_inactives": None,
+    "select_fields_by_default": None,
 }
 
 ENDPOINTS = {
@@ -1321,15 +1322,20 @@ def deselect_unselected_fields(catalog):
     If a field isn't manually deselected, it will be included in the sync by default,
     so we must explicitly deselect any such fields in the catalog.
     """
+    LOGGER.info("Deselecting unselected fields")
     for stream in catalog.get('streams'):
         mdata = stream['metadata']
         if mdata[0].get('metadata', {}).get('selected'):
             for breadcrumb in mdata:
                 if breadcrumb.get('breadcrumb') and breadcrumb.get('metadata', {}).get('selected') is None:
+                    LOGGER.info("Deselecting %s", breadcrumb['breadcrumb'][1])
                     breadcrumb['metadata']['selected'] = False
 
 def do_sync(STATE, catalog):
-    deselect_unselected_fields(catalog)
+    # If select_fields_by_default is not provided, default to True
+    if CONFIG.get('select_fields_by_default') == False:
+        deselect_unselected_fields(catalog)
+
     custom_objects = generate_custom_streams(mode="SYNC", catalog=catalog)
     # Clear out keys that are no longer used
     clean_state(STATE)
