@@ -50,7 +50,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         # return {'start_date' : '2017-11-22T00:00:00Z'}
         return {
             'start_date' : datetime.strftime(
-                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+                datetime.today()-timedelta(days=5), self.START_DATE_FORMAT
             ),
         }
 

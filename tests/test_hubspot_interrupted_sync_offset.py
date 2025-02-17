@@ -169,7 +169,7 @@ class TestHubspotInterruptedSyncOffsetCompanies(TestHubspotInterruptedSyncOffset
     def get_properties(self):
         return {
             'start_date' : datetime.strftime(
-                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+                datetime.today()-timedelta(days=5), self.START_DATE_FORMAT
             ),
         }
 

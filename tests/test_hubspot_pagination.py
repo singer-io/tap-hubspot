@@ -34,7 +34,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
 
     def get_properties(self):
         return {
-            'start_date' : datetime.strftime(datetime.today()-timedelta(days=7), self.START_DATE_FORMAT)
+            'start_date' : datetime.strftime(datetime.today()-timedelta(days=5), self.START_DATE_FORMAT)
         }
 
     def setUp(self):
