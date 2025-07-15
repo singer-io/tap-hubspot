@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.2.1
+  * Bump dependency versions for twistlock compliance [#268](https://github.com/singer-io/tap-hubspot/pull/268)
+
 ## 3.2.0
   * Add support for `select_fields_by_default` config property [#266](https://github.com/singer-io/tap-hubspot/pull/266)
   * Fix dependabot issue
