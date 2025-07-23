@@ -42,7 +42,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         hardcode start_dates for these streams and run the test twice.
         streams tested in TestHubspotStartDateStatic should be removed.
         """
-        excluded = STATIC_DATA_STREAMS | {"subscription_changes", "email_events"}
+        excluded = {"subscription_changes", "email_events"}
         return self.expected_check_streams().difference({
             'owners', # static test data, covered in separate test
             'campaigns', # static test data, covered in separate test
