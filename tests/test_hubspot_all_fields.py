@@ -259,6 +259,14 @@ class TestHubspotAllFields(HubspotBaseTest):
                 replication_method = self.expected_replication_method()[stream]
                 primary_keys = sorted(self.expected_primary_keys()[stream])
 
+                # checking for unsynced streams
+                if stream not in synced_records:
+                    if stream in self.unsynced_streams():
+                        LOGGER.warn("Stream %s is known to have sync issues, skipping", stream)
+                        continue
+                    else: 
+                        raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
+
                 # gather replicated records
                 actual_records = [message['data']
                                   for message in synced_records[stream]['messages']

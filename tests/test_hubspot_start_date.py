@@ -42,11 +42,10 @@ class TestHubspotStartDate(HubspotBaseTest):
         hardcode start_dates for these streams and run the test twice.
         streams tested in TestHubspotStartDateStatic should be removed.
         """
-        excluded = {"subscription_changes", "email_events"}
         return self.expected_check_streams().difference({
             'owners', # static test data, covered in separate test
             'campaigns', # static test data, covered in separate test
-        }) - excluded
+        })
 
 
     def get_properties(self, original=True):
@@ -86,6 +85,12 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         # Test by stream
         for stream in self.expected_streams():
+            if stream not in first_sync_records or stream not in second_sync_records:
+                if stream in self.unsynced_streams():
+                    LOGGER.warn("Stream %s is known to have sync issues, skipping", stream)
+                    continue
+                else: 
+                    raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
             with self.subTest(stream=stream):
 
                 # gather expectations

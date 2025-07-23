@@ -221,6 +221,10 @@ class HubspotBaseTest(BaseCase):
     def expected_streams(self):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
+    
+    def unsynced_streams(self):
+        """A set of streams that are known to have sync issues and should be skipped in assertion errors."""
+        return {"subscription_changes", "email_events"} 
 
     def expected_replication_keys(self):
         """

@@ -2,6 +2,7 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 import re
+from tap_tester import LOGGER
 
 from base import HubspotBaseTest
 
@@ -14,8 +15,7 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
     def streams_to_test(self):
         """streams to test"""
-        excluded = STATIC_DATA_STREAMS | {"subscription_changes", "email_events"}
-        return self.expected_streams() - excluded
+        return self.expected_streams() - STATIC_DATA_STREAMS
 
     def test_run(self):
         """
@@ -60,6 +60,13 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
         # Assert the records for each stream
         for stream in expected_streams:
+            if stream not in synced_records:
+                    if stream in self.unsynced_streams():
+                        LOGGER.warn("Stream %s is known to have sync issues, skipping", stream)
+                        continue
+                    else: 
+                        raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
+            
             with self.subTest(stream=stream):
 
                 # Verify that data is present

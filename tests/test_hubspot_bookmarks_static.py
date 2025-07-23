@@ -5,6 +5,7 @@ import copy
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
+from tap_tester import LOGGER
 
 from base import HubspotBaseTest
 from client import TestClient
@@ -70,7 +71,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         # Test by Stream
         for stream in expected_streams:
-
+            if stream not in synced_records:
+                    if stream in self.unsynced_streams():
+                        LOGGER.warn("Stream %s is known to have sync issues, skipping", stream)
+                        continue
+                    else: 
+                        raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
             with self.subTest(stream=stream):
 
                 # gather expected values

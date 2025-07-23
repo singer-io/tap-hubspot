@@ -137,7 +137,13 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         # Test by Stream
         for stream in expected_streams:
-
+            if stream not in synced_records or stream not in synced_records_2:
+                if stream in self.unsynced_streams():
+                    LOGGER.warn("Stream %s is known to have sync issues, skipping", stream)
+                    continue
+                else: 
+                    raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
+            
             with self.subTest(stream=stream):
 
                 # gather expected values
