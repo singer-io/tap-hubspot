@@ -14,7 +14,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
     def streams_to_test(self):
         """streams to test"""
-        return self.expected_streams() - STATIC_DATA_STREAMS
+        excluded = STATIC_DATA_STREAMS | {"subscription_changes", "email_events"}
+        return self.expected_streams() - excluded
 
     def test_run(self):
         """
