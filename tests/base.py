@@ -238,7 +238,7 @@ class HubspotBaseTest(BaseCase):
         for ds in synced_data_records:
             if stream not in ds:
                 raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
-            return True
+        return True
 
     def expected_replication_keys(self):
         """
