@@ -85,12 +85,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         # Test by stream
         for stream in self.expected_streams():
-            if stream not in first_sync_records or stream not in second_sync_records:
-                if stream in self.unsynced_streams():
-                    LOGGER.warn("Stream %s is known to have sync issues, skipping", stream)
-                    continue
-                else: 
-                    raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
+            if not self.validate_failed_sync_streams(stream, first_sync_records, second_sync_records):
+                continue
             with self.subTest(stream=stream):
 
                 # gather expectations
