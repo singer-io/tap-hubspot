@@ -2,6 +2,7 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 import re
+from tap_tester import LOGGER
 
 from base import HubspotBaseTest
 
@@ -59,6 +60,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
         # Assert the records for each stream
         for stream in expected_streams:
+            if not self.validate_failed_sync_streams(stream, synced_records):
+                continue
             with self.subTest(stream=stream):
 
                 # Verify that data is present

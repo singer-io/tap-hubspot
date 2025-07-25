@@ -76,7 +76,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
             # if we do not exceed the limit generate more data so that we do
             if under_target > 0 :
                 LOGGER.info(f"need to make {under_target} records for {stream} stream")
-                if stream in {'subscription_changes', 'emails_events'}:
+                if stream in {'subscription_changes', 'email_events'}:
                     test_client.create(stream, subscriptions=existing_records[stream], times=under_target)
                 elif stream == 'contacts_by_company':
                     test_client.create(stream, company_ids, times=under_target)

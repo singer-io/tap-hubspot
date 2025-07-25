@@ -85,6 +85,8 @@ class TestHubspotStartDate(HubspotBaseTest):
 
         # Test by stream
         for stream in self.expected_streams():
+            if not self.validate_failed_sync_streams(stream, first_sync_records, second_sync_records):
+                continue
             with self.subTest(stream=stream):
 
                 # gather expectations

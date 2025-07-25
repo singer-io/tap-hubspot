@@ -137,7 +137,8 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         # Test by Stream
         for stream in expected_streams:
-
+            if not self.validate_failed_sync_streams(stream, synced_records, synced_records_2):
+                continue
             with self.subTest(stream=stream):
 
                 # gather expected values

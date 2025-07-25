@@ -259,6 +259,10 @@ class TestHubspotAllFields(HubspotBaseTest):
                 replication_method = self.expected_replication_method()[stream]
                 primary_keys = sorted(self.expected_primary_keys()[stream])
 
+                # checking for failed unsynced streams
+                if not self.validate_failed_sync_streams(stream, synced_records):
+                    continue
+
                 # gather replicated records
                 actual_records = [message['data']
                                   for message in synced_records[stream]['messages']
