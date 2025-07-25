@@ -232,14 +232,15 @@ class HubspotBaseTest(BaseCase):
         If it is, log a warning and skip the assertion.
         If not, raise an error indicating the stream is missing from synced_records.
         """
-        if stream in self.failed_sync_streams():
-                    LOGGER.warning("Stream %s is known to have sync issues, skipping", stream)
-                    return False
         for ds in synced_data_records:
             if stream not in ds:
-                raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
+                if stream in self.failed_sync_streams():
+                    LOGGER.warning("Stream %s is known to have sync issues, skipping", stream)
+                    return False
+                else:
+                    raise KeyError(f"Stream '{stream}' missing from synced_records, verify the stream records")
         return True
-
+    
     def expected_replication_keys(self):
         """
         return a dictionary with key of table name
