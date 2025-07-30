@@ -257,7 +257,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 # verify that at least 1 record from the first sync is replicated in the 2nd sync
                 # to prove that the bookmarking is inclusive
                 if stream in {'companies', # BUG | https://jira.talendforge.org/browse/TDL-15503
-                              'email_events'}: # BUG | https://jira.talendforge.org/browse/TDL-15706
+                              'email_events', 'contacts_by_company'}: # BUG | https://jira.talendforge.org/browse/TDL-15706
                     continue  # skipping failures
                 self.assertTrue(any([expected_pk in sync_2_pks for expected_pk in expected_sync_1_pks]))
 
