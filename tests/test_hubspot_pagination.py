@@ -29,7 +29,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
             'contacts_by_company',
             'email_events',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-            'co_firsts',
+            'co_firsts', # this stream has inconsistencies
         })
         return streams_to_test
 
