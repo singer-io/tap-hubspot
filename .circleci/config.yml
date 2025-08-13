@@ -48,7 +48,7 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             uv pip install nose2 coverage
-            nose2 tap_hubspot/tests
+            nose2 --start-dir tap_hubspot/tests
             nose2 --verbose --with-coverage --coverage-report html --coverage tap_hubspot --start-dir tests/unittests
             coverage html
       - store_test_results:
