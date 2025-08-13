@@ -46,6 +46,7 @@ jobs:
       - run:
           name: 'Unit Tests'
           command: |
+            source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             uv pip install nose2 coverage
             nose2 --start-dir tap_hubspot/tests
