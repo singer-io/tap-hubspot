@@ -20,10 +20,10 @@ class TestDeals(unittest.TestCase):
         """
         This functions reads in the variables need to get an access token
         """
-        CONFIG['redirect_uri'] = os.environ['HUBSPOT_REDIRECT_URI']
-        CONFIG['refresh_token'] = os.environ['HUBSPOT_REFRESH_TOKEN']
-        CONFIG['client_id'] = os.environ['HUBSPOT_CLIENT_ID']
-        CONFIG['client_secret'] = os.environ['HUBSPOT_CLIENT_SECRET']
+        CONFIG['redirect_uri'] = os.environ['TAP_HUBSPOT_REDIRECT_URI']
+        CONFIG['refresh_token'] = os.environ['TAP_HUBSPOT_REFRESH_TOKEN']
+        CONFIG['client_id'] = os.environ['TAP_HUBSPOT_CLIENT_ID']
+        CONFIG['client_secret'] = os.environ['TAP_HUBSPOT_CLIENT_SECRET']
 
         acquire_access_token_from_refresh_token()
 
