@@ -107,8 +107,8 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
                                         state_2["bookmarks"][stream].get(replication_key),
                                         msg="First sync bookmark should not be greater than the second bookmark.")
             elif stream == 'contacts_by_company':
-                self.assertEquals(state_1["bookmarks"][stream], {"offset": {}})
-                self.assertEquals(state_2["bookmarks"][stream], {"offset": {}})
+                self.assertEqual(state_1["bookmarks"][stream], {"offset": {}})
+                self.assertEqual(state_2["bookmarks"][stream], {"offset": {}})
 
             else:
                 replication_key = list(replication_keys[stream])[0]

@@ -5,7 +5,7 @@ orbs:
 executors:
   tap_tester:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
 jobs:
   ensure_env:
     executor: tap_tester
@@ -14,16 +14,17 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /usr/local/share/virtualenvs/dev_env.sh
-            python3 -m venv /usr/local/share/virtualenvs/tap-hubspot/
+            uv venv --python 3.9 /usr/local/share/virtualenvs/tap-hubspot
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
-            pip install .[dev]
+            uv pip install -U 'pip<19.2' 'setuptools<51.0.0'
+            uv pip install .[dev]
+            uv pip install awscli --upgrade
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /usr/local/share/virtualenvs/dev_env.sh
       - persist_to_workspace:
-          root: /usr/local/share/virtualenvs/
+          root: /
           paths:
-            - tap-hubspot
-            - dev_env.sh
+            - usr/local/share/virtualenvs/
+            - root/.local/share/uv/python
   build:
     executor: tap_tester
     steps:
@@ -33,7 +34,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: /usr/local/share/virtualenvs
+          at: /
       - run:
           name: 'pylint'
           command: |
@@ -45,10 +46,11 @@ jobs:
       - run:
           name: 'Unit Tests'
           command: |
+            source /usr/local/share/virtualenvs/dev_env.sh
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
-            nosetests tap_hubspot/tests
-            pip install coverage
-            nosetests --with-coverage --cover-erase --cover-package=tap_hubspot --cover-html-dir=htmlcov tap_hubspot/tests/unittests
+            uv pip install nose2 coverage
+            nose2 --start-dir tap_hubspot/tests
+            nose2 --verbose --with-coverage --coverage-report html --coverage tap_hubspot --start-dir tap_hubspot/tests/unittests
             coverage html
       - store_test_results:
           path: test_output/report.xml
@@ -67,7 +69,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: /usr/local/share/virtualenvs
+          at: /
       - run:
           name: 'Integration Tests'
           command: |
