@@ -57,6 +57,7 @@ CONFIG = {
     "subscription_chunk_size": DEFAULT_CHUNK_SIZE,
 
     # in config.json
+    "api_key": None,
     "redirect_uri": None,
     "client_id": None,
     "client_secret": None,
@@ -325,7 +326,10 @@ def get_params_and_headers(params):
     """
     params = params or {}
     hapikey = CONFIG['hapikey']
-    if hapikey is None:
+    api_key = CONFIG['api_key']
+    if api_key is not None:
+        headers = {'Authorization': 'Bearer {}'.format(CONFIG['api_key'])}
+    elif hapikey is None:
         if CONFIG['token_expires'] is None or CONFIG['token_expires'] < datetime.datetime.utcnow():
             acquire_access_token_from_refresh_token()
         headers = {'Authorization': 'Bearer {}'.format(CONFIG['access_token'])}
@@ -1145,7 +1149,7 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
                 if params['after'] is None:
                     break
     except SourceUnavailableException as ex:
-        warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+        warning_message = str(ex).replace(CONFIG['access_token'] or CONFIG['api_key'], 10 * '*')
         LOGGER.warning(warning_message)
         return []
 
@@ -1358,7 +1362,7 @@ def do_sync(STATE, catalog):
             else:
                 STATE = stream.sync(STATE, ctx) # pylint: disable=not-callable
         except SourceUnavailableException as ex:
-            error_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+            error_message = str(ex).replace(CONFIG['access_token'] or CONFIG['api_key'], 10 * '*')
             LOGGER.error(error_message)
         except UriTooLongException as ex:
             LOGGER.fatal(f"For stream - {stream.tap_stream_id}, please select fewer fields. "
@@ -1437,7 +1441,7 @@ def discover_schemas():
                                       'metadata': mdata})
         except SourceUnavailableException as ex:
             # Skip the discovery mode on the streams were the required scopes are missing
-            warning_message = str(ex).replace(CONFIG['access_token'], 10 * '*')
+            warning_message = str(ex).replace(CONFIG['access_token'] or CONFIG['api_key'], 10 * '*')
             LOGGER.warning(warning_message)
 
     for custom_stream in generate_custom_streams(mode="DISCOVER"):
@@ -1476,14 +1480,13 @@ def get_request_timeout():
     return request_timeout
 
 def main_impl():
-    args = utils.parse_args(
-        ["redirect_uri",
-         "client_id",
-         "client_secret",
-         "refresh_token",
-         "start_date"])
+    args = utils.parse_args(["start_date"])
 
     CONFIG.update(args.config)
+
+    if CONFIG['api_key'] is None and (CONFIG['redirect_uri'] is None or CONFIG['client_id'] is None or CONFIG['client_secret'] is None or CONFIG['refresh_token'] is None):
+        raise ValueError('Config must contain "api_key" or all of ("redirect_uri", "client_id", "client_secret", "refresh_token")')
+
     STATE = {}
 
     if str(CONFIG.get('select_fields_by_default')).lower() not in ['none', 'true', 'false']:
