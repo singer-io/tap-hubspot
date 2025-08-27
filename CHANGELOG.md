@@ -1,6 +1,6 @@
 # Changelog
 
-## 3,3,0
+## 3.3.0
   * Add support for personal access tokens (api_key) instead of passing oauth creds [#276](https://github.com/singer-io/tap-hubspot/pull/276)
 
 ## 3.2.1
