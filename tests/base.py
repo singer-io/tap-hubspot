@@ -75,7 +75,7 @@ class HubspotBaseTest(BaseCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
-                self.EXPECTED_PAGE_SIZE: 250,
+                self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True
             },
             "contact_lists": {

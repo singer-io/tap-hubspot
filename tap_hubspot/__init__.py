@@ -358,22 +358,6 @@ def merge_responses(v1_data, v3_data):
                 v1_record['properties'] = {**v1_record['properties'],
                                            **v3_record['properties']}
 
-def process_v3_deals_records(v3_data):
-    """
-    This function:
-    1. filters out fields that don't contain 'hs_v2_date_entered_*' and
-       'hs_v2_date_exited_*'
-    2. changes a key value pair in `properties` to a key paired to an
-       object with a key 'value' and the original value
-    """
-    transformed_v3_data = []
-    for record in v3_data:
-        new_properties = {field_name : {'value': field_value}
-                          for field_name, field_value in record['properties'].items()
-                          if any(prefix in field_name for prefix in V3_PREFIXES)}
-        transformed_v3_data.append({**record, 'properties' : new_properties})
-    return transformed_v3_data
-
 def get_v3_deals(v3_fields, deal_ids):
     v1_ids = [{'id': _id} for _id in deal_ids]
 
@@ -423,9 +407,11 @@ def sync_contacts(STATE, ctx):
 
     params = {
         'limit': 100,
-        'associations': 'tickets,companies,deals',
-        'properties': get_selected_property_fields(catalog, mdata),
+        'associations': 'tickets,companies,deals'
     }
+    properties = get_selected_property_fields(catalog, mdata)
+    if properties:
+        params['properties'] =  properties
 
     return sync_v3_stream(STATE, ctx, stream_id, params)
 
@@ -473,10 +459,12 @@ def sync_companies(STATE, ctx):
     stream_id = "companies"
 
     params = {
-        'limit': 250,
-        'associations': 'tickets,contacts,deals',
-        'properties': get_selected_property_fields(catalog, mdata),
+        'limit': 100,
+        'associations': 'tickets,contacts,deals'
     }
+    properties = get_selected_property_fields(catalog, mdata)
+    if properties:
+        params['properties'] = properties
 
     start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
     LOGGER.info("sync_companies from %s", start)

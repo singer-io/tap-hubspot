@@ -18,13 +18,6 @@
       ],
       "format": "date-time"
     },
-    "archivedAt": {
-      "type": [
-        "null",
-        "string"
-      ],
-      "format": "date-time"
-    },
     "archived": {
       "type": [
         "null",
