@@ -176,7 +176,7 @@ def get_field_type_schema(field_type):
         return {"type": ["null", "string"]}
 
 
-def parse_custom_schema(entity_name, data, is_custom_object=False):
+def parse_custom_schema(data, is_custom_object=False):
     if is_custom_object:
         return {
             field['name']: get_field_type_schema(field['type'])
@@ -190,7 +190,7 @@ def parse_custom_schema(entity_name, data, is_custom_object=False):
 
 
 def get_custom_schema(entity_name):
-    return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json()['results'])
+    return parse_custom_schema(request(get_url(entity_name + "_properties")).json()['results'])
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
@@ -368,7 +368,7 @@ def get_v3_deals(v3_fields, deal_ids):
     return v3_resp.json()['results']
 
 #pylint: disable=line-too-long
-def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets, v3_fields=None):
+def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, offset_targets):
     if len(offset_keys) != len(offset_targets):
         raise ValueError("Number of offset_keys must match number of offset_targets")
 
@@ -411,7 +411,7 @@ def sync_contacts(STATE, ctx):
     }
     properties = get_selected_property_fields(catalog, mdata)
     if properties:
-        params['properties'] =  properties
+        params['properties'] = properties
 
     return sync_v3_stream(STATE, ctx, stream_id, params)
 
@@ -819,11 +819,11 @@ def sync_contact_lists(STATE, ctx):
                     if modified_time and modified_time >= start:
                         record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                         singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                    
+
                         # API returns records in ascending order
                         max_bk_value = modified_time
                         counter.increment()
-                
+
                 if not data.get('hasMore'):
                     break
                 body["offset"] = data["offset"]
@@ -1122,7 +1122,7 @@ def generate_custom_streams(mode, catalog=None):
             custom_object_name = custom_object["name"]
             stream_id = f'custom_object_{custom_object_name}' if custom_object_name in standard_streams else custom_object_name
             schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
-            custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
+            custom_schema = parse_custom_schema(custom_object["properties"], is_custom_object=True)
             schema["properties"]["properties"] = {
                 "type": "object",
                 "properties": custom_schema,

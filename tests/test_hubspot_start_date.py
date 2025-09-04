@@ -106,19 +106,11 @@ class TestHubspotStartDate(HubspotBaseTest):
                     self.assertGreater(first_sync_count, second_sync_count)
 
                     # for incrmental streams we can compare records agains the start date
-                    if replication_key and stream not in {'contacts', 'subscription_changes', 'email_events'}:  # BUG_TDL-9939
+                    if replication_key and stream not in {'subscription_changes', 'email_events'}:  # BUG_TDL-9939
 
-                        # BUG_TDL-9939 replication key is not listed correctly
-                        if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
-                            # For deals stream, the replication key is already prefixed with 'property_'.
-                            replication_key =  [replication_key[0]] if stream in ["deals", "companies"] else [f'property_{replication_key[0]}']
-                            first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
-                                                                 for record in first_sync_messages]
-                            second_sync_replication_key_values = [record['data'][replication_key[0]]['value']
-                                                                  for record in second_sync_messages]
-                        else:
-                            first_sync_replication_key_values = [record['data'][replication_key[0]] for record in first_sync_messages]
-                            second_sync_replication_key_values = [record['data'][replication_key[0]] for record in second_sync_messages]
+
+                        first_sync_replication_key_values = [record['data'][replication_key[0]] for record in first_sync_messages]
+                        second_sync_replication_key_values = [record['data'][replication_key[0]] for record in second_sync_messages]
                         formatted_start_date_1 = start_date_1.replace('Z', '.000000Z')
                         formatted_start_date_2 = start_date_2.replace('Z', '.000000Z')
 

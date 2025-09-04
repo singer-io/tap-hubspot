@@ -140,11 +140,11 @@ workflows:
             - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
-          # requires:
-          #   - "Child Streams Test"
-          #   - "Start Date Test"
-          #   - "Automatic Fields Test"
-          #   - "Discovery Test"
+          requires:
+            - "Child Streams Test"
+            - "Start Date Test"
+            - "Automatic Fields Test"
+            - "Discovery Test"
       - integration_test:
           name: "Bookmarks Test CRUD"
           context:
@@ -152,8 +152,8 @@ workflows:
             - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
-          # requires:
-          #   - "All Fields Test"
+          requires:
+            - "All Fields Test"
       - integration_test:
           name: "Bookmarks Test Static Data"
           context:
@@ -170,9 +170,9 @@ workflows:
             - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
-          # requires:
-          #   - "Bookmarks Test Static Data"
-          #   - "Bookmarks Test CRUD"
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
       - integration_test:
           name: "Interrupted State with Offset Test"
           context:
@@ -180,9 +180,9 @@ workflows:
             - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
-          # requires:
-          #   - "Bookmarks Test Static Data"
-          #   - "Bookmarks Test CRUD"
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
       - integration_test:
           name: "Pagination Test"
           context:
@@ -190,9 +190,9 @@ workflows:
             - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
-          # requires:
-          #   - "Interrupted State with Offset Test"
-          #   - "Interrupted State Test"
+          requires:
+            - "Interrupted State with Offset Test"
+            - "Interrupted State Test"
       - build:
           context:
             - circleci-user
