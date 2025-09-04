@@ -68,26 +68,19 @@ CONFIG = {
 }
 
 ENDPOINTS = {
-    "contacts_properties":  "/properties/v1/contacts/properties",
-    "contacts_all":         "/contacts/v1/lists/all/contacts/all",
-    "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
-    "contacts_detail":      "/contacts/v1/contact/vids/batch/",
+    "contacts_properties":  "/crm/v3/properties/contacts",
+    "contacts":         "/crm/v3/objects/contacts",
 
-    "companies_properties": "/companies/v2/properties",
-    "companies_all":        "/companies/v2/companies/paged",
-    "companies_recent":     "/companies/v2/companies/recent/modified",
-    "companies_detail":     "/companies/v2/companies/{company_id}",
+    "companies_properties": "/crm/v3/properties/companies",
+    "companies":        "/crm/v3/objects/companies",
+
     "contacts_by_company_v3": "/crm/v3/associations/company/contact/batch/read",
 
-    "deals_properties":     "/properties/v1/deals/properties",
-    "deals_all":            "/deals/v1/deal/paged",
-    "deals_recent":         "/deals/v1/deal/recent/modified",
-    "deals_detail":         "/deals/v1/deal/{deal_id}",
-
+    "deals_properties":     "/crm/v3/properties/deals",
+    "deals":            "/crm/v3/objects/deals",
     "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
-    "deals_v3_properties":  "/crm/v3/properties/deals",
 
-    "deal_pipelines":       "/deals/v1/pipelines",
+    "deal_pipelines":       "/crm/v3/pipelines/deals",
 
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
@@ -96,7 +89,7 @@ ENDPOINTS = {
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
-    "contact_lists":        "/contacts/v1/lists",
+    "contact_lists":        "/crm/v3/lists/search",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/crm/v3/owners/",
@@ -182,24 +175,6 @@ def get_field_type_schema(field_type):
     else:
         return {"type": ["null", "string"]}
 
-def get_field_schema(field_type, extras=False):
-    if extras:
-        return {
-            "type": "object",
-            "properties": {
-                "value": get_field_type_schema(field_type),
-                "timestamp": get_field_type_schema("datetime"),
-                "source": get_field_type_schema("string"),
-                "sourceId": get_field_type_schema("string"),
-            }
-        }
-    else:
-        return {
-            "type": "object",
-            "properties": {
-                "value": get_field_type_schema(field_type),
-            }
-        }
 
 def parse_custom_schema(entity_name, data, is_custom_object=False):
     if is_custom_object:
@@ -207,34 +182,18 @@ def parse_custom_schema(entity_name, data, is_custom_object=False):
             field['name']: get_field_type_schema(field['type'])
             for field in data
         }
-    if entity_name == "tickets":
-        return {
-            field['name']: get_field_type_schema(field['type'])
-            for field in data["results"]
-        }
 
     return {
-        field['name']: get_field_schema(field['type'], entity_name != 'contacts')
+        field['name']: get_field_type_schema(field['type'])
         for field in data
     }
 
 
 def get_custom_schema(entity_name):
-    return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
-
-def get_v3_schema(entity_name):
-    url = get_url("deals_v3_properties")
-    return parse_custom_schema(entity_name, request(url).json()['results'])
+    return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json()['results'])
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
-
-def load_associated_company_schema():
-    associated_company_schema = load_schema("companies")
-    #pylint: disable=line-too-long
-    associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
-    associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
-    return associated_company_schema
 
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
@@ -246,25 +205,9 @@ def load_schema(entity_name):
             "properties": custom_schema,
         }
 
-        if entity_name in ["deals"]:
-            v3_schema = get_v3_schema(entity_name)
-            for key, value in v3_schema.items():
-                if any(prefix in key for prefix in V3_PREFIXES):
-                    custom_schema[key] = value
-
         # Move properties to top level
         custom_schema_top_level = {'property_{}'.format(k): v for k, v in custom_schema.items()}
         schema['properties'].update(custom_schema_top_level)
-
-        # Exclude properties_versions field for tickets stream. As the versions are not present in
-        # the api response.
-        if entity_name != "tickets":
-            # Make properties_versions selectable and share the same schema.
-            versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
-            schema['properties']['properties_versions'] = versions_schema
-
-    if entity_name == "contacts":
-        schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -308,13 +251,6 @@ def on_giveup(details):
     raise Exception("Giving up on request after {} tries with url {} and params {}" \
                     .format(details['tries'], url, params))
 
-URL_SOURCE_RE = re.compile(BASE_URL + r'/(\w+)/')
-
-def parse_source_from_url(url):
-    match = URL_SOURCE_RE.match(url)
-    if match:
-        return match.group(1)
-    return None
 
 def get_params_and_headers(params):
     """
@@ -354,8 +290,7 @@ def request(url, params=None):
     params, headers = get_params_and_headers(params)
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
-    LOGGER.info("GET %s", req.url)
-    with metrics.http_request_timer(parse_source_from_url(url)) as timer:
+    with metrics.http_request_timer(url) as timer:
         resp = SESSION.send(req, timeout=get_request_timeout())
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
@@ -383,6 +318,7 @@ def lift_properties_and_versions(record):
                 if not record.get('properties_versions'):
                     record['properties_versions'] = []
                 record['properties_versions'] += versions
+
     return record
 
 # backoff for Timeout error is already included in "requests.exceptions.RequestException"
@@ -438,8 +374,8 @@ def process_v3_deals_records(v3_data):
         transformed_v3_data.append({**record, 'properties' : new_properties})
     return transformed_v3_data
 
-def get_v3_deals(v3_fields, v1_data):
-    v1_ids = [{'id': str(record['dealId'])} for record in v1_data]
+def get_v3_deals(v3_fields, deal_ids):
+    v1_ids = [{'id': _id} for _id in deal_ids]
 
     v3_body = {'inputs': v1_ids,
                'properties': v3_fields}
@@ -462,14 +398,6 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
             if data.get(path) is None:
                 raise RuntimeError("Unexpected API response: {} not in {}".format(path, data.keys()))
 
-            if v3_fields:
-                v3_data = get_v3_deals(v3_fields, data[path])
-
-                # The shape of v3_data is different than the V1 response,
-                # so we transform v3 to look like v1
-                transformed_v3_data = process_v3_deals_records(v3_data)
-                merge_responses(data[path], transformed_v3_data)
-
             for row in data[path]:
                 counter.increment()
                 yield row
@@ -488,82 +416,22 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
 
-
-def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key):
-    if len(vids) == 0:
-        return
-
-    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
-    time_extracted = utils.now()
-    mdata = metadata.to_map(catalog.get('metadata'))
-    for record in data.values():
-        # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
-        record[bookmark_key] = bookmark_values.get(record.get("vid"))
-        record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-        singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-
-default_contact_params = {
-    'showListMemberships': True,
-    'includeVersion': True,
-    'count': 100,
-}
-
 def sync_contacts(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    bookmark_key = 'versionTimestamp'
-    start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
-    LOGGER.info("sync_contacts from %s", start)
+    mdata = metadata.to_map(catalog.get('metadata'))
+    stream_id = "contacts"
 
-    max_bk_value = start
-    schema = load_schema("contacts")
+    params = {
+        'limit': 100,
+        'associations': 'tickets,companies,deals',
+        'properties': get_selected_property_fields(catalog, mdata),
+    }
 
-    singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
-
-    url = get_url("contacts_all")
-
-    vids = []
-    # Dict to store replication key value for each contact record
-    bookmark_values = {}
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
-            modified_time = None
-            if bookmark_key in row:
-                modified_time = utils.strptime_with_tz(
-                    _transform_datetime( # pylint: disable=protected-access
-                        row[bookmark_key],
-                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
-
-            if not modified_time or modified_time >= start:
-                vids.append(row['vid'])
-                # Adding replication key value in `bookmark_values` dict
-                # Here, key is vid(primary key) and value is replication key value.
-                bookmark_values[row['vid']] = utils.strftime(modified_time)
-
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
-
-            if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
-                vids = []
-
-        _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
-
-    # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(max_bk_value, sync_start_time)
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(new_bookmark))
-    singer.write_state(STATE)
-    return STATE
+    return sync_v3_stream(STATE, ctx, stream_id, params)
 
 class ValidationPredFailed(Exception):
     pass
 
-# companies_recent only supports 10,000 results. If there are more than this,
-# we'll need to use the companies_all endpoint
-def use_recent_companies_endpoint(response):
-    return response["total"] < 10000
 
 default_contacts_by_company_params = {'count' : 100}
 
@@ -601,13 +469,19 @@ def sync_companies(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     bumble_bee = Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING)
-    bookmark_key = 'property_hs_lastmodifieddate'
-    bookmark_field_in_record = 'hs_lastmodifieddate'
+    bookmark_key = 'updatedAt'
+    stream_id = "companies"
 
-    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key, older_bookmark_key=bookmark_field_in_record))
+    params = {
+        'limit': 250,
+        'associations': 'tickets,contacts,deals',
+        'properties': get_selected_property_fields(catalog, mdata),
+    }
+
+    start = utils.strptime_to_utc(get_start(STATE, "companies", bookmark_key))
     LOGGER.info("sync_companies from %s", start)
     schema = load_schema('companies')
-    singer.write_schema("companies", schema, ["companyId"], [bookmark_key], catalog.get('stream_alias'))
+    singer.write_schema("companies", schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
 
     # Because this stream doesn't query by `lastUpdated`, it cycles
     # through the data set every time. The issue with this is that there
@@ -619,7 +493,7 @@ def sync_companies(STATE, ctx):
     STATE = write_current_sync_start(STATE, "companies", current_sync_start)
     singer.write_state(STATE)
 
-    url = get_url("companies_all")
+    url = get_url(stream_id)
     max_bk_value = start
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
         contacts_by_company_schema = load_schema(CONTACTS_BY_COMPANY)
@@ -644,35 +518,30 @@ def sync_companies(STATE, ctx):
     # This list collects the recently modified company ids to extract `contacts_by_company` records in batch
     company_ids = []
     with bumble_bee:
-        for row in gen_request(STATE, 'companies', url, default_company_params, 'companies', 'has-more', ['offset'], ['offset']):
-            row_properties = row['properties']
-            modified_time = None
-            if bookmark_field_in_record in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[bookmark_field_in_record]['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
-            elif 'createdate' in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
+        with metrics.record_counter(stream_id) as counter:
 
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
+            for row in get_v3_records(url, params, 'results', "paging"):
+                # Parsing the string formatted date to datetime object
+                modified_time = utils.strptime_to_utc(row[bookmark_key])
 
-            if not modified_time or modified_time >= start:
-                record = request(get_url("companies_detail", company_id=row['companyId'])).json()
-                record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-                singer.write_record("companies", record, catalog.get('stream_alias'), time_extracted=utils.now())
+                # Checking the bookmark value is present on the record and it
+                # is greater than or equal to defined previous bookmark value
+                if modified_time and modified_time >= start:
+                    # Transforms the data and filters out the selected fields from the catalog
+                    record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                    singer.write_record(stream_id, record, catalog.get(
+                        'stream_alias'), time_extracted=utils.now())
+                    if modified_time >= max_bk_value:
+                        max_bk_value = modified_time
+                    counter.increment()
 
-            if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
-                # Collect the recently modified company id
-                if not modified_time or modified_time >= start:
-                    company_ids.append(row['companyId'])
+                    if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
+                        company_ids.append(row['id'])
 
-                # Once batch size reaches set limit, extract the `contacts_by_company` for company ids collected
-                if len(company_ids) >= default_company_params['limit']:
-                    STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
-                    company_ids = []    # reset the list
+                        # Once batch size reaches set limit, extract the `contacts_by_company` for company ids collected
+                        if len(company_ids) >= default_company_params['limit']:
+                            STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
+                            company_ids = []    # reset the list
 
     # Extract the records for last remaining company ids
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
@@ -697,108 +566,91 @@ def has_selected_custom_field(mdata):
 def sync_deals(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
-    bookmark_key = 'property_hs_lastmodifieddate'
-    # The Bookmark field('hs_lastmodifieddate') available in the record is different from
-    # the tap's bookmark key(property_hs_lastmodifieddate).
-    # `hs_lastmodifieddate` is available in the properties field at the nested level.
-    # As `hs_lastmodifieddate` is not available at the 1st level it can not be marked as automatic inclusion.
-    # tap includes all nested fields of the properties field as custom fields in the schema by appending the
-    # prefix `property_` along with each field.
-    # That's why bookmark_key is `property_hs_lastmodifieddate` so that we can mark it as automatic inclusion.
+    stream_id = "deals"
+    per_page = 100
+    params = {
+        'limit': per_page,
+        'associations': 'tickets,contacts,companies',
+    }
 
-    last_modified_date = 'hs_lastmodifieddate'
+    bookmark_key = 'updatedAt'
+    bookmark_value = utils.strptime_to_utc(get_start(STATE, stream_id, bookmark_key))
+    max_bk_value = bookmark_value
+    LOGGER.info("sync_companies from %s", bookmark_value)
+    schema = load_schema(stream_id)
+    singer.write_schema(stream_id, schema, ["id"], [bookmark_key], catalog.get('stream_alias'))
 
-    # Tap was used to write bookmark using replication key `hs_lastmodifieddate`.
-    # Now, as the replication key gets changed to "property_hs_lastmodifieddate", `get_start` function would return
-    # bookmark value of older bookmark key(`hs_lastmodifieddate`) if it is available.
-    # So, here `older_bookmark_key` is the previous bookmark key that may be available in the state of
-    # the existing connection.
+    v3_fields = get_selected_property_fields(catalog, mdata).split(",")
 
-    start = utils.strptime_with_tz(get_start(STATE, "deals", bookmark_key, older_bookmark_key=last_modified_date))
-    max_bk_value = start
-    LOGGER.info("sync_deals from %s", start)
-    params = {'limit': 100,
-              'includeAssociations': False,
-              'properties' : []}
+    url = get_url(stream_id)
 
-    schema = load_schema("deals")
-    singer.write_schema("deals", schema, ["dealId"], [bookmark_key], catalog.get('stream_alias'))
-
-    # Check if we should  include associations
-    for key in mdata.keys():
-        if 'associations' in key:
-            assoc_mdata = mdata.get(key)
-            if (assoc_mdata.get('selected') and assoc_mdata.get('selected') is True):
-                params['includeAssociations'] = True
-
-    v3_fields = None
-    has_selected_properties = mdata.get(('properties', 'properties'), {}).get('selected')
-    if has_selected_properties or has_selected_custom_field(mdata):
-        # On 2/12/20, hubspot added a lot of additional properties for
-        # deals, and appending all of them to requests ended up leading to
-        # 414 (url-too-long) errors. Hubspot recommended we use the
-        # `includeAllProperties` and `allpropertiesFetchMode` params
-        # instead.
-        params['includeAllProperties'] = True
-        params['allPropertiesFetchMode'] = 'latest_version'
-
-        # Grab selected `hs_v2_date_entered/exited` fields to call the v3 endpoint with
-        v3_fields = [breadcrumb[1].replace('property_', '')
-                     for breadcrumb, mdata_map in mdata.items()
-                     if breadcrumb
-                     and (mdata_map.get('selected') is True or has_selected_properties)
-                     and any(prefix in breadcrumb[1] for prefix in V3_PREFIXES)]
-
-    url = get_url('deals_all')
-
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in gen_request(STATE, 'deals', url, params, 'deals', "hasMore", ["offset"], ["offset"], v3_fields=v3_fields):
-            row_properties = row['properties']
-            modified_time = None
-            if last_modified_date in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties[last_modified_date]['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
-            elif 'createdate' in row_properties:
-                # Hubspot returns timestamps in millis
-                timestamp_millis = row_properties['createdate']['timestamp'] / 1000.0
-                modified_time = datetime.datetime.fromtimestamp(timestamp_millis, datetime.timezone.utc)
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
+        deal_records = {}
+        with metrics.record_counter(stream_id) as counter:
 
-            if not modified_time or modified_time >= start:
-                record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-                singer.write_record("deals", record, catalog.get('stream_alias'), time_extracted=utils.now())
+            for row in get_v3_records(url, params, 'results', "paging"):
+                # Parsing the string formatted date to datetime object
+                modified_time = utils.strptime_to_utc(row[bookmark_key])
+
+                if modified_time and modified_time >= bookmark_value:
+                    deal_records[row['id']] = row
+
+                    if modified_time >= max_bk_value:
+                        max_bk_value = modified_time
+
+                if len(deal_records) == per_page:
+                    # On 2/12/20, hubspot added a lot of additional properties for
+                    # deals, and appending all of them to requests ended up leading to
+                    # 414 (url-too-long) errors. So, make separate requests to the v3
+                    # batch read to get those properties.
+                    for rec in get_v3_deals(v3_fields, list(deal_records.keys())):
+                        deal_with_all_properties = deal_records[rec['id']]
+                        deal_with_all_properties['properties'].update(rec.get('properties', {}))
+
+                        # Transforms the data and filters out the selected fields from the catalog
+                        record = transformer.transform(lift_properties_and_versions(deal_with_all_properties), schema, mdata)
+                        singer.write_record(stream_id, record, catalog.get(
+                            'stream_alias'), time_extracted=utils.now())
+                        counter.increment()
+
+                    deal_records = {}
+
+            if deal_records:
+                for rec in get_v3_deals(v3_fields, list(deal_records.keys())):
+                    deal_with_all_properties = deal_records.get(rec['id'])
+                    deal_with_all_properties['properties'].update(rec.get('properties', {}))
+
+                    record = transformer.transform(lift_properties_and_versions(deal_with_all_properties), schema, mdata)
+                    singer.write_record(stream_id, record, catalog.get(
+                        'stream_alias'), time_extracted=utils.now())
+                    counter.increment()
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
-    STATE = singer.write_bookmark(STATE, 'deals', bookmark_key, utils.strftime(new_bookmark))
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
 
-def get_v3_records(tap_stream_id, url, params, path, more_key):
+def get_v3_records(url, params, path, more_key):
     """
     Cursor-based API Pagination : Used in tickets stream implementation
     """
-    with metrics.record_counter(tap_stream_id) as counter:
-        while True:
-            data = request(url, params).json()
+    while True:
+        data = request(url, params).json()
+        if data.get(path) is None:
+            raise RuntimeError(
+                "Unexpected API response: {} not in {}".format(path, data.keys()))
 
-            if data.get(path) is None:
-                raise RuntimeError(
-                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+        for row in data[path]:
+            yield row
 
-            for row in data[path]:
-                counter.increment()
-                yield row
-
-            if not data.get(more_key):
-                break
-            params['after'] = data.get(more_key).get('next').get('after')
+        if not data.get(more_key):
+            break
+        params['after'] = data.get(more_key).get('next').get('after')
 
 def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt"):
     """
@@ -822,19 +674,21 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in get_v3_records(stream_id, url, params, 'results', "paging"):
-            # Parsing the string formatted date to datetime object
-            modified_time = utils.strptime_to_utc(row[bookmark_key])
+        with metrics.record_counter(stream_id) as counter:
+            for row in get_v3_records(url, params, 'results', "paging"):
+                # Parsing the string formatted date to datetime object
+                modified_time = utils.strptime_to_utc(row[bookmark_key])
 
-            # Checking the bookmark value is present on the record and it
-            # is greater than or equal to defined previous bookmark value
-            if modified_time and modified_time >= bookmark_value:
-                # Transforms the data and filters out the selected fields from the catalog
-                record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
-                singer.write_record(stream_id, record, catalog.get(
-                    'stream_alias'), time_extracted=utils.now())
-                if modified_time >= max_bk_value:
-                    max_bk_value = modified_time
+                # Checking the bookmark value is present on the record and it
+                # is greater than or equal to defined previous bookmark value
+                if modified_time and modified_time >= bookmark_value:
+                    # Transforms the data and filters out the selected fields from the catalog
+                    record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                    singer.write_record(stream_id, record, catalog.get(
+                        'stream_alias'), time_extracted=utils.now())
+                    if modified_time >= max_bk_value:
+                        max_bk_value = modified_time
+                    counter.increment()
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
@@ -957,27 +811,37 @@ def sync_contact_lists(STATE, ctx):
     bookmark_key = 'updatedAt'
     singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
 
-    start = get_start(STATE, "contact_lists", bookmark_key)
+    start = utils.strptime_with_tz(get_start(STATE, "contact_lists", bookmark_key))
     max_bk_value = start
 
     LOGGER.info("sync_contact_lists from %s", start)
 
     url = get_url("contact_lists")
-    params = {'count': 250}
+    body = {'count': 250}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+        with metrics.record_counter("contact_lists") as counter:
+            # To handle records updated between start of the table sync and the end,
+            # store the current sync start in the state and not move the bookmark past this value.
+            sync_start_time = utils.now()
+            while True:
+                data = post_search_endpoint(url, body).json()
 
-            if record[bookmark_key] >= start:
-                singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
+                for row in data["lists"]:
+                    modified_time = utils.strptime_to_utc(row[bookmark_key])
+                    if modified_time and modified_time >= start:
+                        record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                        singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
+                    
+                        # API returns records in ascending order
+                        max_bk_value = modified_time
+                        counter.increment()
+                
+                if not data.get('hasMore'):
+                    break
+                body["offset"] = data["offset"]
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    new_bookmark = min(max_bk_value, sync_start_time)
     STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
@@ -1112,13 +976,25 @@ def sync_deal_pipelines(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     schema = load_schema('deal_pipelines')
-    singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
+    stream_id = "deal_pipelines"
+    bookmark_key = "updatedAt"
+    bookmark_value = utils.strptime_to_utc(get_start(STATE, stream_id, bookmark_key))
+    max_bk_value = bookmark_value
+    singer.write_schema('deal_pipelines', schema, ['id'], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
-    data = request(get_url('deal_pipelines')).json()
+    data = request(get_url(stream_id)).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data:
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-            singer.write_record("deal_pipelines", record, catalog.get('stream_alias'), time_extracted=utils.now())
+        with metrics.record_counter("deal_pipelines") as counter:
+            for row in data['results']:
+                modified_time = utils.strptime_to_utc(row[bookmark_key])
+                if modified_time and modified_time >= bookmark_value:
+                    record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                    singer.write_record("deal_pipelines", record, catalog.get('stream_alias'), time_extracted=utils.now())
+                    if modified_time >= max_bk_value:
+                        max_bk_value = modified_time
+                    counter.increment()
+
+    STATE = singer.write_bookmark(STATE, stream_id, bookmark_key, utils.strftime(max_bk_value))
     singer.write_state(STATE)
     return STATE
 
@@ -1220,9 +1096,9 @@ STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
-    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
-    Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
-    Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
+    Stream('contacts', sync_contacts, ["id"], 'updatedAt', 'INCREMENTAL'),
+    Stream('deals', sync_deals, ["id"], 'updatedAt', 'INCREMENTAL'),
+    Stream('companies', sync_companies, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
@@ -1232,7 +1108,7 @@ STREAMS = [
 
     # Do these last as they are full table
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE')
+    Stream('deal_pipelines', sync_deal_pipelines, ['id'], 'updatedAt', 'INCREMENTAL')
 ]
 
 # pylint: disable=inconsistent-return-statements

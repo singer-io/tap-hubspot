@@ -1,46 +1,132 @@
 {
   "type": "object",
   "properties": {
-    "pipelineId": {
-      "type": ["null", "string"]
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "createdAt": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "archivedAt": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "archived": {
+      "type": [
+        "null",
+        "boolean"
+      ]
     },
     "stages": {
-      "type": ["null", "array"],
+      "type": [
+        "null",
+        "array"
+      ],
       "items": {
         "type": "object",
         "properties": {
-          "stageId": {
-            "type": ["null", "string"]
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "writePermissions": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "label": {
-            "type": ["null", "string"]
+            "type": [
+              "null",
+              "string"
+            ]
           },
-          "probability": {
-            "type": ["null", "number"]
-          },
-          "active": {
-            "type": ["null", "boolean"]
+          "metadata": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "probability": {
+                "type": [
+                  "null",
+                  "number"
+                ]
+              },
+              "isClosed": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
           },
           "displayOrder": {
-            "type": ["null", "integer"]
+            "type": [
+              "null",
+              "integer"
+            ]
           },
-          "closedWon": {
-            "type": ["null", "boolean"]
+          "createdAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "archived": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
-      }    
+      }
     },
     "label": {
-      "type": ["null", "string"]
-    },
-    "active": {
-      "type": ["null", "boolean"]
+      "type": [
+        "null",
+        "string"
+      ]
     },
     "displayOrder": {
-      "type": ["null", "integer"]
-    },
-    "staticDefault": {
-      "type": ["null", "boolean"]      
+      "type": [
+        "null",
+        "integer"
+      ]
     }
   }
 }

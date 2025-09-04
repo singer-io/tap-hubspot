@@ -18,7 +18,7 @@ class HubspotBaseTest(BaseCase):
     REPLICATION_METHOD = "forced-replication-method"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
-
+    EXTRA_AUTOMATIC_FIELDS = "extra-automatic-fields"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z" # %H:%M:%SZ
     BASIC_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -72,9 +72,9 @@ class HubspotBaseTest(BaseCase):
                 self.OBEYS_START_DATE: False
             },
             "companies": {
-                self.PRIMARY_KEYS: {"companyId"},
+                self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"updatedAt"},
                 self.EXPECTED_PAGE_SIZE: 250,
                 self.OBEYS_START_DATE: True
             },
@@ -86,28 +86,30 @@ class HubspotBaseTest(BaseCase):
                 self.OBEYS_START_DATE: True
             },
             "contacts": {
-                self.PRIMARY_KEYS: {"vid"},
+                self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"versionTimestamp"},
+                self.REPLICATION_KEYS: {"updatedAt"},
                 self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True
             },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_METHOD: self.FULL,
                 self.EXPECTED_PAGE_SIZE: 100,
                 self.OBEYS_START_DATE: True,
                 self.PARENT_STREAM: 'companies'
             },
             "deal_pipelines": {
-                self.PRIMARY_KEYS: {"pipelineId"},
-                self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False,
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
             },
             "deals": {
-                self.PRIMARY_KEYS: {"dealId"},
+                self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
+                self.REPLICATION_KEYS: {"updatedAt"},
                 self.OBEYS_START_DATE: True
             },
             "email_events": {
@@ -122,6 +124,7 @@ class HubspotBaseTest(BaseCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"lastUpdated"},
                 self.EXPECTED_PAGE_SIZE: 250,
+                self.EXTRA_AUTOMATIC_FIELDS: {'engagement'},
                 self.OBEYS_START_DATE: True
             },
             "forms": {
@@ -247,6 +250,15 @@ class HubspotBaseTest(BaseCase):
         and value as a set of replication key fields
         """
         return {table: properties.get(self.REPLICATION_KEYS, set())
+                for table, properties
+                in self.expected_metadata().items()}
+
+    def expected_extra_automatic_fields(self):
+        """
+        return a dictionary with key of table name
+        and value as a set of extra automatic key fields
+        """
+        return {table: properties.get(self.EXTRA_AUTOMATIC_FIELDS, set())
                 for table, properties
                 in self.expected_metadata().items()}
 
