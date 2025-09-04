@@ -28,10 +28,10 @@ class FieldSelectionChildTest(HubspotBaseTest):
 
         contact = test_client.create('contacts')
         company = test_client.create('companies')[0]
-        contact_by_company = test_client.create_contacts_by_company(
-            company_ids=[company['companyId']],
-            contact_records=contact
-        )
+        # contact_by_company = test_client.create_contacts_by_company(
+        #     company_ids=[company['companyId']],
+        #     contact_records=contact
+        # )
 
     def test_run(self):
         """

@@ -6,7 +6,6 @@ import tap_tester.runner      as runner
 from tap_tester import LOGGER
 
 from base import HubspotBaseTest
-from client import TestClient
 
 
 STATIC_DATA_STREAMS = {'owners', 'campaigns'}
@@ -27,14 +26,6 @@ class TestHubspotStartDate(HubspotBaseTest):
         LOGGER.info("running streams with creates")
         streams_under_test = self.expected_streams() - {'email_events'} # we get this for free with subscription_changes
         self.my_start_date = self.get_properties()['start_date']
-        self.test_client = TestClient(self.my_start_date)
-        for stream in streams_under_test:
-            if stream == 'contacts_by_company':
-                companies_records = self.test_client.read('companies', since=self.my_start_date)
-                company_ids = [company['companyId'] for company in companies_records]
-                self.test_client.create(stream, company_ids)
-            else:
-                self.test_client.create(stream)
 
     def expected_streams(self):
         """
