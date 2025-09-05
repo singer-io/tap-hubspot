@@ -142,6 +142,5 @@ class TestTickets(unittest.TestCase):
             expected_return_value,
             return_value
         )
-        mocked_gen_request.assert_called_once_with('tickets',
-                                                   'https://api.hubapi.com/crm/v4/objects/tickets',
+        mocked_gen_request.assert_called_once_with('https://api.hubapi.com/crm/v4/objects/tickets',
                                                    expected_param, 'results', 'paging')

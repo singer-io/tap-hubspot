@@ -43,7 +43,7 @@ class TestClient():
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
         response = requests.get(url, params=params, headers=self.HEADERS)
-        LOGGER.info(f"TEST CLIENT | GET {url} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | GET {url} STATUS: {response.status_code}")
         response.raise_for_status()
         json_response = response.json()
 
@@ -1085,7 +1085,7 @@ class TestClient():
         elif stream == "co_firsts":
             data = {
                 "properties": {
-                    "id": random.randint(1, 100000),
+                    "id": random.randint(1, 10000000),
                     "name": "test name",
                     "country": random.choice(["USA", "India", "France", "UK"])
                 }
@@ -1595,7 +1595,7 @@ class TestClient():
         :params contact_id: the pk value of the ticket record to update
         :return:
         """
-        url = f"{BASE_URL}/crm/v3/objects/tickets/{contact_id}"
+        url = f"{BASE_URL}/crm/v3/objects/contacts/{contact_id}"
 
         record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
@@ -1606,7 +1606,7 @@ class TestClient():
 
         self.patch(url, data)
 
-        return self._get_tickets_by_pk(contact_id)
+        return self._get_contacts_by_pks(contact_id)
 
 
     def update_contact_lists(self, list_id):
@@ -1924,5 +1924,6 @@ class TestClient():
 
     def print_histogram_data(self):
         for stream, recorded_times in self.record_create_times.items():
-            LOGGER.info("Time taken for stream {} is total: {}, avg: {}, minimum: {}, maximum: {}".
-                    format(stream, sum(recorded_times), sum(recorded_times)/len(recorded_times), min(recorded_times), max(recorded_times) ))
+            LOGGER.info("Time taken for stream {} is total: {}".format(stream, sum(recorded_times)))
+            # LOGGER.info("Time taken for stream {} is total: {}, minimum: {}, maximum: {}".
+            #         format(stream, sum(recorded_times), sum(recorded_times)/len(recorded_times), min(recorded_times), max(recorded_times) ))

@@ -117,27 +117,6 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
                                     msg="First sync bookmark should not be greater than the second bookmark.")
 
 
-class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
-    """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-    @staticmethod
-    def name():
-        return "tt_hubspot_interrupt_contacts"
-
-    def get_properties(self):
-        return {
-            'start_date' : datetime.strftime(
-                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
-            ),
-        }
-
-
-    def stream_to_interrupt(self):
-        return 'contacts'
-
-    def state_to_inject(self, new_state):
-        new_state['bookmarks']['contacts'] = {'offset': {'vidOffset': 3502}}
-        return new_state
-
 class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetContactLists):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
     @staticmethod
