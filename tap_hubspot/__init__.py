@@ -69,10 +69,8 @@ CONFIG = {
 }
 
 ENDPOINTS = {
-    "contacts_properties":  "/properties/v1/contacts/properties",
-    "contacts_all":         "/contacts/v1/lists/all/contacts/all",
-    "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
-    "contacts_detail":      "/contacts/v1/contact/vids/batch/",
+    "contacts_properties":  "/crm/v3/properties/contacts",
+    "contacts":         "/crm/v3/objects/contacts",
 
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
@@ -97,7 +95,7 @@ ENDPOINTS = {
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
-    "contact_lists":        "/contacts/v1/lists",
+    "contact_lists":        "/crm/v3/lists/search",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/crm/v3/owners/",
@@ -195,12 +193,7 @@ def get_field_schema(field_type, extras=False):
             }
         }
     else:
-        return {
-            "type": "object",
-            "properties": {
-                "value": get_field_type_schema(field_type),
-            }
-        }
+        return get_field_type_schema(field_type)
 
 def parse_custom_schema(entity_name, data, is_custom_object=False):
     if is_custom_object:
@@ -221,6 +214,8 @@ def parse_custom_schema(entity_name, data, is_custom_object=False):
 
 
 def get_custom_schema(entity_name):
+    if entity_name == "contacts":
+        return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json()["results"])
     return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
 
 def get_v3_schema(entity_name):
@@ -259,13 +254,10 @@ def load_schema(entity_name):
 
         # Exclude properties_versions field for tickets stream. As the versions are not present in
         # the api response.
-        if entity_name != "tickets":
+        if entity_name not in ["tickets", "contacts"]:
             # Make properties_versions selectable and share the same schema.
             versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
             schema['properties']['properties_versions'] = versions_schema
-
-    if entity_name == "contacts":
-        schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -309,14 +301,6 @@ def on_giveup(details):
     raise Exception("Giving up on request after {} tries with url {} and params {}" \
                     .format(details['tries'], url, params))
 
-URL_SOURCE_RE = re.compile(BASE_URL + r'/(\w+)/')
-
-def parse_source_from_url(url):
-    match = URL_SOURCE_RE.match(url)
-    if match:
-        return match.group(1)
-    return None
-
 def get_params_and_headers(params):
     """
     This function makes a params object and headers object based on the
@@ -358,8 +342,7 @@ def request(url, params=None):
     params, headers = get_params_and_headers(params)
 
     req = requests.Request('GET', url, params=params, headers=headers).prepare()
-    LOGGER.info("GET %s", req.url)
-    with metrics.http_request_timer(parse_source_from_url(url)) as timer:
+    with metrics.http_request_timer(url) as timer:
         resp = SESSION.send(req, timeout=get_request_timeout())
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
         if resp.status_code == 403:
@@ -493,19 +476,6 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     singer.write_state(STATE)
 
 
-def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key):
-    if len(vids) == 0:
-        return
-
-    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
-    time_extracted = utils.now()
-    mdata = metadata.to_map(catalog.get('metadata'))
-    for record in data.values():
-        # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
-        record[bookmark_key] = bookmark_values.get(record.get("vid"))
-        record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-        singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-
 default_contact_params = {
     'showListMemberships': True,
     'includeVersion': True,
@@ -514,52 +484,15 @@ default_contact_params = {
 
 def sync_contacts(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    bookmark_key = 'versionTimestamp'
-    start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
-    LOGGER.info("sync_contacts from %s", start)
+    mdata = metadata.to_map(catalog.get('metadata'))
+    stream_id = "contacts"
+    params = {
+        'limit': 100,
+        'properties': get_selected_property_fields(catalog, mdata),
+        'associations': 'tickets,companies,deals'
+    }
 
-    max_bk_value = start
-    schema = load_schema("contacts")
-
-    singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
-
-    url = get_url("contacts_all")
-
-    vids = []
-    # Dict to store replication key value for each contact record
-    bookmark_values = {}
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
-            modified_time = None
-            if bookmark_key in row:
-                modified_time = utils.strptime_with_tz(
-                    _transform_datetime( # pylint: disable=protected-access
-                        row[bookmark_key],
-                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
-
-            if not modified_time or modified_time >= start:
-                vids.append(row['vid'])
-                # Adding replication key value in `bookmark_values` dict
-                # Here, key is vid(primary key) and value is replication key value.
-                bookmark_values[row['vid']] = utils.strftime(modified_time)
-
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
-
-            if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
-                vids = []
-
-        _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
-
-    # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(max_bk_value, sync_start_time)
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(new_bookmark))
-    singer.write_state(STATE)
-    return STATE
+    return sync_v3_stream(STATE, ctx, stream_id, params)
 
 class ValidationPredFailed(Exception):
     pass
@@ -784,25 +717,23 @@ def sync_deals(STATE, ctx):
     return STATE
 
 
-def get_v3_records(tap_stream_id, url, params, path, more_key):
+def get_v3_records(url, params, path, more_key):
     """
     Cursor-based API Pagination : Used in tickets stream implementation
     """
-    with metrics.record_counter(tap_stream_id) as counter:
-        while True:
-            data = request(url, params).json()
+    while True:
+        data = request(url, params).json()
 
-            if data.get(path) is None:
-                raise RuntimeError(
-                    "Unexpected API response: {} not in {}".format(path, data.keys()))
+        if data.get(path) is None:
+            raise RuntimeError(
+                "Unexpected API response: {} not in {}".format(path, data.keys()))
 
-            for row in data[path]:
-                counter.increment()
-                yield row
+        for row in data[path]:
+            yield row
 
-            if not data.get(more_key):
-                break
-            params['after'] = data.get(more_key).get('next').get('after')
+        if not data.get(more_key):
+            break
+        params['after'] = data.get(more_key).get('next').get('after')
 
 def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt"):
     """
@@ -826,19 +757,21 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in get_v3_records(stream_id, url, params, 'results', "paging"):
-            # Parsing the string formatted date to datetime object
-            modified_time = utils.strptime_to_utc(row[bookmark_key])
+        with metrics.record_counter(stream_id) as counter:
+            for row in get_v3_records(url, params, 'results', "paging"):
+                # Parsing the string formatted date to datetime object
+                modified_time = utils.strptime_to_utc(row[bookmark_key])
 
-            # Checking the bookmark value is present on the record and it
-            # is greater than or equal to defined previous bookmark value
-            if modified_time and modified_time >= bookmark_value:
-                # Transforms the data and filters out the selected fields from the catalog
-                record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
-                singer.write_record(stream_id, record, catalog.get(
-                    'stream_alias'), time_extracted=utils.now())
-                if modified_time >= max_bk_value:
-                    max_bk_value = modified_time
+                # Checking the bookmark value is present on the record and it
+                # is greater than or equal to defined previous bookmark value
+                if modified_time and modified_time >= bookmark_value:
+                    # Transforms the data and filters out the selected fields from the catalog
+                    record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                    singer.write_record(stream_id, record, catalog.get(
+                        'stream_alias'), time_extracted=utils.now())
+                    if modified_time >= max_bk_value:
+                        max_bk_value = modified_time
+                    counter.increment()
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
@@ -967,18 +900,23 @@ def sync_contact_lists(STATE, ctx):
     LOGGER.info("sync_contact_lists from %s", start)
 
     url = get_url("contact_lists")
-    params = {'count': 250}
+    body = {'count': 250}
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+        while True:
+            data = post_search_endpoint(url, body).json()
+            for row in data["lists"]:
+                record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                if record[bookmark_key] >= start:
+                    singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
+                if record[bookmark_key] >= max_bk_value:
+                    max_bk_value = record[bookmark_key]
 
-            if record[bookmark_key] >= start:
-                singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
+            if not data.get('hasMore'):
+                break
+            body["offset"] = data["offset"]
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
@@ -1223,8 +1161,8 @@ class Stream:
 STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
-    Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
-    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
+    Stream('email_events', sync_email_events, ['id'], 'updatedAt', 'INCREMENTAL'),
+    Stream('contacts', sync_contacts, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
