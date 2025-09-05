@@ -911,52 +911,15 @@ class TestClient():
 
         url = f"{BASE_URL}/crm/v3/objects/contacts"
         data = {
-            "properties": [
-                {
-                    "property": "custom_string",
-                    "value": "custom_string_value"
-                },
-                {
-                    "property": "custom_number",
-                    "value": 1567
-                },
-                {
-                    "property": "email",
-                    "value": f"{record_uuid}@stitchdata.com"
-                },
-                {
-                    "property": "firstname",
-                    "value": "Yusaku"
-                },
-                {
-                    "property": "lastname",
-                    "value": "Kasahara"
-                },
-                {
-                    "property": "website",
-                    "value": "http://app.stitchdata.com"
-                },
-                {
-                    "property": "phone",
-                    "value": "555-122-2323"
-                },
-                {
-                    "property": "address",
-                    "value": "25 First Street"
-                },
-                {
-                    "property": "city",
-                    "value": "Cambridge"
-                },
-                {
-                    "property": "state",
-                    "value": "MA"
-                },
-                {
-                    "property": "zip",
-                    "value": "02139"
-                }
-            ]
+            "properties": {
+                "custom_string": "custom_string_value",
+                "custom_number": 1567,
+                "firstname": "Yusaku",
+                "email": f"{record_uuid}@stitchdata.com",
+                "lastname": "Kasahara",
+                "website": "http://app.stitchdata.com"
+            }
+
         }
 
         # generate a record
@@ -1077,8 +1040,8 @@ class TestClient():
             for company_id in set(company_ids):
                 for contact in contact_records:
                     # look for a contact that is not already in the contacts_by_company list
-                    if contact['vid'] not in [record['contact-id'] for record in records]:
-                        contact_id = contact['vid']
+                    if contact['id'] not in [record['contact-id'] for record in records]:
+                        contact_id = contact['id']
                         data = {
                             "fromObjectId": company_id,
                             "toObjectId": contact_id,
@@ -1290,9 +1253,9 @@ class TestClient():
         # gather all contacts and randomly choose one that has not hit the limit
         page_size = self.BaseTest.expected_metadata().get('engagements',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         contact_records = self.get_contacts(page_size)
-        contact_ids = [contact['vid']
+        contact_ids = [contact['id']
                        for contact in contact_records
-                       if contact['vid'] != 2304]  # contact 2304 has hit the 10,000 assoc limit
+                       if contact['id'] != 2304]  # contact 2304 has hit the 10,000 assoc limit
         contact_id = random.choice(contact_ids)
 
         url = f"{BASE_URL}/engagements/v1/engagements"
