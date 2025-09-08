@@ -214,9 +214,8 @@ def parse_custom_schema(entity_name, data, is_custom_object=False):
 
 
 def get_custom_schema(entity_name):
-    if entity_name == "contacts":
-        return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json()["results"])
-    return parse_custom_schema(entity_name, request(get_url(entity_name + "_properties")).json())
+    res = request(get_url(entity_name + "_properties")).json()
+    return parse_custom_schema(entity_name, res if entity_name != "contacts" else res["results"])
 
 def get_v3_schema(entity_name):
     url = get_url("deals_v3_properties")
@@ -906,7 +905,8 @@ def sync_contact_lists(STATE, ctx):
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        while True:
+        has_more = True
+        while has_more:
             data = post_search_endpoint(url, body).json()
             for row in data["lists"]:
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
@@ -915,8 +915,7 @@ def sync_contact_lists(STATE, ctx):
                 if record[bookmark_key] >= max_bk_value:
                     max_bk_value = record[bookmark_key]
 
-            if not data.get('hasMore'):
-                break
+            has_more = data.get('hasMore')
             body["offset"] = data["offset"]
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
