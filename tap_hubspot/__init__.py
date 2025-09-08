@@ -759,13 +759,9 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         sync_start_time = utils.now()
         with metrics.record_counter(stream_id) as counter:
             for row in get_v3_records(url, params, 'results', "paging"):
-                # Parsing the string formatted date to datetime object
                 modified_time = utils.strptime_to_utc(row[bookmark_key])
 
-                # Checking the bookmark value is present on the record and it
-                # is greater than or equal to defined previous bookmark value
                 if modified_time and modified_time >= bookmark_value:
-                    # Transforms the data and filters out the selected fields from the catalog
                     record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
                     singer.write_record(stream_id, record, catalog.get(
                         'stream_alias'), time_extracted=utils.now())
@@ -1070,7 +1066,8 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
     """
     try:
         with metrics.record_counter(tap_stream_id) as counter:
-            while True:
+            has_more = True
+            while has_more:
                 data = request(url, params).json()
 
                 if data.get(path) is None:
@@ -1081,8 +1078,7 @@ def gen_request_custom_objects(tap_stream_id, url, params, path, more_key):
                     counter.increment()
                     yield row
 
-                if not data.get(more_key):
-                    break
+                has_more = data.get(more_key)
                 params['after'] = data.get(more_key, {}).get('next', {}).get('after', None)
                 if params['after'] is None:
                     break
