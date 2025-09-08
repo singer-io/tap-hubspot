@@ -2,7 +2,7 @@ import datetime
 import random
 import uuid
 import string
-import random
+
 import backoff
 import requests
 from base import HubspotBaseTest
@@ -760,9 +760,6 @@ class TestClient():
             return self.create_contact_lists()
         elif stream == 'static_contact_lists':
             staticlist = self.create_contact_lists(dynamic=False)
-            # records =  self.create('contacts')
-            # contact_email =  records[0].get('properties').get('email').get('value')
-            # self.add_contact_to_contact_list(listId, contact_email)
             return staticlist
         elif stream == 'contacts_by_company':
             return self.create_contacts_by_company(company_ids, times=times)

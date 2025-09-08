@@ -43,10 +43,10 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
             days=-1, str_format=self.BASIC_DATE_FORMAT)
         new_state['bookmarks']['tickets']['updatedAt'] = tickets_bookmark
 
-        tickets_bookmark = self.timedelta_formatted(
+        contacts_bookmark = self.timedelta_formatted(
             reference_state['bookmarks']['contacts']['updatedAt'],
             days=-1, str_format=self.BASIC_DATE_FORMAT)
-        new_state['bookmarks']['contacts']['updatedAt'] = tickets_bookmark
+        new_state['bookmarks']['contacts']['updatedAt'] = contacts_bookmark
 
         return new_state
 

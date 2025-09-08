@@ -719,7 +719,8 @@ def sync_deals(STATE, ctx):
 
 def get_v3_records(url, params, path, more_key):
     """
-    Cursor-based API Pagination : Used in tickets stream implementation
+    Cursor-based API Pagination for v3 API endpoints.
+    Used for multiple streams, such as tickets and contacts.
     """
     while True:
         data = request(url, params).json()
