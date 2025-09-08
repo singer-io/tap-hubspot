@@ -302,13 +302,12 @@ class TestClient():
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
         url = f"{BASE_URL}/crm/v3/lists/search"
-        page_size = self.BaseTest.expected_metadata().get('contact_lists',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
 
         if list_id:
-            url += f"/{list_id}"
+            url = f"{BASE_URL}/crm/v3/lists/{list_id}"
             response = self.get(url)
 
-            return response['lists']
+            return response['list']
 
         body = {'count': 250}
         return self.post(url, data=body)['lists']
@@ -761,7 +760,6 @@ class TestClient():
             return self.create_contact_lists()
         elif stream == 'static_contact_lists':
             staticlist = self.create_contact_lists(dynamic=False)
-            listId = staticlist[0].get('listId')
             # records =  self.create('contacts')
             # contact_email =  records[0].get('properties').get('email').get('value')
             # self.add_contact_to_contact_list(listId, contact_email)
@@ -996,9 +994,9 @@ class TestClient():
         }
         # generate a record
         response = self.post(url, data)
-        records = [response]
+        records = response["list"]
         LOGGER.info("dynamic contact list is %s", records)
-        return records
+        return [records]
 
     def add_contact_to_contact_list(self, list_id, contact_email):
         """
@@ -1050,7 +1048,7 @@ class TestClient():
                         }
                         # generate a record
                         self.put(url, data)
-                        record = {'company-id': company_id, 'contact-id': contact_id}
+                        record = {'company-id': company_id, 'contact-id': int(contact_id)}
                         records.append(record)
                         break
 
