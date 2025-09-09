@@ -1,201 +1,141 @@
 {
   "type": "object",
   "properties": {
-    "vid": {
-      "type": ["null", "integer"]
+    "id": {
+      "type": "string"
     },
-    "versionTimestamp": {
-      "type": ["null", "string"],
+    "createdAt": {
+      "type": [
+        "null",
+        "string"
+      ],
       "format": "date-time"
     },
-    "canonical-vid": {
-      "type": ["null", "integer"]
+    "updatedAt": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
     },
-    "merged-vids": {
-      "type": ["null", "array"],
-      "items": {
-        "type": ["null", "integer"]
-      }
+    "archived": {
+      "type": [
+        "null",
+        "boolean"
+      ]
     },
-    "portal-id": {
-      "type": ["null", "integer"]
-    },
-    "is-contact": {
-      "type": ["null", "boolean"]
-    },
-    "profile-token": {
-      "type": ["null", "string"]
-    },
-    "profile-url": {
-      "type": ["null", "string"]
-    },
-    "associated-company" : {
-        "type": ["null", "object"],
-        "properties" : {}
-    },
-    "identity-profiles": {
-        "type": ["null", "array"],
-        "items": {
-            "type": ["null", "object"],
-            "properties": {
-                "deleted-changed-timestamp": {
-                    "type": ["null", "string"],
-                    "format": "date-time"
-                },
-                "saved-at-timestamp": {
-                    "type": ["null", "string"],
-                    "format": "date-time"
-                },
-                "vid": {
-                    "type": ["null", "integer"]
-                },
-                "identities": {
-                    "type": ["null", "array"],
-                    "items": {
-                        "type": ["null", "object"],
-                        "properties": {
-                            "timestamp": {
-                                "type": ["null", "string"],
-                                "format": "date-time"
-                            },
-                            "type": {
-                                "type": ["null", "string"]
-                            },
-                            "value": {
-                                "type": ["null", "string"]
-                            }
-                        }
-                    }
+    "associations": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "contacts": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "results": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "properties": {
+                  "id": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "type": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
                 }
-            }
-        }
-    },
-    "list-memberships": {
-        "type": ["null", "array"],
-        "items": {
-            "type": ["null", "object"],
-            "properties": {
-                "internal-list-id": {
-                    "type": ["null", "integer"]
-                },
-                "is-member": {
-                    "type": ["null", "boolean"]
-                },
-                "static-list-id": {
-                    "type": ["null", "integer"]
-                },
-                "timestamp": {
-                    "type": ["null", "string"],
-                    "format": "date-time"
-                },
-                "vid": {
-                    "type": ["null", "integer"]
-                }
-            }
-        }
-    },
-    "form-submissions": {
-      "type": ["null", "array"],
-      "items": {
-        "type": ["null", "object"],
-        "properties": {
-          "conversion-id": {
-            "type": ["null", "string"]
-          },
-          "timestamp": {
-            "type": ["null", "string"],
-            "format": "date-time"
-          },
-          "form-id": {
-            "type": ["null", "string"]
-          },
-          "portal-id": {
-            "type": ["null", "integer"]
-          },
-          "page-url": {
-            "type": ["null", "string"]
-          },
-          "title": {
-            "type": ["null", "string"]
-          }
-        }
-      }
-    },
-    "merge-audits": {
-      "type": ["null", "array"],
-      "items": {
-        "type": ["null", "object"],
-        "properties": {
-          "canonical-vid": {
-            "type": ["null", "integer"]
-          },
-          "vid-to-merge": {
-            "type": ["null", "integer"]
-          },
-          "timestamp": {
-            "type": ["null", "string"],
-            "format": "date-time"
-          },
-          "user-id": {
-            "type": ["null", "integer"]
-          },
-          "num-properties-moved": {
-            "type": ["null", "integer"]
-          },
-          "merged_from_email": {
-            "type": ["null", "object"],
-            "properties": {
-              "value": {
-                "type": ["null", "string"]
-              },
-              "source-type": {
-                "type": ["null", "string"]
-              },
-              "source-id": {
-                "type": ["null", "string"]
-              },
-              "source-label": {
-                "type": ["null", "string"]
-              },
-              "source-vids": {
-                "type": ["null", "array"],
-                "items": {
-                  "type": ["null", "integer"]
-                }
-              },
-              "timestamp": {
-                "type": ["null", "integer"]
-              },
-              "selected": {
-                "type": ["null", "boolean"]
               }
             }
-          },
-          "merged_to_email": {
-            "type": ["null", "object"],
-            "properties": {
-              "value": {
-                "type": ["null", "string"]
-              },
-              "source-type": {
-                "type": ["null", "string"]
-              },
-              "source-id": {
-                "type": ["null", "string"]
-              },
-              "source-label": {
-                "type": ["null", "string"]
-              },
-              "timestamp": {
-                "type": ["null", "integer"]
-              },
-              "selected": {
-                "type": ["null", "boolean"]
+          }
+        },
+        "deals": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "results": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "properties": {
+                  "id": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "type": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tickets": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "results": {
+              "type": [
+                "null",
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "properties": {
+                  "id": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  },
+                  "type": {
+                    "type": [
+                      "null",
+                      "string"
+                    ]
+                  }
+                }
               }
             }
           }
         }
       }
+    },
+    "objectWriteTraceId": {
+      "type": "string"
     }
   }
 }

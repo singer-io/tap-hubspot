@@ -152,7 +152,7 @@ class TestDoSync(unittest.TestCase):
         mock_generate_custom_streams.return_value = []
 
         # Mocking the catalog and state
-        CONFIG.update({'select_fields_by_default': 'false'})
+        CONFIG.update({'select_fields_by_default': False})
         catalog = {'streams': []}
         state = {}
 
