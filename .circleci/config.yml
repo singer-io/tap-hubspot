@@ -14,7 +14,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            uv venv --python 3.9 /usr/local/share/virtualenvs/tap-hubspot
+            uv venv --python 3.12 /usr/local/share/virtualenvs/tap-hubspot
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             uv pip install -U 'pip<19.2' 'setuptools<51.0.0'
             uv pip install .[dev]
