@@ -43,7 +43,7 @@ class TestClient():
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
         response = requests.get(url, params=params, headers=self.HEADERS)
-        LOGGER.info(f"TEST CLIENT | GET {url} params={params}  STATUS: {response.status_code}")
+        LOGGER.info(f"TEST CLIENT | GET {url} STATUS: {response.status_code}")
         response.raise_for_status()
         json_response = response.json()
 
@@ -301,114 +301,64 @@ class TestClient():
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
-        url = f"{BASE_URL}/contacts/v1/lists"
-        page_size = self.BaseTest.expected_metadata().get('contact_lists',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        url = f"{BASE_URL}/crm/v3/lists/search"
 
         if list_id:
-            url += f"/{list_id}"
+            url = f"{BASE_URL}/crm/v3/lists/{list_id}"
             response = self.get(url)
 
-            return response
+            return response['list']
 
-        if since == 'all':
-            params = {'count': page_size}
-        else:
-            if not since:
-                since = self.start_date_strf
+        body = {'count': 250}
+        return self.post(url, data=body)['lists']
 
-            if not isinstance(since, datetime.datetime):
-                since = datetime.datetime.strptime(since, self.START_DATE_FORMAT)
-
-            since = str(since.timestamp() * 1000).split(".")[0]
-            params = {'since': since, 'count': page_size}
-
-        records = []
-        replication_key = list(self.replication_keys['contact_lists'])[0]
-
-        # paginating through allxo the contact_lists
-        has_more = True
-        while has_more:
-            response = self.get(url, params=params)
-            for record in response['lists']:
-
-                if since == 'all' or int(since) <= record[replication_key]:
-                    records.append(record)
-
-            has_more = response['has-more']
-            params['offset'] = response['offset']
-            if pagination and len(records) > page_size+10:
-                break
-
-        return records
-
-    def _get_contacts_by_pks(self, pks):
+    def _get_contacts_by_pks(self, contact_id):
         """
-        Get a specific contact by using the primary key value.
-
-        :params pks: vids
-        :return: the contacts record
+        Get a specific contact_id by pk value
+        HubSpot API https://developers.hubspot.com/docs/api/crm/contact_id
         """
-        url_2 = f"{BASE_URL}/contacts/v1/contact/vids/batch/"
-        params_2 = {
-            'showListMemberships': True,
-            'formSubmissionMode': "all",
-        }
-        records = []
-        # get the detailed contacts records by vids
-        params_2['vid'] = pks
-        response_2 = self.get(url_2, params=params_2)
-        for vid, record in response_2.items():
-            ts_ms = int(record['properties']['lastmodifieddate']['value']) / 1000
-            converted_ts = self.BaseTest.datetime_from_timestamp(
-                ts_ms, self.BOOKMARK_DATE_FORMAT
-            )
-            record['versionTimestamp'] = converted_ts
+        url = f"{BASE_URL}/crm/v3/objects/contacts/{contact_id}?associations=ticket,company,deals"
+        response = self.get(url)
+        return response
 
-            records.append(record)
+    def get_contacts_properties(self):
+        """
+        Get contacts properties.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/contacts
+        """
+        url = f"{BASE_URL}/crm/v3/properties/contacts"
+        # records = []
+        records = self.get(url)
 
-        records = self.denest_properties('contacts', records)
-
-        return records[0]
+        return ",".join([record["name"] for record in records["results"]])
 
     def get_contacts(self, pagination=False):
         """
-        Get all contact vids by paginating using 'has-more' and 'vid-offset/vidOffset'.
-        Then use the vids to grab the detailed contacts records.
+        Get all contacts.
+        HubSpot API https://developers.hubspot.com/docs/api/crm/contacts
         """
         page_size = self.BaseTest.expected_metadata().get('contacts',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        url_1 = f"{BASE_URL}/contacts/v1/lists/all/contacts/all"
-        params_1 = {
-            'showListMemberships': True,
-            'includeVersion': True,
-            'count': page_size,
-        }
-        vids = []
-        url_2 = f"{BASE_URL}/contacts/v1/contact/vids/batch/"
-        params_2 = {
-            'showListMemberships': True,
-            'formSubmissionMode': "all",
-        }
+        url = f"{BASE_URL}/crm/v3/objects/contacts"
+        replication_key = list(self.replication_keys["contacts"])[0]
         records = []
 
-        has_more = True
-        while has_more:
-            # get a page worth of contacts and pull the vids
-            response_1 = self.get(url_1, params=params_1)
-            vids = [record['vid'] for record in response_1['contacts']
-                    if record['versionTimestamp'] >= self.start_date]
+        params = {"limit": page_size, "associations": "tickets,company,deals", 'properties': self.get_contacts_properties()}
+        while True:
+            response = self.get(url, params=params)
 
-            has_more = response_1['has-more']
-            params_1['vidOffset'] = response_1['vid-offset']
+            records.extend([record
+                    for record in response["results"]
+                    if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
 
-            # get the detailed contacts records by vids
-            params_2['vid'] = vids
-            response_2 = self.get(url_2, params=params_2)
-            records.extend([record for record in response_2.values()])
-            if pagination  and len(records) > page_size+10:
+            if not response.get("paging"):
                 break
-
+            if page_size and len(records) > page_size+10:
+                break
+            params["after"] = response.get("paging").get("next").get("after")
+        
         records = self.denest_properties('contacts', records)
         return records
+
 
     def get_contacts_by_company(self, parent_ids, pagination=False):
         """
@@ -810,10 +760,6 @@ class TestClient():
             return self.create_contact_lists()
         elif stream == 'static_contact_lists':
             staticlist = self.create_contact_lists(dynamic=False)
-            listId = staticlist[0].get('listId')
-            records =  self.create('contacts')
-            contact_email =  records[0].get('properties').get('email').get('value')
-            self.add_contact_to_contact_list(listId, contact_email)
             return staticlist
         elif stream == 'contacts_by_company':
             return self.create_contacts_by_company(company_ids, times=times)
@@ -853,7 +799,7 @@ class TestClient():
     def create_custom_contact_properties(self):
         """Create custom contact properties of all the types"""
 
-        url = f"{BASE_URL}/properties/v1/contacts/properties"
+        url = f"{BASE_URL}/crm/v3/properties/contacts"
         data = []
         property = {
             "name": "custom_string",
@@ -958,81 +904,23 @@ class TestClient():
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}/contacts/v1/contact"
+        url = f"{BASE_URL}/crm/v3/objects/contacts"
         data = {
-            "properties": [
-                {
-                    "property": "custom_string",
-                    "value": "custom_string_value"
-                },
-                {
-                    "property": "custom_number",
-                    "value": 1567
-                },
-                {
-                    "property": "email",
-                    "value": f"{record_uuid}@stitchdata.com"
-                },
-                {
-                    "property": "firstname",
-                    "value": "Yusaku"
-                },
-                {
-                    "property": "lastname",
-                    "value": "Kasahara"
-                },
-                {
-                    "property": "website",
-                    "value": "http://app.stitchdata.com"
-                },
-                {
-                    "property": "phone",
-                    "value": "555-122-2323"
-                },
-                {
-                    "property": "address",
-                    "value": "25 First Street"
-                },
-                {
-                    "property": "city",
-                    "value": "Cambridge"
-                },
-                {
-                    "property": "state",
-                    "value": "MA"
-                },
-                {
-                    "property": "zip",
-                    "value": "02139"
-                }
-            ]
+            "properties": {
+                "custom_string": "custom_string_value",
+                "custom_number": 1567,
+                "firstname": "Yusaku",
+                "email": f"{record_uuid}@stitchdata.com",
+                "lastname": "Kasahara",
+                "website": "http://app.stitchdata.com"
+            }
+
         }
 
-        # Get the current time in seconds
-        date = datetime.datetime.utcnow()
-        seconds = datetime.datetime.timestamp(date)
-
-        # generate a contacts record
+        # generate a record
         response = self.post(url, data)
-        records = [response]
+        return [response]
 
-        get_url = f"{BASE_URL}/contacts/v1/contact/vid/{response['vid']}/profile"
-        params = {'includeVersion': True}
-        get_resp = self.get(get_url, params=params)
-
-        #Get the created time and the difference to monitor the time difference - tdl-20939
-        created_time = get_resp.get('properties').get('createdate').get('value')
-        ts=int(created_time)/1000
-        LOGGER.info("Created Time  %s", datetime.datetime.utcfromtimestamp(ts))
-        self.record_create_times["contacts"].append(ts-seconds)
-
-        converted_versionTimestamp = self.BaseTest.datetime_from_timestamp(
-            get_resp['versionTimestamp'] / 1000, self.BOOKMARK_DATE_FORMAT
-        )
-        get_resp['versionTimestamp'] = converted_versionTimestamp
-        records = self.denest_properties('contacts', [get_resp])
-
-        return records
 
     def create_campaigns(self):
         """
@@ -1067,33 +955,45 @@ class TestClient():
 
     def create_contact_lists(self, dynamic=True):
         """
-        HubSpot API https://legacydocs.hubspot.com/docs/methods/lists/create_list
+        HubSpot API https://developers.hubspot.com/docs/api-reference/crm-lists-v3/lists/post-crm-v3-lists-
 
         NB: This generates a list based on a 'twitterhandle' filter. There are many
             different filters, but at the time of implementation it did not seem that
             using different filters would result in any new fields.
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
-        value = f"@hubspot{record_uuid}"
 
-        url = f"{BASE_URL}/contacts/v1/lists/"
+        url = f"{BASE_URL}/crm/v3/lists"
         data = {
             "name": f"tweeters{record_uuid}",
-            "dynamic": dynamic,
-            "filters": [
-                [{
-                    "operator": "EQ",
-                    "value": value,
-                    "property": "twitterhandle",
-                    "type": "string"
-                }]
+            "objectTypeId": "0-1",
+            "processingType": "DYNAMIC",
+            "filterBranch": {
+            "filterBranchType": "OR",
+            "filterBranches": [
+                {
+                    "filterBranchType": "AND",
+                    "filters": [
+                    {
+                        "filterType": "PROPERTY",
+                        "operation": {
+                        "operationType": "NUMBER",
+                        "operator": "IS_GREATER_THAN_OR_EQUAL_TO",
+                        "value": 12
+                        },
+                        "property": "hs_predictivecontactscore_v2"
+                    }
+                    ]
+                }
             ]
+        }
+            
         }
         # generate a record
         response = self.post(url, data)
-        records = [response]
+        records = response["list"]
         LOGGER.info("dynamic contact list is %s", records)
-        return records
+        return [records]
 
     def add_contact_to_contact_list(self, list_id, contact_email):
         """
@@ -1135,8 +1035,8 @@ class TestClient():
             for company_id in set(company_ids):
                 for contact in contact_records:
                     # look for a contact that is not already in the contacts_by_company list
-                    if contact['vid'] not in [record['contact-id'] for record in records]:
-                        contact_id = contact['vid']
+                    if contact['id'] not in [record['contact-id'] for record in records]:
+                        contact_id = contact['id']
                         data = {
                             "fromObjectId": company_id,
                             "toObjectId": contact_id,
@@ -1145,7 +1045,7 @@ class TestClient():
                         }
                         # generate a record
                         self.put(url, data)
-                        record = {'company-id': company_id, 'contact-id': contact_id}
+                        record = {'company-id': company_id, 'contact-id': int(contact_id)}
                         records.append(record)
                         break
 
@@ -1180,7 +1080,7 @@ class TestClient():
         elif stream == "co_firsts":
             data = {
                 "properties": {
-                    "id": random.randint(1, 100000),
+                    "id": random.randint(1, 10000000),
                     "name": "test name",
                     "country": random.choice(["USA", "India", "France", "UK"])
                 }
@@ -1348,9 +1248,9 @@ class TestClient():
         # gather all contacts and randomly choose one that has not hit the limit
         page_size = self.BaseTest.expected_metadata().get('engagements',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         contact_records = self.get_contacts(page_size)
-        contact_ids = [contact['vid']
+        contact_ids = [contact['id']
                        for contact in contact_records
-                       if contact['vid'] != 2304]  # contact 2304 has hit the 10,000 assoc limit
+                       if contact['id'] != 2304]  # contact 2304 has hit the 10,000 assoc limit
         contact_id = random.choice(contact_ids)
 
         url = f"{BASE_URL}/engagements/v1/engagements"
@@ -1684,42 +1584,25 @@ class TestClient():
 
         return record
 
-    def update_contacts(self, vid):
+    def update_contacts(self, contact_id):
         """
-        Update a single contact record with a new email.
-        Hubspot API https://legacydocs.hubspot.com/docs/methods/contacts/update_contact
-
-        :param vid: the primary key value of the record to update
-        :return: the updated record using the get_contracts_by_pks method
+        Hubspot API https://developers.hubspot.com/docs/api/crm/contacts
+        :params contact_id: the pk value of the ticket record to update
+        :return:
         """
-        url = f"{BASE_URL}/contacts/v1/contact/vid/{vid}/profile"
+        url = f"{BASE_URL}/crm/v3/objects/contacts/{contact_id}"
 
-        record_uuid = str(uuid.uuid4()).replace('-', '')
+        record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
-            "properties": [
-                {
-                    "property": "email",
-                    "value": f"{record_uuid}@stitchdata.com"
-                },
-                {
-                    "property": "firstname",
-                    "value": "Updated"
-                },
-                {
-                    "property": "lastname",
-                    "value": "Record"
-                },
-                {
-                    "property": "lifecyclestage",
-                    "value": "customer"
-                }
-            ]
+            "properties": {
+                "address": f"update record for testing - {record_uuid}"
+            }
         }
-        _ = self.post(url, data=data)
 
-        record = self._get_contacts_by_pks(pks=[vid])
+        self.patch(url, data)
 
-        return record
+        return self._get_contacts_by_pks(contact_id)
+
 
     def update_contact_lists(self, list_id):
         """
@@ -1729,12 +1612,32 @@ class TestClient():
         :param list_id: the primary key value of the record to update
         :return: the updated record using the get_contracts_by_pks method
         """
-        url = f"{BASE_URL}/contacts/v1/lists/{list_id}"
+        url = f"{BASE_URL}/crm/v3/lists/{list_id}/update-list-filters"
 
-        record_uuid = str(uuid.uuid4()).replace('-', '')
-        data = {"name": f"Updated {record_uuid}"}
+        data = {
+            "filterBranch": {
+                "filterBranchType": "OR",
+                "filterBranches": [
+                {
+                    "filterBranchType": "AND",
+                    "filters": [
+                    {
+                        "filterType": "PROPERTY",
+                        "operation": {
+                        "operationType": "NUMBER",
+                        "operator": "IS_GREATER_THAN_OR_EQUAL_TO",
+                        "value": random.randint(1, 100)
+                        },
+                        "property": "hs_predictivecontactscore_v2"
+                    }
+                    ]
+                }
+                ]
+            }
 
-        _ = self.post(url, data=data)
+        }
+
+        _ = self.put(url, data=data)
 
         record = self.get_contact_lists(since='', list_id=list_id)
 
@@ -1925,7 +1828,7 @@ class TestClient():
                 "need to have at least one record remaining"
             )
         for record_id in record_ids_to_delete[:count]:
-            url = f"{BASE_URL}/contacts/v1/lists/{record_id}"
+            url = f"{BASE_URL}/crm/v3/lists/{record_id}"
 
             self.delete(url)
 
@@ -2016,6 +1919,6 @@ class TestClient():
 
     def print_histogram_data(self):
         for stream, recorded_times in self.record_create_times.items():
-            LOGGER.info("Time taken for stream {} is total: {}, avg: {}, minimum: {}, maximum: {}".
-                    format(stream, sum(recorded_times), sum(recorded_times)/len(recorded_times), min(recorded_times), max(recorded_times) ))
-
+            LOGGER.info("Time taken for stream {} is total: {}".format(stream, sum(recorded_times)))
+            # LOGGER.info("Time taken for stream {} is total: {}, minimum: {}, maximum: {}".
+            #         format(stream, sum(recorded_times), sum(recorded_times)/len(recorded_times), min(recorded_times), max(recorded_times) ))

@@ -71,9 +71,9 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.OBEYS_START_DATE: True
             },
             "contacts": {
-                BaseCase.PRIMARY_KEYS: {"vid"},
+                BaseCase.PRIMARY_KEYS: {"id"},
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"versionTimestamp"},
+                BaseCase.REPLICATION_KEYS: {"updatedAt"},
                 BaseCase.API_LIMIT: 100,
                 BaseCase.OBEYS_START_DATE: True
             },

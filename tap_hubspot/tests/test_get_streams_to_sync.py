@@ -1,5 +1,5 @@
 import unittest
-from tap_hubspot import get_streams_to_sync, parse_source_from_url, Stream
+from tap_hubspot import get_streams_to_sync, Stream
 
 
 class TestGetStreamsToSync(unittest.TestCase):
@@ -38,7 +38,3 @@ class TestGetStreamsToSync(unittest.TestCase):
 
         parsed_result = [s.tap_stream_id for s in result]
         self.assertEqual(parsed_result, ['c', 'a', 'b'])
-
-    def test_parse_source_from_url_succeeds(self):
-        url = "https://api.hubapi.com/companies/v2/companies/recent/modified"
-        self.assertEqual('companies', parse_source_from_url(url))
