@@ -42,7 +42,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             # BUG https://jira.talendforge.org/browse/TDL-15447
             echo "Disabling the following $PYLINT_DISABLE_LIST"
-            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,too-many-positional-arguments,consider-using-max-builtin,possibly-used-before-assignment,inconsistent-return-statements,unnecessary-lambda-assignment,unspecified-encoding"
+            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,too-many-positional-arguments,consider-using-max-builtin,possibly-used-before-assignment,inconsistent-return-statements,unnecessary-lambda-assignment,unspecified-encoding,use-yield-from"
       - run:
           name: 'Unit Tests'
           command: |
