@@ -1355,6 +1355,10 @@ def get_metadata(stream, schema):
     if stream.tap_stream_id == "engagements":
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
         mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
+
+    if parent_stream := STREAM_DEPENDENCIES.get(stream.tap_stream_id):
+        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', parent_stream)
+
     return metadata.to_list(mdata)
 
 def load_discovered_schema(stream):
