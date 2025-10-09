@@ -92,4 +92,4 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
 
         setup_end = time.perf_counter()
         LOGGER.info(f"Test Client took about {str(setup_end-setup_start).split('.')[0]} seconds")
-        super().setUp()
+        super().setUp(self)
