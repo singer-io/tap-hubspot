@@ -30,7 +30,8 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
             'email_events',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
             'co_firsts',
-            'contacts' # As of 10/22/25, this stream takes too long to test pagination
+            'contacts', # As of 10/22/25, this stream takes too long to test pagination
+            'contact_lists' # As of 10/23/25, there is insufficient data in the test account for this stream to paginate
         })
         return streams_to_test
 
