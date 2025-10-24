@@ -14,12 +14,11 @@ setup(name='tap-hubspot',
           'singer-python==5.13.2',
           'requests==2.32.4',
           'backoff==1.10.0',
-          'requests_mock==1.3.0',
       ],
       extras_require= {
           'dev': [
-              'pylint==2.5.3',
-              'nose==1.3.7',
+              'pylint',
+              'nose',
           ]
       },
       entry_points='''

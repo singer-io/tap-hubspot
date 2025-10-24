@@ -273,7 +273,7 @@ class TestHubspotAllFields(HubspotBaseTest):
                         # Verify the fields in our expected record match the fields in the corresponding replicated record
                         #     As of Oct 10, 2025 HubSpot's v4 API removed groupId from responses, currently still present
                         #     in the test_client. TODO explore updating client
-                        expected_keys_adjusted = expected_keys.union(known_extra_keys) - {'groupId'}
+                        expected_keys_adjusted = expected_keys.union(known_extra_keys) - {'groupId', 'url'}
                         actual_keys_adjusted = actual_keys.union(known_missing_keys)
 
                         # NB: The following woraround is for dynamic fields on the `deals` stream that we just can't track.

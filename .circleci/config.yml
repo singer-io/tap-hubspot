@@ -14,7 +14,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            uv venv --python 3.9 /usr/local/share/virtualenvs/tap-hubspot
+            uv venv --python 3.12 /usr/local/share/virtualenvs/tap-hubspot
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             uv pip install -U 'pip<19.2' 'setuptools<51.0.0'
             uv pip install .[dev]
@@ -42,7 +42,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-hubspot/bin/activate
             # BUG https://jira.talendforge.org/browse/TDL-15447
             echo "Disabling the following $PYLINT_DISABLE_LIST"
-            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST"
+            pylint tap_hubspot -d "$PYLINT_DISABLE_LIST,too-many-positional-arguments,consider-using-max-builtin,possibly-used-before-assignment,inconsistent-return-statements,unnecessary-lambda-assignment,unspecified-encoding,use-yield-from"
       - run:
           name: 'Unit Tests'
           command: |
