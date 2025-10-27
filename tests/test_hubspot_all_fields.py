@@ -111,6 +111,7 @@ KNOWN_MISSING_FIELDS = {
         'lastProcessingFinishedAt',
         'processingState',
         'lastProcessingStartedAt',
+        'groupId',
     },
     'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
         'imports',
