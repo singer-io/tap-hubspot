@@ -40,12 +40,12 @@
         "formFieldGroups": {
             "type": "array",
             "items": {
-                "type": "object",
+              "type": ["null", "object"],
                 "properties": {
                     "fields": {
                         "type": "array",
                         "items": {
-                            "type": "object",
+                          "type": ["null", "object"],
                             "properties": {
                                 "name": {
                                     "type": ["null", "string"]
@@ -72,7 +72,7 @@
                                     "type": ["null", "boolean"]
                                 },
                                 "validation": {
-                                    "type": "object",
+                                    "type": ["null", "object"],
                                     "properties": {
                                         "name": {
                                             "type": ["null", "string"]
@@ -118,7 +118,7 @@
                                 "options": {
                                     "type": "array",
                                     "items": {
-                                        "type": "object",
+                                        "type": ["null", "object"],
                                         "properties": {
                                             "description": {
                                                 "type": ["null", "string"]
@@ -160,7 +160,7 @@
                         "type": ["null", "boolean"]
                     },
                     "richText": {
-                        "type": "object",
+                        "type": ["null", "object"],
                         "properties": {
                             "content": {
                                 "type": ["null", "string"]
@@ -214,7 +214,7 @@
         "metaData": {
             "type": "array",
             "items": {
-                "type": "object",
+                "type": ["null", "object"],
                 "properties": {
                     "name": {
                         "type": ["null", "string"]

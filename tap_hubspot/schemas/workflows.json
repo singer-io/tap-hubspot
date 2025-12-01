@@ -28,7 +28,7 @@
       }
     },
     "contactListIds": {
-      "type": "object",
+      "type": ["null", "object"],
       "properties": {
         "enrolled": {
           "type": ["null", "integer"]
