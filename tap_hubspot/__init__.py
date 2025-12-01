@@ -184,7 +184,7 @@ def get_field_type_schema(field_type):
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
