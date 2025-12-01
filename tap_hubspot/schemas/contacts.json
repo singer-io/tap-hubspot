@@ -78,7 +78,7 @@
       }
     },
     "objectWriteTraceId": {
-      "type": ["null, "string"]
+      "type": ["null", "string"]
     }
   }
 }
