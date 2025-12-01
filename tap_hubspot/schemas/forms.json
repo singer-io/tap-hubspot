@@ -38,12 +38,12 @@
             "type": ["null", "string"]
         },
         "formFieldGroups": {
-            "type": "array",
+            "type": ["null", "array"],
             "items": {
               "type": ["null", "object"],
                 "properties": {
                     "fields": {
-                        "type": "array",
+                        "type": ["null", "array"],
                         "items": {
                           "type": ["null", "object"],
                             "properties": {
@@ -87,7 +87,7 @@
                                             "type": ["null", "boolean"]
                                         },
                                         "blockedEmailAddresses": {
-                                            "type": "array",
+                                            "type": ["null", "array"],
                                             "items": {
                                                 "type": ["null", "string"]
                                             }
@@ -116,7 +116,7 @@
                                     "type": ["null", "boolean"]
                                 },
                                 "options": {
-                                    "type": "array",
+                                    "type": ["null", "array"],
                                     "items": {
                                         "type": ["null", "object"],
                                         "properties": {
@@ -145,7 +145,7 @@
                                     }
                                 },
                                 "selectedOptions": {
-                                    "type": "array",
+                                    "type": ["null", "array"],
                                     "items": {
                                         "type" : ["null", "string"]
                                     }
@@ -212,7 +212,7 @@
             "type": ["null", "string"]
         },
         "metaData": {
-            "type": "array",
+            "type": ["null", "array"],
             "items": {
                 "type": ["null", "object"],
                 "properties": {

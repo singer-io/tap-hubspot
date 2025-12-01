@@ -22,7 +22,7 @@
       "format": "date-time"
     },
     "personaTagIds": {
-      "type": "array",
+      "type": ["null", "array"],
       "items": {
         "type": "integer"
       }
