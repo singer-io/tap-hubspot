@@ -237,7 +237,7 @@ def load_schema(entity_name):
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": custom_schema,
         }
 
@@ -1198,7 +1198,7 @@ def generate_custom_streams(mode, catalog=None):
             schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
             custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
             schema["properties"]["properties"] = {
-                "type": "object",
+                "type": ["null", "object"],
                 "properties": custom_schema,
             }
 
