@@ -24,7 +24,7 @@
     "personaTagIds": {
       "type": ["null", "array"],
       "items": {
-        "type": "integer"
+        "type": ["null", "integer"]
       }
     },
     "contactListIds": {
