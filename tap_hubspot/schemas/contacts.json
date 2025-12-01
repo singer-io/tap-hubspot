@@ -5,59 +5,32 @@
       "type": "string"
     },
     "createdAt": {
-      "type": [
-        "null",
-        "string"
-      ],
+      "type": ["null", "string"],
       "format": "date-time"
     },
     "updatedAt": {
-      "type": [
-        "null",
-        "string"
-      ],
+      "type": ["null", "string"],
       "format": "date-time"
     },
     "archived": {
-      "type": [
-        "null",
-        "boolean"
-      ]
+      "type": ["null", "boolean"]
     },
     "associations": {
-      "type": [
-        "null",
-        "object"
-      ],
+      "type": ["null", "object"],
       "properties": {
         "contacts": {
-          "type": [
-            "null",
-            "object"
-          ],
+          "type": ["null", "object"],
           "properties": {
             "results": {
-              "type": [
-                "null",
-                "array"
-              ],
+              "type": ["null", "array"],
               "items": {
-                "type": [
-                  "null",
-                  "object"
-                ],
+                "type": ["null", "object"],
                 "properties": {
                   "id": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
+                    "type": ["null", "string"]
                   },
                   "type": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
+                    "type": ["null", "string"]
                   }
                 }
               }
@@ -65,33 +38,18 @@
           }
         },
         "deals": {
-          "type": [
-            "null",
-            "object"
-          ],
+          "type": ["null", "object"],
           "properties": {
             "results": {
-              "type": [
-                "null",
-                "array"
-              ],
+              "type": ["null", "array"],
               "items": {
-                "type": [
-                  "null",
-                  "object"
-                ],
+                "type": ["null", "object"],
                 "properties": {
                   "id": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
+                    "type": ["null", "string"]
                   },
                   "type": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
+                    "type": ["null", "string"]
                   }
                 }
               }
@@ -99,33 +57,18 @@
           }
         },
         "tickets": {
-          "type": [
-            "null",
-            "object"
-          ],
+          "type": ["null", "object"],
           "properties": {
             "results": {
-              "type": [
-                "null",
-                "array"
-              ],
+              "type": ["null", "array"],
               "items": {
-                "type": [
-                  "null",
-                  "object"
-                ],
+                "type": ["null", "object"],
                 "properties": {
                   "id": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
+                    "type": ["null", "string"]
                   },
                   "type": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
+                    "type": ["null", "string"]
                   }
                 }
               }
