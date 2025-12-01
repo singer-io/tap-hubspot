@@ -2,10 +2,10 @@
   "type": "object",
   "properties": {
     "portalId": {
-      "type": ["null", "integer"]
+      "type": ["integer"]
     },
     "companyId": {
-      "type": ["null", "integer"]
+      "type": ["integer"]
     }
   }
 }
