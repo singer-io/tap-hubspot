@@ -135,7 +135,7 @@
       }
     },
     "objectWriteTraceId": {
-      "type": "string"
+      "type": ["null, "string"]
     }
   }
 }
