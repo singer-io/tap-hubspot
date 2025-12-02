@@ -22,13 +22,13 @@
       "format": "date-time"
     },
     "personaTagIds": {
-      "type": "array",
+      "type": ["null", "array"],
       "items": {
-        "type": "integer"
+        "type": ["null", "integer"]
       }
     },
     "contactListIds": {
-      "type": "object",
+      "type": ["null", "object"],
       "properties": {
         "enrolled": {
           "type": ["null", "integer"]

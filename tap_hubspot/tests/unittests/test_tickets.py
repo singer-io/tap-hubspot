@@ -58,7 +58,7 @@ class MockContext:
                         "format": "date-time"
                     },
                     "properties": {
-                        "type": "object",
+                        "type": ["null", "object"],
                         "properties": {
                             "hs_all_team_ids": {
                                 "type": [
