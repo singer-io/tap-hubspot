@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.0.2
+  * Retry the API requests for all the errors [#282](https://github.com/singer-io/tap-hubspot/pull/282)
+
 ## 4.0.1
   * Updates all non-primary key fields to be nullable [#281](https://github.com/singer-io/tap-hubspot/pull/281)
 
