@@ -83,7 +83,7 @@ class TestGenerateCustomStreams(unittest.TestCase):
         }
         expected_value = [
             {'custom_object_name':'fake_object',
-             'stream': Stream(tap_stream_id='fake_object', sync=mock_sync_custom_records, key_properties=['id'], replication_key='updatedAt', replication_method='INCREMENTAL'), 
+             'stream': Stream(tap_stream_id='fake_object', sync=mock_sync_custom_records, key_properties=['id'], replication_key='updatedAt', replication_method='INCREMENTAL'),
              'schema': {'type': 'object', 'properties': {'property_fake_object': 'fake_value'}}}]
 
         # Set up mock return values
@@ -116,7 +116,7 @@ class TestGenerateCustomStreams(unittest.TestCase):
                 "type": "object",
                 "properties": {
                     "properties": {
-                        "type": "object",
+                        "type": ["null", "object"],
                         "properties": {"prop1": "type1", "prop2": "type2"},
                     },
                     "property_prop1": "type1",

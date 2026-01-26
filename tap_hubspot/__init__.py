@@ -184,7 +184,7 @@ def get_field_type_schema(field_type):
 def get_field_schema(field_type, extras=False):
     if extras:
         return {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": {
                 "value": get_field_type_schema(field_type),
                 "timestamp": get_field_type_schema("datetime"),
@@ -237,7 +237,7 @@ def load_schema(entity_name):
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
-            "type": "object",
+            "type": ["null", "object"],
             "properties": custom_schema,
         }
 
@@ -284,12 +284,6 @@ def acquire_access_token_from_refresh_token():
         datetime.timedelta(seconds=auth['expires_in'] - 600))
     LOGGER.info("Token refreshed. Expires at %s", CONFIG['token_expires'])
 
-
-def giveup(exc):
-    return exc.response is not None \
-        and 400 <= exc.response.status_code < 500 \
-        and exc.response.status_code != 429
-
 def on_giveup(details):
     if len(details['args']) == 2:
         url, params = details['args']
@@ -333,7 +327,6 @@ def get_params_and_headers(params):
                        requests.exceptions.HTTPError),
                       max_tries=5,
                       jitter=None,
-                      giveup=giveup,
                       on_giveup=on_giveup,
                       interval=10)
 def request(url, params=None):
@@ -378,7 +371,6 @@ def lift_properties_and_versions(record):
                        requests.exceptions.HTTPError),
                       max_tries=5,
                       jitter=None,
-                      giveup=giveup,
                       on_giveup=on_giveup,
                       interval=10)
 def post_search_endpoint(url, data, params=None):
@@ -1198,7 +1190,7 @@ def generate_custom_streams(mode, catalog=None):
             schema = utils.load_json(get_abs_path('schemas/shared/custom_objects.json'))
             custom_schema = parse_custom_schema(stream_id, custom_object["properties"], is_custom_object=True)
             schema["properties"]["properties"] = {
-                "type": "object",
+                "type": ["null", "object"],
                 "properties": custom_schema,
             }
 
