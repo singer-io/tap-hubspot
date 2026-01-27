@@ -49,10 +49,10 @@ class HubspotBaseTest(BaseCase):
         return "tap-hubspot"
 
     def get_properties(self):
-        start_date = dt.today() - timedelta(days=1)
-        start_date_with_fmt = dt.strftime(start_date, self.START_DATE_FORMAT)
+        # start_date = dt.today() - timedelta(days=1)
+        # start_date_with_fmt = dt.strftime(start_date, self.START_DATE_FORMAT)
 
-        return {'start_date' : start_date_with_fmt}
+        return {'start_date' : '2022-01-01T00:00:00Z'}
 
     def get_credentials(self):
         return {'refresh_token': os.getenv('TAP_HUBSPOT_REFRESH_TOKEN'),

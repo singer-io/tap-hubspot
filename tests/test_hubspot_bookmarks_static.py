@@ -26,7 +26,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def get_properties(self):
         #        'start_date' : '2021-08-19T00:00:00Z'
-        return {'start_date' : '2017-11-22T00:00:00Z'}
+        return {'start_date' : '2022-01-01T00:00:00Z'}
 
     def setUp(self):
         self.maxDiff = None  # see all output in failure

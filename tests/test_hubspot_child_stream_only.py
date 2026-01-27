@@ -19,9 +19,10 @@ class FieldSelectionChildTest(HubspotBaseTest):
         return "tt_hubspot_child_streams"
 
     def get_properties(self):
-        return {
-            'start_date' : dt.strftime(dt.today()-timedelta(days=2), self.START_DATE_FORMAT)
-        }
+        # return {
+        #     'start_date' : dt.strftime(dt.today()-timedelta(days=2), self.START_DATE_FORMAT)
+        # }
+        return {'start_date' : '2022-01-01T00:00:00Z'}
 
     def setUp(self):
         test_client = TestClient(start_date=self.get_properties()['start_date'])
