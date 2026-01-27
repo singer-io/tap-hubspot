@@ -32,7 +32,7 @@
             ]
         },
         "additionalProperties": {
-            "type": "object",
+          "type": ["null", "object"],
             "properties": {
                 "hs_folder_name": {
                     "type": [

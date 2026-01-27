@@ -1,8 +1,14 @@
 # Changelog
 
+## 4.0.2
+  * Retry the API requests for all the errors [#282](https://github.com/singer-io/tap-hubspot/pull/282)
+
+## 4.0.1
+  * Updates all non-primary key fields to be nullable [#281](https://github.com/singer-io/tap-hubspot/pull/281)
+
 ## 4.0.0
   * Upgrade API version v1 to v3 for [contacts](https://developers.hubspot.com/docs/api-reference/crm-contacts-v3/basic/get-crm-v3-objects-contacts) and [contact_lists](https://developers.hubspot.com/docs/api-reference/crm-lists-v3/lists/post-crm-v3-lists-search) stream.
-  * Update primary_key to `id` and replication_key to `updatedAt` for `contacts`
+  * Update primary_key to `id` and replication_key to `updatedAt` for `contacts` [#277](https://github.com/singer-io/tap-hubspot/pull/277)
 
 ## 3.3.0
   * Add support for personal access tokens (api_key) instead of passing oauth creds [#276](https://github.com/singer-io/tap-hubspot/pull/276)

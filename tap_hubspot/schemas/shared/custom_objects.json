@@ -22,23 +22,20 @@
             ]
         },
         "associations": {
-            "type": [
-                "null",
-                "object"
-            ],
-            "properties": {
-                "emails": {"$ref": "associations_schema.json"},
-                "meetings": {"$ref": "associations_schema.json"},
-                "notes": {"$ref": "associations_schema.json"},
-                "tasks": {"$ref": "associations_schema.json"},
-                "calls": {"$ref": "associations_schema.json"},
-                "conversation_session": {"$ref": "associations_schema.json"},
-                "companies": {"$ref": "associations_schema.json"},
-                "contacts": {"$ref": "associations_schema.json"},
-                "deals": {"$ref": "associations_schema.json"},
-                "products": {"$ref": "associations_schema.json"},
-                "tickets": {"$ref": "associations_schema.json"}
-            }
+            "type": ["null", "object"],
+          "properties": {
+            "emails": {"$ref": "associations_schema.json"},
+            "meetings": {"$ref": "associations_schema.json"},
+            "notes": {"$ref": "associations_schema.json"},
+            "tasks": {"$ref": "associations_schema.json"},
+            "calls": {"$ref": "associations_schema.json"},
+            "conversation_session": {"$ref": "associations_schema.json"},
+            "companies": {"$ref": "associations_schema.json"},
+            "contacts": {"$ref": "associations_schema.json"},
+            "deals": {"$ref": "associations_schema.json"},
+            "products": {"$ref": "associations_schema.json"},
+            "tickets": {"$ref": "associations_schema.json"}
+          }
         }
     }
 }
