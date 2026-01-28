@@ -46,12 +46,11 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
         return new_state
 
     def get_properties(self):
-        # return {
-        #     'start_date' : datetime.strftime(
-        #         datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
-        #     ),
-        # }
-        return {'start_date' : '2022-01-01T00:00:00Z'}
+        return {
+            'start_date' : datetime.strftime(
+                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+            ),
+        }
 
     def setUp(self):
         self.maxDiff = None  # see all output in failure

@@ -95,6 +95,9 @@ KNOWN_MISSING_FIELDS = {
         'isPublished',
         'paymentSessionTemplateIds',
         'selectedExternalOptions',
+        'spamNotificationsRecipients',
+        'spamNotificationsEnabled',
+        'captchaVersion',
     },
     'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',
@@ -111,7 +114,6 @@ KNOWN_MISSING_FIELDS = {
         'lastProcessingFinishedAt',
         'processingState',
         'lastProcessingStartedAt',
-        'groupId',
     },
     'deals': {  # BUG https://jira.talendforge.org/browse/TDL-14999
         'imports',
