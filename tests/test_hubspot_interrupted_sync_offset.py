@@ -124,12 +124,11 @@ class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetCont
         return "tt_hubspot_interrupt_deals"
 
     def get_properties(self):
-        # return  {
-        #     'start_date' : datetime.strftime(
-        #         datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
-        #     ),
-        # }
-        return {'start_date' : '2022-01-01T00:00:00Z'}
+        return  {
+            'start_date' : datetime.strftime(
+                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
+            ),
+        }
 
     def stream_to_interrupt(self):
         return 'deals'
