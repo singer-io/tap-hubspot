@@ -878,8 +878,8 @@ def sync_email_events(STATE, ctx):
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
     return STATE
 
-def sync_list_memberships(list_id, STATE, ctx, schema, catalog, bookmark_key, start, max_bk_value):
-    
+def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, max_bk_value):
+
     mdata = metadata.to_map(catalog.get('metadata'))
     params = {
         'limit': 250
@@ -927,7 +927,7 @@ def sync_contact_lists(STATE, ctx):
         fs_schema = load_schema("list_memberships")
         fs_catalog = ctx.get_catalog_from_id("list_memberships")
         fs_bookmark_key = 'membershipTimestamp'
-        
+
         singer.write_schema("list_memberships", fs_schema, ["recordId"], [fs_bookmark_key], fs_catalog.get('stream_alias'))
 
         fs_start = get_start(STATE, "list_memberships", fs_bookmark_key)
@@ -951,7 +951,7 @@ def sync_contact_lists(STATE, ctx):
                     max_bk_value = record[bookmark_key]
 
                 if "list_memberships" in ctx.selected_stream_ids:
-                    STATE, fs_max_bk_value = sync_list_memberships(row['listId'], STATE, ctx, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
+                    STATE, fs_max_bk_value = sync_list_memberships(row['listId'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
 
             has_more = data.get('hasMore')
             body["offset"] = data["offset"]
@@ -963,7 +963,7 @@ def sync_contact_lists(STATE, ctx):
 
     return STATE
 
-def sync_form_submission(form_id, STATE, ctx, schema, catalog, bookmark_key, start, max_bk_value):
+def sync_form_submission(form_id, STATE, schema, catalog, bookmark_key, start, max_bk_value):
 
     mdata = metadata.to_map(catalog.get('metadata'))
 
@@ -1010,7 +1010,7 @@ def sync_forms(STATE, ctx):
         fs_schema = load_schema("form_submissions")
         fs_catalog = ctx.get_catalog_from_id("form_submissions")
         fs_bookmark_key = 'submittedAt'
-        
+
         singer.write_schema("form_submissions", fs_schema, ["conversionId"], [fs_bookmark_key], fs_catalog.get('stream_alias'))
 
         fs_start = get_start(STATE, "form_submissions", fs_bookmark_key)
@@ -1033,7 +1033,7 @@ def sync_forms(STATE, ctx):
                 max_bk_value = record[bookmark_key]
 
             if "form_submissions" in ctx.selected_stream_ids:
-                STATE, fs_max_bk_value = sync_form_submission(row['guid'], STATE, ctx, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
+                STATE, fs_max_bk_value = sync_form_submission(row['guid'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
