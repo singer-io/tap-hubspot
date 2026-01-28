@@ -85,6 +85,13 @@ class HubspotBaseTest(BaseCase):
                 self.EXPECTED_PAGE_SIZE: 250,
                 self.OBEYS_START_DATE: True
             },
+            "list_memberships": {
+                self.PRIMARY_KEYS: {"recordId"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"membershipTimestamp"},
+                self.EXPECTED_PAGE_SIZE: 250,
+                self.OBEYS_START_DATE: True
+            },
             "contacts": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -128,6 +135,12 @@ class HubspotBaseTest(BaseCase):
                 self.PRIMARY_KEYS: {"guid"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.OBEYS_START_DATE: True
+            },
+            "form_submissions": {
+                self.PRIMARY_KEYS: {"conversionId"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"submittedAt"},
                 self.OBEYS_START_DATE: True
             },
             "owners": {
