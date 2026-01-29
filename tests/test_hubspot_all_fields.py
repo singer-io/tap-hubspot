@@ -95,6 +95,9 @@ KNOWN_MISSING_FIELDS = {
         'isPublished',
         'paymentSessionTemplateIds',
         'selectedExternalOptions',
+        'captchaVersion',  # New field returned by API
+        'spamNotificationsEnabled',  # New field returned by API
+        'spamNotificationsRecipients',  # New field returned by API
     },
     'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',
