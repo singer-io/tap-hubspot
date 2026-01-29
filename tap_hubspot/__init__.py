@@ -146,6 +146,20 @@ def clean_state(state):
             LOGGER.info("%s - Removing last_sync_duration from state.", stream)
             state["bookmarks"][stream].pop("last_sync_duration", None)
 
+def remove_empty_bookmark(state, tap_stream_id):
+    """
+    Remove a stream's bookmark entirely if it's empty or contains only empty nested dicts.
+    This is called after clear_offset to ensure we don't leave empty bookmarks like {"offset": {}}
+    which could be misinterpreted as resumable state by targets.
+    """
+    bookmark = state.get("bookmarks", {}).get(tap_stream_id)
+    if bookmark is not None:
+        # Check if bookmark is empty or contains only empty nested values
+        if not bookmark or all(not v for v in bookmark.values()):
+            LOGGER.info("%s - Removing empty bookmark from state", tap_stream_id)
+            state.get("bookmarks", {}).pop(tap_stream_id, None)
+    return state
+
 def get_selected_property_fields(catalog, mdata):
 
     fields = catalog.get("schema").get("properties").keys()
@@ -464,6 +478,7 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
             singer.write_state(STATE)
 
     STATE = singer.clear_offset(STATE, tap_stream_id)
+    STATE = remove_empty_bookmark(STATE, tap_stream_id)
     singer.write_state(STATE)
 
 
@@ -606,6 +621,7 @@ def sync_companies(STATE, ctx):
     if CONTACTS_BY_COMPANY in ctx.selected_stream_ids:
         STATE = _sync_contacts_by_company_batch_read(STATE, ctx, company_ids)
         STATE = singer.clear_offset(STATE, "contacts_by_company")
+        STATE = remove_empty_bookmark(STATE, "contacts_by_company")
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, current_sync_start)
