@@ -40,7 +40,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
             'start_date' : datetime.strftime(datetime.today()-timedelta(days=5), self.START_DATE_FORMAT)
         }
 
-    def setUp(cls):
+    def setUp(self):
         self.maxDiff = None  # see all output in failure
 
         # initialize the test client
@@ -73,7 +73,7 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
 
             # check if we exceed the pagination limit
             LOGGER.info(f"Pagination limit set to - {limits[stream]} and total number of existing record - {len(existing_records[stream])}")
-            under_target = limits[stream] + 1 -  len(existing_records[stream])
+            under_target = limits[stream] + 1 - len(existing_records[stream])
             LOGGER.info(f'under_target = {under_target} for {stream}')
 
             # if we do not exceed the limit generate more data so that we do
