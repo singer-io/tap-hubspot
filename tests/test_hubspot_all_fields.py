@@ -80,6 +80,9 @@ KNOWN_MISSING_FIELDS = {
         'enrichable',
         'themeName',
         'style',
+        'spamNotificationsEnabled',
+        'captchaVersion',
+        'spamNotificationsRecipients'
         'thankYouMessageJson',
         'createMarketableContact',
         'kickbackEmailWorkflowId',

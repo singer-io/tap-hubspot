@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "membershipTimestamp": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "recordId": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "listId": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}
