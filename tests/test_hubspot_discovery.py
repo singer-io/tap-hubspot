@@ -72,53 +72,49 @@ class DiscoveryTest(HubspotBaseTest):
                 actual_primary_keys = set(stream_properties[0].get( "metadata", {self.PRIMARY_KEYS: []}).get(self.PRIMARY_KEYS, []))
                 self.assertSetEqual(self.expected_primary_keys()[stream], actual_primary_keys,
                                     msg=f"expected primary key {self.expected_primary_keys()[stream]} but actual is {actual_primary_keys}"
-                                    #set(stream_properties[0].get('metadata', {self.PRIMARY_KEYS: None}).get(self.PRIMARY_KEYS, [])))}"
-
                         )
+                
+                # verify the actual replication method matches our expected replication method
                 actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
-                # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
-                # verify the actual replication matches our expected replication method
-                if stream == "contacts":
-                    self.assertEqual(
-                        self.expected_replication_method().get(stream, None),
-                        actual_replication_method,
-                        msg="The actual replication method {} doesn't match the expected {}".format(
-                            actual_replication_method,
-                            self.expected_replication_method().get(stream, None)))
+                expected_replication_method = self.expected_replication_method().get(stream, None)
+                
+                self.assertEqual(
+                    expected_replication_method,
+                    actual_replication_method,
+                    msg=f"The actual replication method {actual_replication_method} doesn't match the expected {expected_replication_method} for stream {stream}"
+                )
 
                 # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
                 actual_replication_method = stream_properties[0].get(
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
-                if stream_properties[0].get(
-                        "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-              
-                    if stream in ["contacts", "companies", "deals"]:                        
-                        self.assertTrue(actual_replication_method == self.INCREMENTAL,
-                                    msg="Expected INCREMENTAL replication "
-                                    "since there is a replication key")
-                    else:
-                        # BUG_TDL-9939 https://jira.talendforge.org/browse/TDL-9939 all streams are set to full table
-                        pass  # BUG TDL-9939 REMOVE ME WHEN BUG IS ADDRESSED
-
+                
+                if self.expected_replication_keys()[stream]:
+                    self.assertEqual(
+                        actual_replication_method, 
+                        self.INCREMENTAL,
+                        msg=f"Expected INCREMENTAL replication for stream {stream} since there is a replication key, but got {actual_replication_method}"
+                    )
                 else:
-                    self.assertTrue(actual_replication_method == self.FULL,
-                                    msg="Expected FULL replication "
-                                        "since there is no replication key")
+                    self.assertEqual(
+                        actual_replication_method, 
+                        self.FULL,
+                        msg=f"Expected FULL replication for stream {stream} since there is no replication key, but got {actual_replication_method}"
+                    )
 
                 expected_primary_keys = self.expected_primary_keys()[stream]
                 expected_replication_keys = self.expected_replication_keys()[stream]
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
 
                 # verify that primary, replication and foreign keys are given the inclusion of automatic in metadata.
-                # BUG_2 https://jira.talendforge.org/browse/TDL-9772 'inclusion' is not present for replication keys
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
-                if stream in ["contacts", "companies", "deals"]:
-                    self.assertEqual(expected_automatic_fields,
-                                    actual_automatic_fields,
-                                    msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields}"
-                                    )
+                
+                self.assertEqual(
+                    expected_automatic_fields,
+                    actual_automatic_fields,
+                    msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields} for stream {stream}"
+                )
 
                 # verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources
