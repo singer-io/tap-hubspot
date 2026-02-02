@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.0.1
+## 4.1.0
   * added parent-tap-stream-id to the streams in each tap that have a parent stream [#279](https://github.com/singer-io/tap-hubspot/pull/279)
 
 ## 4.0.2
