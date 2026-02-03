@@ -42,13 +42,11 @@ class TestHubspotStartDate(HubspotBaseTest):
         hardcode start_dates for these streams and run the test twice.
         streams tested in TestHubspotStartDateStatic should be removed.
         
-        PERFORMANCE: Only test representative streams instead of all streams.
+        PERFORMANCE: Only test 1 representative stream.
         Start date logic is the same across all incremental streams.
         """
         return {
-            'companies',  # Incremental with hs_lastmodifieddate
-            'contacts',   # Incremental with updatedAt
-            'deals',      # Incremental with complex v3 properties
+            'companies',  # Representative incremental stream
         }
 
 

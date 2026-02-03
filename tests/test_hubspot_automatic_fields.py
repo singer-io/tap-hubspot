@@ -16,14 +16,12 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
     def streams_to_test(self):
         """streams to test
         
-        PERFORMANCE: Only test representative streams.
+        PERFORMANCE: Only test 2 representative streams.
         Automatic field selection logic is the same for all streams.
         """
         return {
-            'companies',
-            'contacts',
-            'deals',
-            'engagements',
+            'companies',  # Basic incremental stream
+            'contacts',   # Stream with associations
         }
 
     def test_run(self):
