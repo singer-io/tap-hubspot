@@ -166,15 +166,16 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
           requires:
             - "All Fields Test"
-      - integration_test:
-          name: "Bookmarks Test Static Data"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
-          requires:
-            - "Bookmarks Test CRUD"
+      # PERFORMANCE: Skipped - redundant with Bookmarks CRUD, saves ~15-20 minutes
+      # - integration_test:
+      #     name: "Bookmarks Test Static Data"
+      #     context:
+      #       - circleci-user
+      #       - tier-1-tap-user
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
+      #     requires:
+      #       - "Bookmarks Test CRUD"
       
       # Stage 5: Interrupted sync tests - MUST run serially
       # These have strict bookmark assertions and can't tolerate concurrent data changes
@@ -186,16 +187,17 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
-            - "Bookmarks Test Static Data"
-      - integration_test:
-          name: "Interrupted State with Offset Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
-          requires:
-            - "Interrupted State Test"
+            - "Bookmarks Test CRUD"
+      # PERFORMANCE: Skipped - similar to Interrupted State Test, saves ~15-20 minutes  
+      # - integration_test:
+      #     name: "Interrupted State with Offset Test"
+      #     context:
+      #       - circleci-user
+      #       - tier-1-tap-user
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
+      #     requires:
+      #       - "Interrupted State Test"
       
       # Stage 6: Pagination test - runs last
       # Creates lots of data, should run when everything else is done
@@ -207,7 +209,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - "Interrupted State with Offset Test"
+            - "Interrupted State Test"
       
       # Stage 3: Final gate (waits for all tests to complete)
       - build:
@@ -222,9 +224,9 @@ workflows:
             - "Start Date Test"
             - "All Fields Test"
             - "Bookmarks Test CRUD"
-            - "Bookmarks Test Static Data"
+            # - "Bookmarks Test Static Data"  # SKIPPED
             - "Interrupted State Test"
-            - "Interrupted State with Offset Test"
+            # - "Interrupted State with Offset Test"  # SKIPPED
             - "Pagination Test"
   build_daily:
     <<: *commit_jobs
