@@ -87,16 +87,22 @@ workflows:
   version: 2
   commit: &commit_jobs
     jobs:
+      # Stage 1: Environment setup (required by all tests)
       - ensure_env:
           context:
             - circleci-user
             - tier-1-tap-user
+      
+      # Stage 2: Linting and unit tests (runs in parallel with integration tests)
       - run_pylint_and_unittests:
           context:
             - circleci-user
             - tier-1-tap-user
           requires:
             - ensure_env
+      
+      # Stage 2: All integration tests run in parallel (each creates its own test data)
+      # NOTE: All tests are independent - each setUp() method creates required test data
       - integration_test:
           name: "Discovery Test"
           context:
@@ -141,10 +147,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
           requires:
-            - "Child Streams Test"
-            - "Start Date Test"
-            - "Automatic Fields Test"
-            - "Discovery Test"
+            - ensure_env
       - integration_test:
           name: "Bookmarks Test CRUD"
           context:
@@ -153,7 +156,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
           requires:
-            - "All Fields Test"
+            - ensure_env
       - integration_test:
           name: "Bookmarks Test Static Data"
           context:
@@ -162,7 +165,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
           requires:
-            - "All Fields Test"
+            - ensure_env
       - integration_test:
           name: "Interrupted State Test"
           context:
@@ -171,8 +174,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
-            - "Bookmarks Test Static Data"
-            - "Bookmarks Test CRUD"
+            - ensure_env
       - integration_test:
           name: "Interrupted State with Offset Test"
           context:
@@ -181,8 +183,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
           requires:
-            - "Bookmarks Test Static Data"
-            - "Bookmarks Test CRUD"
+            - ensure_env
       - integration_test:
           name: "Pagination Test"
           context:
@@ -191,13 +192,24 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - "Interrupted State with Offset Test"
-            - "Interrupted State Test"
+            - ensure_env
+      
+      # Stage 3: Final gate (waits for all tests to complete)
       - build:
           context:
             - circleci-user
             - tier-1-tap-user
           requires:
+            - run_pylint_and_unittests
+            - "Discovery Test"
+            - "Automatic Fields Test"
+            - "Child Streams Test"
+            - "Start Date Test"
+            - "All Fields Test"
+            - "Bookmarks Test CRUD"
+            - "Bookmarks Test Static Data"
+            - "Interrupted State Test"
+            - "Interrupted State with Offset Test"
             - "Pagination Test"
   build_daily:
     <<: *commit_jobs
