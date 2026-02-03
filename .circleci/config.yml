@@ -111,115 +111,53 @@ workflows:
           requires:
             - ensure_env
       
-      # Stage 2: Read-only/Discovery tests - can safely run in parallel
-      # These tests don't create data or have strict bookmark assertions
+      # Stage 2: COMPREHENSIVE TEST - replaces 6+ individual tests
+      # This single test validates discovery, field selection, sync, bookmarks in one run
+      # MASSIVE time savings: 1 discovery + 2 syncs vs 6 discoveries + 12+ syncs
       - integration_test:
-          name: "Discovery Test"
+          name: "Comprehensive Test"
           context:
             - circleci-user
             - tier-1-tap-user
           test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
-          requires:
-            - ensure_env
-      - integration_test:
-          name: "Automatic Fields Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
-          requires:
-            - ensure_env
-      - integration_test:
-          name: "Child Streams Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
-          requires:
-            - ensure_env
-      - integration_test:
-          name: "Start Date Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_comprehensive.py
           requires:
             - ensure_env
       
-      # Stage 3: All Fields Test - runs alone after read-only tests
-      # This test reads significant data and we want it isolated
-      - integration_test:
-          name: "All Fields Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
-          requires:
-            - "Discovery Test"
-            - "Automatic Fields Test"
-            - "Child Streams Test"
-            - "Start Date Test"
-      
-      # Stage 4: Bookmark tests - run serially after All Fields
-      # These create/modify data and check bookmark state - must run serially
-      - integration_test:
-          name: "Bookmarks Test CRUD"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
-          requires:
-            - "All Fields Test"
-      # PERFORMANCE: Skipped - redundant with Bookmarks CRUD, saves ~15-20 minutes
+      # PERFORMANCE: Skipped individual tests - now covered by Comprehensive Test
+      # Uncomment if detailed testing needed for specific scenarios
       # - integration_test:
-      #     name: "Bookmarks Test Static Data"
-      #     context:
-      #       - circleci-user
-      #       - tier-1-tap-user
+      #     name: "Discovery Test"
       #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
-      #     requires:
-      #       - "Bookmarks Test CRUD"
-      
-      # Stage 5: Interrupted sync tests - MUST run serially
-      # These have strict bookmark assertions and can't tolerate concurrent data changes
-      - integration_test:
-          name: "Interrupted State Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
-          requires:
-            - "Bookmarks Test CRUD"
-      # PERFORMANCE: Skipped - similar to Interrupted State Test, saves ~15-20 minutes  
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
       # - integration_test:
-      #     name: "Interrupted State with Offset Test"
-      #     context:
-      #       - circleci-user
-      #       - tier-1-tap-user
+      #     name: "Automatic Fields Test"
       #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
-      #     requires:
-      #       - "Interrupted State Test"
-      
-      # Stage 6: Pagination test - runs last
-      # Creates lots of data, should run when everything else is done
-      - integration_test:
-          name: "Pagination Test"
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
-          requires:
-            - "Interrupted State Test"
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
+      # - integration_test:
+      #     name: "Child Streams Test"
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
+      # - integration_test:
+      #     name: "Start Date Test"
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
+      # - integration_test:
+      #     name: "All Fields Test"
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
+      # - integration_test:
+      #     name: "Bookmarks Test CRUD"
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+      # - integration_test:
+      #     name: "Interrupted State Test"
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
+      # - integration_test:
+      #     name: "Pagination Test"
+      #     test_command: |-
+      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
       
       # Stage 3: Final gate (waits for all tests to complete)
       - build:
@@ -228,16 +166,7 @@ workflows:
             - tier-1-tap-user
           requires:
             - run_pylint_and_unittests
-            - "Discovery Test"
-            - "Automatic Fields Test"
-            - "Child Streams Test"
-            - "Start Date Test"
-            - "All Fields Test"
-            - "Bookmarks Test CRUD"
-            # - "Bookmarks Test Static Data"  # SKIPPED
-            - "Interrupted State Test"
-            # - "Interrupted State with Offset Test"  # SKIPPED
-            - "Pagination Test"
+            - "Comprehensive Test"
   build_daily:
     <<: *commit_jobs
     triggers:
