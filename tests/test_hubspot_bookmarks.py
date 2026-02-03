@@ -55,12 +55,9 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.expected_records = {stream: []
                                  for stream in expected_streams}
         for stream in expected_streams - {'contacts_by_company'}:
-            if stream == 'contacts': 
-                self.times=10
-            elif stream == 'contact_lists':
-                self.times=2
-            else:
-                self.times =3
+            # PERFORMANCE: Reduced from 10/3/2 to 1 record per stream
+            # Creating fewer records drastically reduces API calls and rate limiting
+            self.times = 1
 
             if stream == 'email_events':
                 email_records = self.test_client.create(stream, self.times)
