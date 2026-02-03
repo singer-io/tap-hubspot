@@ -56,12 +56,11 @@ jobs:
           path: test_output/report.xml
       - store_artifacts:
           path: htmlcov
-      # PERFORMANCE: JSON validation is slow and schemas rarely change - skip to save time
-      # - run:
-      #     name: 'JSON Validator'
-      #     command: |
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       stitch-validate-json tap_hubspot/schemas/*.json
+      - run:
+          name: 'JSON Validator'
+          command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            stitch-validate-json tap_hubspot/schemas/*.json
   integration_test:
     parameters:
       test_command:
@@ -102,9 +101,9 @@ workflows:
           requires:
             - ensure_env
       
-      # Stage 2: COMPREHENSIVE TEST - replaces 6+ individual tests
-      # This single test validates discovery, field selection, sync, bookmarks in one run
-      # MASSIVE time savings: 1 discovery + 2 syncs vs 6 discoveries + 12+ syncs
+      # Stage 2: Comprehensive integration test
+      # Validates discovery, field selection, sync, and bookmarks in a single test run
+      # Replaces 6+ individual tests for significant time savings
       - integration_test:
           name: "Comprehensive Test"
           context:
@@ -114,41 +113,6 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_comprehensive.py
           requires:
             - ensure_env
-      
-      # PERFORMANCE: Skipped individual tests - now covered by Comprehensive Test
-      # Uncomment if detailed testing needed for specific scenarios
-      # - integration_test:
-      #     name: "Discovery Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
-      # - integration_test:
-      #     name: "Automatic Fields Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
-      # - integration_test:
-      #     name: "Child Streams Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
-      # - integration_test:
-      #     name: "Start Date Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
-      # - integration_test:
-      #     name: "All Fields Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
-      # - integration_test:
-      #     name: "Bookmarks Test CRUD"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
-      # - integration_test:
-      #     name: "Interrupted State Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
-      # - integration_test:
-      #     name: "Pagination Test"
-      #     test_command: |-
-      #       run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
       
       # Stage 3: Final gate (waits for all tests to complete)
       - build:
