@@ -101,8 +101,8 @@ workflows:
           requires:
             - ensure_env
       
-      # Stage 2: All integration tests run in parallel (each creates its own test data)
-      # NOTE: All tests are independent - each setUp() method creates required test data
+      # Stage 2: Read-only/Discovery tests - can safely run in parallel
+      # These tests don't create data or have strict bookmark assertions
       - integration_test:
           name: "Discovery Test"
           context:
@@ -139,6 +139,9 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
           requires:
             - ensure_env
+      
+      # Stage 3: All Fields Test - runs alone after read-only tests
+      # This test reads significant data and we want it isolated
       - integration_test:
           name: "All Fields Test"
           context:
@@ -147,7 +150,13 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
           requires:
-            - ensure_env
+            - "Discovery Test"
+            - "Automatic Fields Test"
+            - "Child Streams Test"
+            - "Start Date Test"
+      
+      # Stage 4: Bookmark tests - run serially after All Fields
+      # These create/modify data and check bookmark state - must run serially
       - integration_test:
           name: "Bookmarks Test CRUD"
           context:
@@ -156,7 +165,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
           requires:
-            - ensure_env
+            - "All Fields Test"
       - integration_test:
           name: "Bookmarks Test Static Data"
           context:
@@ -165,7 +174,10 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
           requires:
-            - ensure_env
+            - "Bookmarks Test CRUD"
+      
+      # Stage 5: Interrupted sync tests - MUST run serially
+      # These have strict bookmark assertions and can't tolerate concurrent data changes
       - integration_test:
           name: "Interrupted State Test"
           context:
@@ -174,7 +186,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
-            - ensure_env
+            - "Bookmarks Test Static Data"
       - integration_test:
           name: "Interrupted State with Offset Test"
           context:
@@ -183,7 +195,10 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
           requires:
-            - ensure_env
+            - "Interrupted State Test"
+      
+      # Stage 6: Pagination test - runs last
+      # Creates lots of data, should run when everything else is done
       - integration_test:
           name: "Pagination Test"
           context:
@@ -192,7 +207,7 @@ workflows:
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
-            - ensure_env
+            - "Interrupted State with Offset Test"
       
       # Stage 3: Final gate (waits for all tests to complete)
       - build:
