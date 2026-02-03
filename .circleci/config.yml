@@ -11,10 +11,6 @@ jobs:
     executor: tap_tester
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "setup.py" }}
-            - v1-dependencies-
       - run:
           name: 'Setup virtual env'
           command: |
@@ -24,11 +20,6 @@ jobs:
             uv pip install .[dev]
             uv pip install awscli --upgrade
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /usr/local/share/virtualenvs/dev_env.sh
-      - save_cache:
-          key: v1-dependencies-{{ checksum "setup.py" }}
-          paths:
-            - /usr/local/share/virtualenvs/tap-hubspot
-            - /root/.cache/uv
       - persist_to_workspace:
           root: /
           paths:
