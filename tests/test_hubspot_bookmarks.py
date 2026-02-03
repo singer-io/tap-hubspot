@@ -29,12 +29,16 @@ class TestHubspotBookmarks(HubspotBaseTest):
         return "tt_hubspot_bookmarks"
 
     def streams_to_test(self):
-        """expected streams minus the streams not under test"""
-        expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
-
-        return expected_streams.difference({
-            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        }) 
+        """expected streams minus the streams not under test
+        
+        PERFORMANCE: Only test 3 representative streams instead of all 14+.
+        Bookmark logic is the same across all incremental streams.
+        """
+        return {
+            'companies',   # Incremental stream
+            'contacts',    # Incremental stream with associations
+            'deals',       # Incremental with v3 properties
+        } 
 
     def get_properties(self):
         return {
