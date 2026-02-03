@@ -331,7 +331,7 @@ def get_params_and_headers(params):
                       max_tries=5,
                       jitter=None,
                       on_giveup=on_giveup,
-                      interval=10)
+                      interval=3)
 def request(url, params=None):
 
     params, headers = get_params_and_headers(params)
@@ -375,7 +375,7 @@ def lift_properties_and_versions(record):
                       max_tries=5,
                       jitter=None,
                       on_giveup=on_giveup,
-                      interval=10)
+                      interval=3)
 def post_search_endpoint(url, data, params=None):
 
     params, headers = get_params_and_headers(params)
