@@ -11,7 +11,7 @@ setup(name='tap-hubspot',
       py_modules=['tap_hubspot'],
       install_requires=[
           'attrs==16.3.0',
-          'singer-python==5.13.2',
+          'singer-python==5.15.0',
           'requests==2.32.4',
           'backoff==1.10.0',
       ],
