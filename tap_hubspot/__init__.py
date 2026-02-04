@@ -925,7 +925,7 @@ def sync_forms(STATE, ctx):
 
     LOGGER.info("sync_forms from %s", start)
 
-    data = request(get_url("forms")).json()
+    data = request(get_url("forms"), params={'formTypes': 'ALL'}).json()
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
