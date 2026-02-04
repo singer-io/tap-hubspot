@@ -38,7 +38,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
 
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
@@ -55,7 +55,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def post(self, url, data=dict(), params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
@@ -86,7 +86,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def put(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PUT using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
@@ -105,7 +105,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def patch(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PATCH using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
@@ -124,7 +124,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def delete(self, url, params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
@@ -182,49 +182,49 @@ class TestClient():
     ### GET
     ##########################################################################
     ### Take pagination parameter to limit the pagination to first 2 pages tdl-16124 ###
-    def read(self, stream, parent_ids=[], since='', pagination=False):
+    def read(self, stream, parent_ids=[], since='', pagination=False, limit=None):
 
         # Resets the access_token if the expiry time is less than or equal to the current time
         if self.CONFIG["token_expires"] <= datetime.datetime.utcnow():
             self.acquire_access_token_from_refresh_token()
 
         if stream == 'forms':
-            return self.get_forms()
+            return self.get_forms(limit=limit)
         elif stream == 'owners':
-            return self.get_owners()
+            return self.get_owners(limit=limit)
         elif stream == 'companies':
-            return self.get_companies(since, pagination)
+            return self.get_companies(since, pagination, limit=limit)
         elif stream == 'contact_lists':
-            return self.get_contact_lists(since, pagination=pagination)
+            return self.get_contact_lists(since, pagination=pagination, limit=limit)
         elif stream == 'contacts_by_company':
-            return self.get_contacts_by_company(parent_ids, pagination)
+            return self.get_contacts_by_company(parent_ids, pagination, limit=limit)
         elif stream == 'engagements':
-            return self.get_engagements(pagination)
+            return self.get_engagements(pagination, limit=limit)
         elif stream == 'campaigns':
-            return self.get_campaigns()
+            return self.get_campaigns(limit=limit)
         elif stream == 'deals':
-            return self.get_deals()
+            return self.get_deals(limit=limit)
         elif stream == 'workflows':
-            return self.get_workflows()
+            return self.get_workflows(limit=limit)
         elif stream == 'contacts':
-            return self.get_contacts(pagination)
+            return self.get_contacts(pagination, limit=limit)
         elif stream == 'deal_pipelines':
-            return self.get_deal_pipelines()
+            return self.get_deal_pipelines(limit=limit)
         elif stream == 'email_events':
-            return self.get_email_events(pagination)
+            return self.get_email_events(pagination, limit=limit)
         elif stream == 'subscription_changes':
-            return self.get_subscription_changes(since, pagination)
+            return self.get_subscription_changes(since, pagination, limit=limit)
         elif stream == "tickets":
-            return self.get_tickets(pagination)
+            return self.get_tickets(pagination, limit=limit)
         elif stream in ["cars", "co_firsts", "custom_object_contacts"]:
-            return self.get_custom_objects(stream)
+            return self.get_custom_objects(stream, limit=limit)
         elif stream == "custom_object_campaigns":
             # Custom object endpoints must be accessed using the names specified in the source.
-            return self.get_custom_objects("custom_object_campaigns", source_name="campaigns")
+            return self.get_custom_objects("custom_object_campaigns", source_name="campaigns", limit=limit)
         else:
             raise NotImplementedError
 
-    def get_campaigns(self):
+    def get_campaigns(self, limit=None):
         """
         Get all campaigns by id, then grab the details of each campaign.
         """
@@ -234,6 +234,10 @@ class TestClient():
         # get all campaigns by-id
         response = self.get(campaign_by_id_url)
         campaign_ids = [campaign['id'] for campaign in response['campaigns']]
+        
+        # Apply limit if specified
+        if limit:
+            campaign_ids = campaign_ids[:limit]
 
         # get the detailed record corresponding to each campagin-id
         records = []
@@ -249,7 +253,7 @@ class TestClient():
         response = self.get(url)
         return response
 
-    def get_companies(self, since='', pagination=False):
+    def get_companies(self, since='', pagination=False, limit=None):
         """
         Get all companies by paginating using 'hasMore' and 'offset'.
         """
@@ -282,14 +286,18 @@ class TestClient():
 
                 if company_timestamp >= since:
                     companies.append(company)
+                    # Stop early if we've hit the limit
+                    if limit and len(companies) >= limit:
+                        has_more = False
+                        break
 
-            has_more = response['has-more']
+            has_more = has_more and response['has-more']
             params['offset'] = response['offset']
             if pagination and len(companies) > page_size+10:
                 break
 
         # get the details of each company
-        for company in companies:
+        for company in companies[:limit] if limit else companies:
             response = self._get_company_by_id(company['companyId'])
             records.append(response)
 
@@ -297,7 +305,7 @@ class TestClient():
 
         return records
 
-    def get_contact_lists(self, since='', list_id='', pagination=False):
+    def get_contact_lists(self, since='', list_id='', pagination=False, limit=None):
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
@@ -309,8 +317,9 @@ class TestClient():
 
             return response['list']
 
-        body = {'count': 250}
-        return self.post(url, data=body)['lists']
+        body = {'count': limit if limit and limit < 250 else 250}
+        lists = self.post(url, data=body)['lists']
+        return lists[:limit] if limit else lists
 
     def _get_contacts_by_pks(self, contact_id):
         """
@@ -332,7 +341,7 @@ class TestClient():
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_contacts(self, pagination=False):
+    def get_contacts(self, pagination=False, limit=None):
         """
         Get all contacts.
         HubSpot API https://developers.hubspot.com/docs/api/crm/contacts
@@ -350,17 +359,20 @@ class TestClient():
                     for record in response["results"]
                     if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
 
+            # Stop if we've hit the limit
+            if limit and len(records) >= limit:
+                break
             if not response.get("paging"):
                 break
             if page_size and len(records) > page_size+10:
                 break
             params["after"] = response.get("paging").get("next").get("after")
         
-        records = self.denest_properties('contacts', records)
+        records = self.denest_properties('contacts', records[:limit] if limit else records)
         return records
 
 
-    def get_contacts_by_company(self, parent_ids, pagination=False):
+    def get_contacts_by_company(self, parent_ids, pagination=False, limit=None):
         """
         Get all contacts_by_company iterating over compnayId's and
         paginating using 'hasMore' and 'vidOffset'. This stream is essentially
@@ -384,6 +396,9 @@ class TestClient():
                 for vid in response.get('vids', {}):
                     records.extend([{'company-id': parent_id,
                                      'contact-id': vid}])
+                    # Stop early if we've hit the limit
+                    if limit and len(records) >= limit:
+                        return records
 
                 has_more = response['hasMore']
                 params['vidOffset'] = response['vidOffset']
@@ -391,10 +406,13 @@ class TestClient():
                     break
 
             params = {'count': page_size}
+            # Stop iterating through parent_ids if we've hit the limit
+            if limit and len(records) >= limit:
+                break
 
         return records
 
-    def get_deal_pipelines(self):
+    def get_deal_pipelines(self, limit=None):
         """
         Get all deal_pipelines.
         """
@@ -402,7 +420,7 @@ class TestClient():
         records = []
 
         response = self.get(url)
-        records.extend(response)
+        records.extend(response[:limit] if limit else response)
 
         records = self.denest_properties('deal_pipelines', records)
         return records
@@ -414,7 +432,7 @@ class TestClient():
 
         return response
 
-    def get_deals(self):
+    def get_deals(self, limit=None):
         """
         Get all deals from the v1 endpoiint by paginating using 'hasMore' and 'offset'.
         For each deals record denest 'properties' so that they are prefxed with 'property_'
@@ -436,8 +454,16 @@ class TestClient():
                             # Here replication key of the deals stream is derived from "hs_lastmodifieddate" field.
                             if record['properties']["hs_lastmodifieddate"][
                                 'timestamp'] >= self.start_date])
+            # Stop early if we've hit the limit
+            if limit and len(records) >= limit:
+                has_more = False
+                break
             has_more = response['hasMore']
             v1_params['offset'] = response['offset']
+        
+        # Trim to limit before expensive v3 processing
+        if limit:
+            records = records[:limit]
 
         # batch the v1 response ids into groups of 100
         v1_ids = [{'id': str(record['dealId'])} for record in records]
@@ -485,7 +511,7 @@ class TestClient():
         records = self.denest_properties('deals', records)
         return records
 
-    def get_email_events(self, recipient='', pagination=False):
+    def get_email_events(self, recipient='', pagination=False, limit=None):
         """
         Get all email_events by paginating using 'hasMore' and 'offset'.
         """
@@ -504,12 +530,15 @@ class TestClient():
             records.extend([record for record in response['events']
                             if record['created'] >= self.start_date])
 
+            # Stop early if we've hit the limit
+            if limit and len(records) >= limit:
+                break
             has_more = response['hasMore']
             params['offset'] = response['offset']
             if pagination and len(records) > page_size+10:
                 break
 
-        return records
+        return records[:limit] if limit else records
 
     def _get_engagements_by_pk(self, engagement_id):
         """
@@ -525,7 +554,7 @@ class TestClient():
 
         return response
 
-    def get_engagements(self, pagination=False):
+    def get_engagements(self, pagination=False, limit=None):
         """
         Get all engagements by paginating using 'hasMore' and 'offset'.
         """
@@ -544,6 +573,9 @@ class TestClient():
                     result['engagement_id'] = result['engagement']['id']
                     result['lastUpdated'] = result['engagement']['lastUpdated']
                     records.append(result)
+                    # Stop early if we've hit the limit
+                    if limit and len(records) >= limit:
+                        return records
 
             has_more = response['hasMore']
             params['offset'] = response['offset']
@@ -562,7 +594,7 @@ class TestClient():
 
         return response
 
-    def get_forms(self):
+    def get_forms(self, limit=None):
         """
         Get all forms.
         """
@@ -574,18 +606,19 @@ class TestClient():
         records.extend([record for record in response
                         if record[replication_key] >= self.start_date])
 
-        return records
+        return records[:limit] if limit else records
 
-    def get_owners(self):
+    def get_owners(self, limit=None):
         """
         Get all owners.
         """
         url = f"{BASE_URL}/crm/v3/owners"
         records = self.get(url)
-        transformed_records = self.datatype_transformations('owners', records['results'])
+        results = records['results'][:limit] if limit else records['results']
+        transformed_records = self.datatype_transformations('owners', results)
         return transformed_records
 
-    def get_subscription_changes(self, since='', pagination=False):
+    def get_subscription_changes(self, since='', pagination=False, limit=None):
         """
         Get all subscription_changes from 'since' date by paginating using 'hasMore' and 'offset'.
         Default since date is one week ago
@@ -612,6 +645,9 @@ class TestClient():
                 #                            this won't be feasible until BUG_TDL-14938 is addressed
                 if int(since) <= record['timestamp']:
                     records.append(record)
+                    # Stop early if we've hit the limit
+                    if limit and len(records) >= limit:
+                        return records
             if pagination and len(records) > page_size+10:
                 break
 
@@ -625,7 +661,7 @@ class TestClient():
 
         return response
 
-    def get_workflows(self):
+    def get_workflows(self, limit=None):
         """
         Get all workflows.
         """
@@ -637,7 +673,8 @@ class TestClient():
 
         records.extend([record for record in response['workflows']
                         if record[replication_key] >= self.start_date])
-        return records
+
+        return records[:limit] if limit else records
 
     def _get_tickets_by_pk(self, ticket_id):
         """
@@ -659,7 +696,7 @@ class TestClient():
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_tickets(self, pagination=False):
+    def get_tickets(self, pagination=False, limit=None):
         """
         Get all tickets.
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
@@ -679,13 +716,16 @@ class TestClient():
                     for record in response["results"]
                     if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
 
+            # Stop early if we've hit the limit
+            if limit and len(records) >= limit:
+                break
             if not response.get("paging"):
                 break
             if page_size and len(records) > page_size+10:
                 break
             params["after"] = response.get("paging").get("next").get("after")
         
-        records = self.denest_properties('tickets', records)
+        records = self.denest_properties('tickets', records[:limit] if limit else records)
         return records
     
     def _get_custom_object_record_by_pk(self, object_name, id):
@@ -708,7 +748,7 @@ class TestClient():
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_custom_objects(self, stream, source_name=None):
+    def get_custom_objects(self, stream, source_name=None, limit=None):
         """
         Get all custom_object records.
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
@@ -728,6 +768,9 @@ class TestClient():
                     for record in response["results"]
                     if record[replication_key] >= self.start_date_strf.replace('.Z', '.000Z')])
 
+            # Stop early if we've hit the limit
+            if limit and len(records) >= limit:
+                break
             if not response.get("paging"):
                 break
             if page_size and len(records) > page_size+10:
@@ -736,7 +779,7 @@ class TestClient():
             if params['after'] is None:
                 break
         
-        records = self.denest_properties(stream, records)
+        records = self.denest_properties(stream, records[:limit] if limit else records)
         return records
 
     ##########################################################################
