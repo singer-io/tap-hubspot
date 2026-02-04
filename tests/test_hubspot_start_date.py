@@ -41,13 +41,11 @@ class TestHubspotStartDate(HubspotBaseTest):
         If any streams cannot have data generated programmatically,
         hardcode start_dates for these streams and run the test twice.
         streams tested in TestHubspotStartDateStatic should be removed.
-        
-        PERFORMANCE: Only test 1 representative stream.
-        Start date logic is the same across all incremental streams.
         """
-        return {
-            'companies',  # Representative incremental stream
-        }
+        return self.expected_check_streams().difference({
+            'owners', # static test data, covered in separate test
+            'campaigns', # static test data, covered in separate test
+        })
 
 
     def get_properties(self, original=True):

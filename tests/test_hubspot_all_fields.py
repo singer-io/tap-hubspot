@@ -175,17 +175,13 @@ class TestHubspotAllFields(HubspotBaseTest):
             streams = list(streams)
             streams.append(stream_to_run_last)
 
-        # PERFORMANCE: Limit records read to 50 per stream to avoid reading thousands of accumulated test records
-        # This significantly speeds up test execution while still validating field presence
-        record_limit = 50
-
         for stream in streams:
-            # Get records with limit to avoid reading entire test account history
+            # Get all records
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in self.expected_records['companies']]
-                self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids, limit=record_limit)
+                self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids)
             else:
-                self.expected_records[stream] = test_client.read(stream, limit=record_limit)
+                self.expected_records[stream] = test_client.read(stream)
 
         for stream, records in self.expected_records.items():
             LOGGER.info("The test client found %s %s records.", len(records), stream)

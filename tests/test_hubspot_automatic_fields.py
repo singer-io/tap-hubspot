@@ -14,15 +14,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
         return "tt_hubspot_automatic"
 
     def streams_to_test(self):
-        """streams to test
-        
-        PERFORMANCE: Only test 2 representative streams.
-        Automatic field selection logic is the same for all streams.
-        """
-        return {
-            'companies',  # Basic incremental stream
-            'contacts',   # Stream with associations
-        }
+        """streams to test"""
+        return self.expected_streams() - STATIC_DATA_STREAMS
 
     def test_run(self):
         """
