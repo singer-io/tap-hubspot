@@ -83,7 +83,6 @@ KNOWN_MISSING_FIELDS = {
         'spamNotificationsEnabled',
         'captchaVersion',
         'spamNotificationsRecipients'
-        'thankYouMessageJson',
         'createMarketableContact',
         'kickbackEmailWorkflowId',
         'businessUnitId',
