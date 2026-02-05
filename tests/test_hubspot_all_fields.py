@@ -82,7 +82,8 @@ KNOWN_MISSING_FIELDS = {
         'style',
         'spamNotificationsEnabled',
         'captchaVersion',
-        'spamNotificationsRecipients'
+        'spamNotificationsRecipients',
+        'thankYouMessageJson',
         'createMarketableContact',
         'kickbackEmailWorkflowId',
         'businessUnitId',
@@ -157,11 +158,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
-        return self.expected_streams().difference({
-            'owners',
-            'form_submissions',
-            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        })
+        return {'forms'}
 
     def setUp(self):
         self.maxDiff = None  # see all output in failure
