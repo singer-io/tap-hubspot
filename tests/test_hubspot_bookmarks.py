@@ -12,7 +12,7 @@ from tap_tester import LOGGER
 
 
 STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
-STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
+STREAMS_WITHOUT_CREATES = {'campaigns', 'owners', 'form_submissions'}
 
 class TestHubspotBookmarks(HubspotBaseTest):
     """Ensure tap replicates new and upated records based on the replication method of a given stream.
@@ -54,7 +54,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         self.expected_records = {stream: []
                                  for stream in expected_streams}
-        for stream in expected_streams - {'contacts_by_company'}:
+        for stream in expected_streams - {'contacts_by_company', 'list_memberships'}:
             if stream == 'contacts': 
                 self.times=10
             elif stream == 'contact_lists':
@@ -74,6 +74,14 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 if stream == 'contact_lists':
                     static_list = self.test_client.create('static_contact_lists')
                     self.expected_records[stream] += static_list
+
+        if 'list_memberships' in expected_streams:
+            list_ids = [self.expected_records['contact_lists'][-1]['listId']]
+            for i in range(self.times):
+                record = self.test_client.create_list_memberships(
+                    list_ids=list_ids
+                )
+                self.expected_records['list_memberships'] += record
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]

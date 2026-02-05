@@ -86,7 +86,7 @@ class HubspotBaseTest(BaseCase):
                 self.OBEYS_START_DATE: True
             },
             "list_memberships": {
-                self.PRIMARY_KEYS: {"recordId"},
+                self.PRIMARY_KEYS: {"recordId", "listId"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"membershipTimestamp"},
                 self.EXPECTED_PAGE_SIZE: 250,

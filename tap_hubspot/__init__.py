@@ -928,7 +928,7 @@ def sync_contact_lists(STATE, ctx):
         fs_catalog = ctx.get_catalog_from_id("list_memberships")
         fs_bookmark_key = 'membershipTimestamp'
 
-        singer.write_schema("list_memberships", fs_schema, ["recordId"], [fs_bookmark_key], fs_catalog.get('stream_alias'))
+        singer.write_schema("list_memberships", fs_schema, ["recordId", "listId"], [fs_bookmark_key], fs_catalog.get('stream_alias'))
 
         fs_start = get_start(STATE, "list_memberships", fs_bookmark_key)
         fs_max_bk_value = fs_start
@@ -963,11 +963,13 @@ def sync_contact_lists(STATE, ctx):
 
     return STATE
 
-def sync_form_submission(form_id, STATE, schema, catalog, bookmark_key, start, max_bk_value):
+def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, max_bk_value):
 
     mdata = metadata.to_map(catalog.get('metadata'))
-
-    data = request(get_url("form_submissions", form_id=form_id)).json()["results"]
+    url = get_url("form_submissions", form_id=form_id)
+    params = {
+        'limit': 50
+    }
     time_extracted = utils.now()
     need_to_write_state = False
 
@@ -975,7 +977,7 @@ def sync_form_submission(form_id, STATE, schema, catalog, bookmark_key, start, m
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
-        for row in data:
+        for row in get_v3_records(url, params, "results", "paging"):
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
             record['formId'] = form_id
 
@@ -1033,7 +1035,7 @@ def sync_forms(STATE, ctx):
                 max_bk_value = record[bookmark_key]
 
             if "form_submissions" in ctx.selected_stream_ids:
-                STATE, fs_max_bk_value = sync_form_submission(row['guid'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
+                STATE, fs_max_bk_value = sync_form_submissions(row['guid'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
@@ -1251,10 +1253,10 @@ STREAMS = [
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
-    Stream('form_submissions', sync_form_submission, ['conversionId'], 'submittedAt', 'INCREMENTAL'),
+    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
-    Stream('list_memberships', sync_list_memberships, ["recordId"], 'membershipTimestamp', 'INCREMENTAL'),
+    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
 
     # Do these last as they are full table

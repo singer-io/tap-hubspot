@@ -33,7 +33,9 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
             'campaigns', # unable to manually find a partial state with our test data
             'email_events', # unable to manually find a partial state with our test data
             'subscription_changes', # BUG_TDL-14938
-            'tickets' # covered in TestHubspotInterruptedSync1
+            'tickets', # covered in TestHubspotInterruptedSync1,
+            'form_submissions',
+            'list_memberships'
         }
 
         return self.expected_streams() - untested

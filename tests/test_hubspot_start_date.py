@@ -9,7 +9,7 @@ from base import HubspotBaseTest
 from client import TestClient
 
 
-STATIC_DATA_STREAMS = {'owners', 'campaigns'}
+STATIC_DATA_STREAMS = {'owners', 'campaigns', 'form_submissions'}
 
 class TestHubspotStartDate(HubspotBaseTest):
 

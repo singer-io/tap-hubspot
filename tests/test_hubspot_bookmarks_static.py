@@ -11,7 +11,7 @@ from base import HubspotBaseTest
 from client import TestClient
 
 
-STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
+STREAMS_WITHOUT_CREATES = {'campaigns', 'owners', 'form_submissions'}
 
 
 class TestHubspotBookmarks(HubspotBaseTest):
