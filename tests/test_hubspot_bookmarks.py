@@ -11,8 +11,8 @@ from client import TestClient
 from tap_tester import LOGGER
 
 
-STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows', 'list_memberships'}
-STREAMS_WITHOUT_CREATES = {'campaigns', 'owners', 'form_submissions'}
+STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
+STREAMS_WITHOUT_CREATES = {'campaigns', 'owners', 'form_submissions', 'list_memberships'}
 
 class TestHubspotBookmarks(HubspotBaseTest):
     """Ensure tap replicates new and upated records based on the replication method of a given stream.
@@ -30,7 +30,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        expected_streams = {'list_memberships', 'contact_lists'}
+        expected_streams = self.expected_streams().difference(STREAMS_WITHOUT_CREATES)
 
         return expected_streams.difference({
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
