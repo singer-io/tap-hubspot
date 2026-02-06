@@ -16,6 +16,15 @@
         "action": {
             "type": ["null", "string"]
         },
+        "captchaVersion": {
+            "type": ["null", "string"]
+        },
+        "spamNotificationsRecipients": {
+            "type": ["null", "string"]
+        },
+        "spamNotificationsEnabled": {
+            "type": ["null", "string"]
+        },
         "method": {
             "type": ["null", "string"]
         },

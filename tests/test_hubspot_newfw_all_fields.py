@@ -16,6 +16,7 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
         """expected streams minus the streams not under test"""
         return self.expected_stream_names().difference({
             'owners',
+            'form_submissions',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
         })
 

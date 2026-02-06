@@ -12,7 +12,7 @@ from tap_tester import LOGGER
 
 
 STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
-STREAMS_WITHOUT_CREATES = {'campaigns', 'owners'}
+STREAMS_WITHOUT_CREATES = {'campaigns', 'owners', 'form_submissions', 'list_memberships'}
 
 class TestHubspotBookmarks(HubspotBaseTest):
     """Ensure tap replicates new and upated records based on the replication method of a given stream.
@@ -54,7 +54,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         self.expected_records = {stream: []
                                  for stream in expected_streams}
-        for stream in expected_streams - {'contacts_by_company'}:
+        for stream in expected_streams - {'contacts_by_company', 'list_memberships'}:
             if stream == 'contacts': 
                 self.times=10
             elif stream == 'contact_lists':
@@ -74,6 +74,14 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 if stream == 'contact_lists':
                     static_list = self.test_client.create('static_contact_lists')
                     self.expected_records[stream] += static_list
+
+        if 'list_memberships' in expected_streams:
+            list_ids = [record['listId'] for record in self.expected_records['contact_lists'] if record['processingType'] == 'MANUAL']
+            for i in range(self.times):
+                record = self.test_client.create_list_memberships(
+                    list_ids=list_ids
+                )
+                self.expected_records['list_memberships'] += record
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
@@ -111,7 +119,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
         state_1 = menagerie.get_state(conn_id)
 
         # Create 1 record for each stream between syncs
-        for stream in expected_streams - {'contacts_by_company'}:
+        for stream in expected_streams - {'contacts_by_company', 'list_memberships'}:
             record = self.test_client.create(stream)
             self.expected_records[stream] += record
 
@@ -122,6 +130,13 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 company_ids=company_ids, contact_records=contact_records
             )
             self.expected_records['contacts_by_company'] += record
+
+        if 'list_memberships' in expected_streams:
+            list_ids = [record['listId'] for record in self.expected_records['contact_lists'] if record['processingType'] == 'MANUAL']
+            record = self.test_client.create_list_memberships(
+                list_ids=list_ids
+            )
+            self.expected_records['list_memberships'] += record
 
         # Update 1 record from the test seutp for each stream that has an update endpoint
         for stream in expected_streams - STREAMS_WITHOUT_UPDATES:

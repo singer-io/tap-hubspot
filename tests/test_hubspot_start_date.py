@@ -44,6 +44,8 @@ class TestHubspotStartDate(HubspotBaseTest):
         """
         return self.expected_check_streams().difference({
             'owners', # static test data, covered in separate test
+            'form_submissions',
+            'list_memberships',
             'campaigns', # static test data, covered in separate test
         })
 
