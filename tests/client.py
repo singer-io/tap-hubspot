@@ -1013,7 +1013,7 @@ class TestClient():
             LOGGER.info("Post URL is %s", url)
             # generate a record
             self.put(url, data)
-            records.extend([{'list_id': list_id, 'recordId': '318041'}, {'list_id': list_id, 'recordId': '199564445797'}])
+            records.extend([{'listId': list_id, 'recordId': '318041'}, {'listId': list_id, 'recordId': '199564445797'}])
         return records
 
     def create_contact_lists(self, dynamic=True):
