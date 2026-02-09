@@ -70,6 +70,14 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.API_LIMIT: 250,
                 BaseCase.OBEYS_START_DATE: True
             },
+            "list_memberships": {
+                BaseCase.PRIMARY_KEYS: {"recordId", "listId"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"membershipTimestamp"},
+                BaseCase.EXPECTED_PAGE_SIZE: 250,
+                BaseCase.OBEYS_START_DATE: True,
+                BaseCase.PARENT_STREAM: 'contact_lists'
+            },
             "contacts": {
                 BaseCase.PRIMARY_KEYS: {"id"},
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
@@ -114,6 +122,13 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
                 BaseCase.OBEYS_START_DATE: True
+            },
+            "form_submissions": {
+                BaseCase.PRIMARY_KEYS: {"conversionId"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"submittedAt"},
+                BaseCase.OBEYS_START_DATE: True,
+                BaseCase.PARENT_STREAM: 'forms'
             },
             "owners": {
                 BaseCase.PRIMARY_KEYS: {"id"},
