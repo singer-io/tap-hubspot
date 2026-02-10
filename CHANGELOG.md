@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.1.0
+  * Add new streams [#284](https://github.com/singer-io/tap-hubspot/pull/284)
+    * [form_submissions](https://developers.hubspot.com/docs/api-reference/legacy/forms-v1/submissions/get-form-integrations-v1-submissions-forms-form_guid)
+    * [list_memberships](https://developers.hubspot.com/docs/api-reference/crm-lists-v3/memberships/get-crm-v3-lists-listId-memberships)
+
 ## 4.0.2
   * Retry the API requests for all the errors [#282](https://github.com/singer-io/tap-hubspot/pull/282)
 

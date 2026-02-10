@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "properties": {
+    "formId": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "submittedAt": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "conversionId": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "values": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "objectTypeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "pageUrl": {
+    "type": [
+      "null",
+      "string"
+    ]
+  }
+}

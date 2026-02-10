@@ -80,6 +80,9 @@ KNOWN_MISSING_FIELDS = {
         'enrichable',
         'themeName',
         'style',
+        'spamNotificationsEnabled',
+        'captchaVersion',
+        'spamNotificationsRecipients',
         'thankYouMessageJson',
         'createMarketableContact',
         'kickbackEmailWorkflowId',
@@ -158,10 +161,7 @@ class TestHubspotAllFields(HubspotBaseTest):
 
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
-        return self.expected_streams().difference({
-            'owners',
-            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-        })
+        return {'forms'}
 
     def setUp(self):
         self.maxDiff = None  # see all output in failure
@@ -180,6 +180,9 @@ class TestHubspotAllFields(HubspotBaseTest):
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in self.expected_records['companies']]
                 self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids)
+            elif stream == 'list_memberships':
+                list_ids = [contact_list['listId'] for contact_list in self.expected_records['contact_lists']]
+                self.expected_records[stream] = test_client.read(stream, parent_ids=list_ids)
             else:
                 self.expected_records[stream] = test_client.read(stream)
 
