@@ -101,9 +101,9 @@ workflows:
           requires:
             - ensure_env
       
-      # Stage 2: Comprehensive integration test
-      # Validates discovery, field selection, sync, and bookmarks in a single test run
-      # Replaces 6+ individual tests for significant time savings
+      # Stage 2: Integration tests (run in parallel)
+      # Comprehensive test validates discovery, field selection, sync, and bookmarks
+      # in a single test run, replacing several individual tests for time savings
       - integration_test:
           name: "Comprehensive Test"
           context:
@@ -111,6 +111,24 @@ workflows:
             - tier-1-tap-user
           test_command: |-
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_comprehensive.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Child Streams Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_child_stream_only.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Interrupted State Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
             - ensure_env
       
@@ -122,6 +140,8 @@ workflows:
           requires:
             - run_pylint_and_unittests
             - "Comprehensive Test"
+            - "Child Streams Test"
+            - "Interrupted State Test"
   build_daily:
     <<: *commit_jobs
     triggers:
