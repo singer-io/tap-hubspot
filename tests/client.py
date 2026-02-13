@@ -38,7 +38,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
 
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
@@ -55,7 +55,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def post(self, url, data=dict(), params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
@@ -86,7 +86,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def put(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PUT using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
@@ -105,7 +105,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def patch(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PATCH using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
@@ -124,7 +124,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def delete(self, url, params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
