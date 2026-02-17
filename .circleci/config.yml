@@ -85,25 +85,22 @@ jobs:
 
 workflows:
   version: 2
-  commit: &commit_jobs
+
+  # Fast suite - runs on every commit/PR push
+  commit:
     jobs:
-      # Stage 1: Environment setup (required by all tests)
       - ensure_env:
           context:
             - circleci-user
             - tier-1-tap-user
-      
-      # Stage 2: Linting and unit tests (runs in parallel with integration tests)
       - run_pylint_and_unittests:
           context:
             - circleci-user
             - tier-1-tap-user
           requires:
             - ensure_env
-      
-      # Stage 2: Integration tests (run in parallel)
-      # Comprehensive test validates discovery, field selection, sync, and bookmarks
-      # in a single test run, replacing several individual tests for time savings
+      # Comprehensive test covers discovery metadata, automatic fields,
+      # sync validation, and bookmark behavior in a single run
       - integration_test:
           name: "Comprehensive Test"
           context:
@@ -131,8 +128,6 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
             - ensure_env
-      
-      # Stage 3: Final gate (waits for all tests to complete)
       - build:
           context:
             - circleci-user
@@ -142,12 +137,78 @@ workflows:
             - "Comprehensive Test"
             - "Child Streams Test"
             - "Interrupted State Test"
-  build_daily:
-    <<: *commit_jobs
-    triggers:
-      - schedule:
-          cron: "0 1 * * *"
+
+  # Full suite - runs only on master merges
+  master:
+    jobs:
+      - ensure_env:
+          context:
+            - circleci-user
+            - tier-1-tap-user
           filters:
             branches:
-              only:
-                - master
+              only: master
+      - integration_test:
+          name: "Start Date Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "All Fields Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Pagination Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Bookmarks Test CRUD"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Bookmarks Test Static Data"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks_static.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Interrupted State with Offset Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync_offset.py
+          requires:
+            - "Bookmarks Test Static Data"
+            - "Bookmarks Test CRUD"
+      - build:
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          requires:
+            - "Start Date Test"
+            - "All Fields Test"
+            - "Pagination Test"
+            - "Interrupted State with Offset Test"
