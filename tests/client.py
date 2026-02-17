@@ -38,7 +38,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
 
     def get(self, url, params=dict()):
         """Perform a GET using the standard requests method and logs the action"""
@@ -55,7 +55,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def post(self, url, data=dict(), params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
@@ -86,14 +86,14 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def put(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PUT using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
         headers['content-type'] = "application/json"
         response = requests.put(url, json=data, params=params, headers=headers)
         LOGGER.info(
-            f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.status_code}")
+            f"TEST CLIENT | PUT {url} data={data} params={params}  STATUS: {response.text}")
         if debug:
             LOGGER.debug(response.text)
 
@@ -105,7 +105,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def patch(self, url, data, params=dict(), debug=DEBUG):
         """Perfroma a PATCH using the standard requests method and log the action"""
         headers = dict(self.HEADERS)
@@ -124,7 +124,7 @@ class TestClient():
                           max_tries=5,
                           jitter=None,
                           giveup=giveup,
-                          interval=10)
+                          interval=3)
     def delete(self, url, params=dict(), debug=DEBUG):
         """Perfroma a POST using the standard requests method and log the action"""
 
@@ -190,12 +190,16 @@ class TestClient():
 
         if stream == 'forms':
             return self.get_forms()
+        elif stream == 'form_submissions':
+            return self.get_form_submissions(parent_ids, pagination=pagination)
         elif stream == 'owners':
             return self.get_owners()
         elif stream == 'companies':
             return self.get_companies(since, pagination)
         elif stream == 'contact_lists':
             return self.get_contact_lists(since, pagination=pagination)
+        elif stream == 'list_memberships':
+            return self.get_list_memberships(parent_ids, pagination=pagination)
         elif stream == 'contacts_by_company':
             return self.get_contacts_by_company(parent_ids, pagination)
         elif stream == 'engagements':
@@ -391,6 +395,52 @@ class TestClient():
                     break
 
             params = {'count': page_size}
+
+        return records
+
+    def get_list_memberships(self, parent_ids, pagination=False):
+        page_size = self.BaseTest.expected_metadata().get('list_memberships', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        url = f"{BASE_URL}/crm/v3/lists/{{}}/memberships"
+        records = []
+        
+        for parent_id in parent_ids:
+            params = {'count': page_size}
+            while True:
+                child_url = url.format(parent_id)
+                response = self.get(child_url, params=params)
+
+                for record in response.get("results", []):
+                    record['listId'] = parent_id
+                    records.append(record)
+                
+                if not response.get("paging"):
+                    break
+                if pagination and len(records) > page_size+10:
+                    break
+                params["after"] = response.get("paging").get("next").get("after")
+
+        return records
+
+    def get_form_submissions(self, parent_ids, pagination=False):
+        page_size = self.BaseTest.expected_metadata().get('form_submissions', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
+        url = f"{BASE_URL}/form-integrations/v1/submissions/forms/{{}}"
+        records = []
+        
+        for parent_id in parent_ids:
+            params = {'count': page_size}
+            while True:
+                child_url = url.format(parent_id)
+                response = self.get(child_url, params=params)
+
+                for record in response.get("results", []):
+                    record['formId'] = parent_id
+                    records.append(record)
+                
+                if not response.get("paging"):
+                    break
+                if pagination and len(records) > page_size+10:
+                    break
+                params["after"] = response.get("paging").get("next").get("after")
 
         return records
 
@@ -743,7 +793,7 @@ class TestClient():
     ### CREATE
     ##########################################################################
 
-    def create(self, stream, company_ids=[], subscriptions=[], times=1):
+    def create(self, stream, company_ids=[], subscriptions=[], times=1, list_ids = []):
         """Dispatch create to make tests clean."""
 
         # Resets the access_token if the expiry time is less than or equal to the current time
@@ -758,6 +808,8 @@ class TestClient():
             return self.create_companies()
         elif stream == 'contact_lists':
             return self.create_contact_lists()
+        elif stream == 'list_memberships':
+            return self.create_list_memberships(list_ids)
         elif stream == 'static_contact_lists':
             staticlist = self.create_contact_lists(dynamic=False)
             return staticlist
@@ -953,6 +1005,17 @@ class TestClient():
         records = [response]
         return records
 
+    def create_list_memberships(self, list_ids):
+        records = []
+        for list_id in list_ids:
+            url = f"{BASE_URL}/crm/v3/lists/{list_id}/memberships/add"
+            data = ["318001", "199564445797"]
+            LOGGER.info("Post URL is %s", url)
+            # generate a record
+            self.put(url, data)
+            records.extend([{'listId': list_id, 'recordId': '318041'}, {'listId': list_id, 'recordId': '199564445797'}])
+        return records
+
     def create_contact_lists(self, dynamic=True):
         """
         HubSpot API https://developers.hubspot.com/docs/api-reference/crm-lists-v3/lists/post-crm-v3-lists-
@@ -964,31 +1027,39 @@ class TestClient():
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
         url = f"{BASE_URL}/crm/v3/lists"
-        data = {
-            "name": f"tweeters{record_uuid}",
-            "objectTypeId": "0-1",
-            "processingType": "DYNAMIC",
-            "filterBranch": {
-            "filterBranchType": "OR",
-            "filterBranches": [
-                {
-                    "filterBranchType": "AND",
-                    "filters": [
+        if dynamic:
+            data = {
+                "name": f"tweeters{record_uuid}",
+                "objectTypeId": "0-1",
+                "processingType": "DYNAMIC",
+                "filterBranch": {
+                "filterBranchType": "OR",
+                "filterBranches": [
                     {
-                        "filterType": "PROPERTY",
-                        "operation": {
-                        "operationType": "NUMBER",
-                        "operator": "IS_GREATER_THAN_OR_EQUAL_TO",
-                        "value": 12
-                        },
-                        "property": "hs_predictivecontactscore_v2"
+                        "filterBranchType": "AND",
+                        "filters": [
+                        {
+                            "filterType": "PROPERTY",
+                            "operation": {
+                            "operationType": "NUMBER",
+                            "operator": "IS_GREATER_THAN_OR_EQUAL_TO",
+                            "value": 12
+                            },
+                            "property": "hs_predictivecontactscore_v2"
+                        }
+                        ]
                     }
-                    ]
-                }
-            ]
-        }
+                ]
+            }
+                
+            }
+        else:
+            data = {
+                "name": f"tweeters{record_uuid}",
+                "objectTypeId": "0-1",
+                "processingType": "MANUAL"
+            }
             
-        }
         # generate a record
         response = self.post(url, data)
         records = response["list"]

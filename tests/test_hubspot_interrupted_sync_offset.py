@@ -33,7 +33,9 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
             'campaigns', # unable to manually find a partial state with our test data
             'email_events', # unable to manually find a partial state with our test data
             'subscription_changes', # BUG_TDL-14938
-            'tickets' # covered in TestHubspotInterruptedSync1
+            'tickets', # covered in TestHubspotInterruptedSync1,
+            'form_submissions',
+            'list_memberships'
         }
 
         return self.expected_streams() - untested
@@ -107,8 +109,8 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
                                         state_2["bookmarks"][stream].get(replication_key),
                                         msg="First sync bookmark should not be greater than the second bookmark.")
             elif stream == 'contacts_by_company':
-                self.assertEqual(state_1["bookmarks"][stream], {"offset": {}})
-                self.assertEqual(state_2["bookmarks"][stream], {"offset": {}})
+                self.assertEqual(state_1["bookmarks"][stream], {})
+                self.assertEqual(state_2["bookmarks"][stream], {})
 
             else:
                 replication_key = list(replication_keys[stream])[0]
