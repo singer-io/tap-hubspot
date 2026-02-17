@@ -77,23 +77,24 @@ class DiscoveryTest(HubspotBaseTest):
                         )
                 actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
                 # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
-                # verify the actual replication matches our expected replication method
+                # verify the actual replication matches our expected replication method   
                 if stream == "contacts":
                     self.assertEqual(
                         self.expected_replication_method().get(stream, None),
                         actual_replication_method,
                         msg="The actual replication method {} doesn't match the expected {}".format(
                             actual_replication_method,
-                            self.expected_replication_method().get(stream, None)))
+                            self.expected_replication_method().get(stream, None)))        
 
                 # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
                 actual_replication_method = stream_properties[0].get(
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-              
-                    if stream in ["contacts", "companies", "deals"]:                        
-                        self.assertTrue(actual_replication_method == self.INCREMENTAL,
+
+                    if stream in ["contacts", "companies", "deals"]:                      
+
+                        self.assertTrue(actual_replication_method == self.INCREMENTAL,    
                                     msg="Expected INCREMENTAL replication "
                                     "since there is a replication key")
                     else:
@@ -106,7 +107,7 @@ class DiscoveryTest(HubspotBaseTest):
                                         "since there is no replication key")
 
                 expected_primary_keys = self.expected_primary_keys()[stream]
-                expected_replication_keys = self.expected_replication_keys()[stream]
+                expected_replication_keys = self.expected_replication_keys()[stream]      
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
 
                 # verify that primary, replication and foreign keys are given the inclusion of automatic in metadata.
@@ -129,3 +130,17 @@ class DiscoveryTest(HubspotBaseTest):
                          and item.get("breadcrumb", ["properties", None])[1]
                          not in actual_automatic_fields}),
                     msg="Not all non key properties are set to available in metadata")
+
+                # verify parent-tap-stream-id for streams with dependencies
+                # contacts_by_company is dependent on companies stream
+                expected_parent_stream = None
+                if stream == "contacts_by_company":
+                    expected_parent_stream = "companies"
+                
+                actual_parent_stream = stream_properties[0].get("metadata", {}).get("parent-tap-stream-id")
+                
+                self.assertEqual(
+                    expected_parent_stream,
+                    actual_parent_stream,
+                    msg=f"Expected parent-tap-stream-id to be {expected_parent_stream} for stream {stream}, but got {actual_parent_stream}"
+                )
