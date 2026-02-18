@@ -1456,6 +1456,12 @@ def get_metadata(stream, schema):
     if stream.tap_stream_id == 'contacts_by_company':
         mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'companies')
 
+    if stream.tap_stream_id == 'form_submissions':
+        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'forms')
+
+    if stream.tap_stream_id == 'list_memberships':
+        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'contact_lists')
+
     return metadata.to_list(mdata)
 
 def load_discovered_schema(stream):
