@@ -139,7 +139,7 @@ workflows:
             - "Interrupted State Test"
 
   # Full suite - runs only on master merges
-  master:
+  master: &full_suite
     jobs:
       - ensure_env:
           context:
@@ -212,3 +212,14 @@ workflows:
             - "All Fields Test"
             - "Pagination Test"
             - "Interrupted State with Offset Test"
+
+  # Full suite on a daily schedule to catch API changes
+  build_daily:
+    <<: *full_suite
+    triggers:
+      - schedule:
+          cron: "0 1 * * *"
+          filters:
+            branches:
+              only:
+                - master
