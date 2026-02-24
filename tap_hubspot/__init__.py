@@ -1379,7 +1379,7 @@ def do_sync(STATE, catalog):
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.tap_stream_id for stream in selected_streams])
     for stream in selected_streams:
-        if stream.tap_stream_id in ["list_memberships", "form_submissions"]:
+        if stream.parent_tap_stream_id:
             # These streams are synced as part of their parent streams
             continue
 
