@@ -1242,6 +1242,7 @@ class Stream:
     key_properties = attr.ib()
     replication_key = attr.ib()
     replication_method = attr.ib()
+    parent_tap_stream_id = attr.ib(default=None)
 
 STREAMS = [
     # Do these first as they are incremental
@@ -1253,10 +1254,10 @@ STREAMS = [
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
-    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL'),
+    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL', 'forms'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
-    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL'),
+    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL', 'contact_lists'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
 
     # Do these last as they are full table
@@ -1453,14 +1454,8 @@ def get_metadata(stream, schema):
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
         mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
 
-    if stream.tap_stream_id == 'contacts_by_company':
-        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'companies')
-
-    if stream.tap_stream_id == 'form_submissions':
-        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'forms')
-
-    if stream.tap_stream_id == 'list_memberships':
-        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'contact_lists')
+    if stream.parent_tap_stream_id:
+        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', stream.parent_tap_stream_id)
 
     return metadata.to_list(mdata)
 
@@ -1495,7 +1490,7 @@ def discover_schemas():
 
     # Load the contacts_by_company schema
     LOGGER.info('Loading schema for contacts_by_company')
-    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE')
+    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE', 'companies')
     schema, mdata = load_discovered_schema(contacts_by_company)
 
     result['streams'].append({'stream': CONTACTS_BY_COMPANY,
