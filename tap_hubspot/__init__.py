@@ -1262,7 +1262,7 @@ STREAMS = [
 
     # Do these last as they are full table
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE')
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE', 'companies')
 ]
 
