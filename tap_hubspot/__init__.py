@@ -1424,8 +1424,8 @@ def validate_dependencies(ctx):
 
     for stream in STREAMS:
         if stream.parent_tap_stream_id:
-          if stream.tap_stream_id in ctx.selected_stream_ids and stream.parent_tap_stream_id not in ctx.selected_stream_ids:
-            errs.append(msg_tmpl.format(stream.tap_stream_id, stream.parent_tap_stream_id))
+            if stream.tap_stream_id in ctx.selected_stream_ids and stream.parent_tap_stream_id not in ctx.selected_stream_ids:
+                errs.append(msg_tmpl.format(stream.tap_stream_id, stream.parent_tap_stream_id))
     if errs:
         raise DependencyException(" ".join(errs))
 
