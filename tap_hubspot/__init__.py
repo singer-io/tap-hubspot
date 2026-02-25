@@ -1242,6 +1242,7 @@ class Stream:
     key_properties = attr.ib()
     replication_key = attr.ib()
     replication_method = attr.ib()
+    parent_tap_stream_id = attr.ib(default=None)
 
 STREAMS = [
     # Do these first as they are incremental
@@ -1253,15 +1254,16 @@ STREAMS = [
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
-    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL'),
+    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL', 'forms'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
-    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL'),
+    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL', 'contact_lists'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE')
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
+    Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE', 'companies')
 ]
 
 # pylint: disable=inconsistent-return-statements
@@ -1377,7 +1379,7 @@ def do_sync(STATE, catalog):
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.tap_stream_id for stream in selected_streams])
     for stream in selected_streams:
-        if stream.tap_stream_id in ["list_memberships", "form_submissions"]:
+        if stream.parent_tap_stream_id:
             # These streams are synced as part of their parent streams
             continue
 
@@ -1415,21 +1417,15 @@ class Context:
     def get_catalog_from_id(self, tap_stream_id):
         return [c for c in self.catalog.get('streams') if c.get('stream') == tap_stream_id][0]
 
-# stream a is dependent on stream STREAM_DEPENDENCIES[a]
-STREAM_DEPENDENCIES = {
-    CONTACTS_BY_COMPANY: 'companies',
-    'form_submissions': 'forms',
-    'list_memberships': 'contact_lists',
-}
-
 def validate_dependencies(ctx):
     errs = []
     msg_tmpl = ("Unable to extract {0} data. "
                 "To receive {0} data, you also need to select {1}.")
 
-    for k, v in STREAM_DEPENDENCIES.items():
-        if k in ctx.selected_stream_ids and v not in ctx.selected_stream_ids:
-            errs.append(msg_tmpl.format(k, v))
+    for stream in STREAMS:
+        if stream.parent_tap_stream_id:
+            if stream.tap_stream_id in ctx.selected_stream_ids and stream.parent_tap_stream_id not in ctx.selected_stream_ids:
+                errs.append(msg_tmpl.format(stream.tap_stream_id, stream.parent_tap_stream_id))
     if errs:
         raise DependencyException(" ".join(errs))
 
@@ -1453,8 +1449,8 @@ def get_metadata(stream, schema):
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
         mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
 
-    if stream.tap_stream_id == 'contacts_by_company':
-        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', 'companies')
+    if stream.parent_tap_stream_id:
+        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', stream.parent_tap_stream_id)
 
     return metadata.to_list(mdata)
 
@@ -1486,16 +1482,6 @@ def discover_schemas():
                                   "table_name": custom_stream["custom_object_name"],
                                   'schema': custom_stream["schema"],
                                   'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
-
-    # Load the contacts_by_company schema
-    LOGGER.info('Loading schema for contacts_by_company')
-    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE')
-    schema, mdata = load_discovered_schema(contacts_by_company)
-
-    result['streams'].append({'stream': CONTACTS_BY_COMPANY,
-                              'tap_stream_id': CONTACTS_BY_COMPANY,
-                              'schema': schema,
-                              'metadata': mdata})
 
     return result
 
