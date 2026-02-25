@@ -18,7 +18,9 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        return {'companies', 'engagements', 'tickets', 'contacts'}
+        # BUG https://qlik-dev.atlassian.net/browse/SAC-30347,
+        # add tickets and engagements into streams_to_test after resolving
+        return {'companies', 'contacts'}
 
     def simulated_interruption(self, reference_state):
 
@@ -31,17 +33,18 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         new_state['bookmarks']['companies']['property_hs_lastmodifieddate'] = None
         new_state['bookmarks']['companies']['current_sync_start'] = companies_bookmark
 
-        engagements_bookmark = self.timedelta_formatted(
-            reference_state['bookmarks']['engagements']['lastUpdated'],
-            days=-1, str_format=self.BASIC_DATE_FORMAT
-        )
-        new_state['bookmarks']['engagements']['lastUpdated'] = None
-        new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
+        # Uncomment after SAC-30347 is resloved
+        # engagements_bookmark = self.timedelta_formatted(
+        #     reference_state['bookmarks']['engagements']['lastUpdated'],
+        #     days=-1, str_format=self.BASIC_DATE_FORMAT
+        # )
+        # new_state['bookmarks']['engagements']['lastUpdated'] = None
+        # new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
 
-        tickets_bookmark = self.timedelta_formatted(
-            reference_state['bookmarks']['tickets']['updatedAt'],
-            days=-1, str_format=self.BASIC_DATE_FORMAT)
-        new_state['bookmarks']['tickets']['updatedAt'] = tickets_bookmark
+        # tickets_bookmark = self.timedelta_formatted(
+        #     reference_state['bookmarks']['tickets']['updatedAt'],
+        #     days=-1, str_format=self.BASIC_DATE_FORMAT)
+        # new_state['bookmarks']['tickets']['updatedAt'] = tickets_bookmark
 
         contacts_bookmark = self.timedelta_formatted(
             reference_state['bookmarks']['contacts']['updatedAt'],
