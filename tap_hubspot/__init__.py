@@ -886,7 +886,6 @@ def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, 
     }
     url = get_url("list_memberships", list_id=list_id)
     time_extracted = utils.now()
-    need_to_write_state = False
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
@@ -897,17 +896,18 @@ def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, 
             record['listId'] = list_id
 
             if record[bookmark_key] >= start:
-                need_to_write_state = True
                 singer.write_record("list_memberships", record, catalog.get('stream_alias'), time_extracted=time_extracted)
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    # Write state only if new records were processed
-    if need_to_write_state:
-        # Don't bookmark past the start of this sync to account for updated records during the sync.
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    if max_bk_value:
         new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-        STATE = singer.write_bookmark(STATE, 'list_memberships', bookmark_key, utils.strftime(new_bookmark))
-        singer.write_state(STATE)
+    else:
+        new_bookmark = sync_start_time
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'list_memberships', bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
 
     return STATE, max_bk_value
 
@@ -971,7 +971,6 @@ def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, 
         'limit': 50
     }
     time_extracted = utils.now()
-    need_to_write_state = False
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
@@ -982,17 +981,17 @@ def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, 
             record['formId'] = form_id
 
             if record[bookmark_key] >= start:
-                need_to_write_state = True
                 singer.write_record("form_submissions", record, catalog.get('stream_alias'), time_extracted=time_extracted)
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    # Write state only if new records were processed
-    if need_to_write_state:
-        # Don't bookmark past the start of this sync to account for updated records during the sync.
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    if max_bk_value:
         new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-        STATE = singer.write_bookmark(STATE, 'form_submissions', bookmark_key, utils.strftime(new_bookmark))
-        singer.write_state(STATE)
+    else:
+        new_bookmark = sync_start_time
+    STATE = singer.write_bookmark(STATE, 'form_submissions', bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
 
     return STATE, max_bk_value
 
