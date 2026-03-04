@@ -91,8 +91,7 @@ class DiscoveryTest(HubspotBaseTest):
                     "metadata", {self.REPLICATION_METHOD: None}).get(self.REPLICATION_METHOD)
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
-              
-                    if stream in ["contacts", "companies", "deals"]:                        
+                    if stream in ["contacts", "companies", "deals"]:
                         self.assertTrue(actual_replication_method == self.INCREMENTAL,
                                     msg="Expected INCREMENTAL replication "
                                     "since there is a replication key")
@@ -129,3 +128,24 @@ class DiscoveryTest(HubspotBaseTest):
                          and item.get("breadcrumb", ["properties", None])[1]
                          not in actual_automatic_fields}),
                     msg="Not all non key properties are set to available in metadata")
+
+                # verify parent-tap-stream-id for streams with dependencies
+                expected_parent_stream = None
+                # contacts_by_company is dependent on companies stream
+                if stream == "contacts_by_company":
+                    expected_parent_stream = "companies"
+                # form_submissions is dependent on forms stream
+                elif stream == "form_submissions":
+                    expected_parent_stream = "forms"
+                # list_memberships is dependent on contact_lists stream
+                elif stream == "list_memberships":
+                    expected_parent_stream = "contact_lists"
+
+                actual_parent_stream = stream_properties[0].get("metadata", {}).get(
+                    "parent-tap-stream-id")
+
+                self.assertEqual(
+                    expected_parent_stream,
+                    actual_parent_stream,
+                    msg=f"Expected parent-tap-stream-id to be {expected_parent_stream} " \
+                        f"for stream {stream}, but got {actual_parent_stream}")
