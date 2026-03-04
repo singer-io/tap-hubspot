@@ -902,7 +902,6 @@ def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, 
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time) if max_bk_value else sync_start_time
-    LOGGER.info("Writing list_memberships bookmark !!!! bk_key: %s, bookmark: %s \n", bookmark_key, utils.strftime(new_bookmark))
     STATE = singer.write_bookmark(STATE, 'list_memberships', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
@@ -940,6 +939,11 @@ def sync_contact_lists(STATE, ctx):
         has_more = True
         while has_more:
             data = post_search_endpoint(url, body).json()
+            # Child stream list_memberships is INCREMENTAL and needs a bookmark even if no records are extracted
+            if not data["lists"]:
+                new_bookmark = min(utils.strptime_to_utc(fs_max_bk_value), sync_start_time) if fs_max_bk_value else sync_start_time
+                STATE = singer.write_bookmark(STATE, 'list_memberships', fs_bookmark_key, utils.strftime(new_bookmark))
+                singer.write_state(STATE)
             for row in data["lists"]:
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 if record[bookmark_key] >= start:
@@ -984,7 +988,6 @@ def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, 
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time) if max_bk_value else sync_start_time
-    LOGGER.info("Writing form_submissions bookmark !!!! bk_key: %s, bookmark: %s \n", bookmark_key, utils.strftime(new_bookmark))
     STATE = singer.write_bookmark(STATE, 'form_submissions', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
@@ -1020,6 +1023,11 @@ def sync_forms(STATE, ctx):
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
+        # Child stream form_submissions is INCREMENTAL and needs a bookmark even if no records are extracted
+        if not data:
+            new_bookmark = min(utils.strptime_to_utc(fs_max_bk_value), sync_start_time) if fs_max_bk_value else sync_start_time
+            STATE = singer.write_bookmark(STATE, 'form_submissions', fs_bookmark_key, utils.strftime(new_bookmark))
+            singer.write_state(STATE)
         for row in data:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
