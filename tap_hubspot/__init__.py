@@ -901,11 +901,8 @@ def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, 
                 max_bk_value = record[bookmark_key]
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    if max_bk_value:
-        new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-    else:
-        new_bookmark = sync_start_time
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time) if max_bk_value else sync_start_time
+    LOGGER.info("Writing list_memberships bookmark !!!! bk_key: %s, bookmark: %s \n", bookmark_key, utils.strftime(new_bookmark))
     STATE = singer.write_bookmark(STATE, 'list_memberships', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
@@ -986,10 +983,8 @@ def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, 
                 max_bk_value = record[bookmark_key]
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    if max_bk_value:
-        new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-    else:
-        new_bookmark = sync_start_time
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time) if max_bk_value else sync_start_time
+    LOGGER.info("Writing form_submissions bookmark !!!! bk_key: %s, bookmark: %s \n", bookmark_key, utils.strftime(new_bookmark))
     STATE = singer.write_bookmark(STATE, 'form_submissions', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
