@@ -53,7 +53,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         ]
         requests.post('https://api.hubapi.com/crm-objects/v1/objects/tickets', json=ticket, headers=headers)
 
-    def ensure_enagement(self, headers):
+    def ensure_engagement(self, headers):
         access_token = self.get_access_token()
         headers = {
             'authorization': f'Bearer {access_token}',
