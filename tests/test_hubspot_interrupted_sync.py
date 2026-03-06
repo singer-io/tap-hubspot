@@ -18,9 +18,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        # BUG https://qlik-dev.atlassian.net/browse/SAC-30347,
-        # add tickets and engagements into streams_to_test after resolving
-        return {'companies', 'contacts'}
+        return {'companies', 'contacts', 'tickets', 'engagements'}
 
     def simulated_interruption(self, reference_state):
 
@@ -33,18 +31,17 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         new_state['bookmarks']['companies']['property_hs_lastmodifieddate'] = None
         new_state['bookmarks']['companies']['current_sync_start'] = companies_bookmark
 
-        # Uncomment after SAC-30347 is resloved
-        # engagements_bookmark = self.timedelta_formatted(
-        #     reference_state['bookmarks']['engagements']['lastUpdated'],
-        #     days=-1, str_format=self.BASIC_DATE_FORMAT
-        # )
-        # new_state['bookmarks']['engagements']['lastUpdated'] = None
-        # new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
+        engagements_bookmark = self.timedelta_formatted(
+            reference_state['bookmarks']['engagements']['lastUpdated'],
+            days=-1, str_format=self.BASIC_DATE_FORMAT
+        )
+        new_state['bookmarks']['engagements']['lastUpdated'] = None
+        new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
 
-        # tickets_bookmark = self.timedelta_formatted(
-        #     reference_state['bookmarks']['tickets']['updatedAt'],
-        #     days=-1, str_format=self.BASIC_DATE_FORMAT)
-        # new_state['bookmarks']['tickets']['updatedAt'] = tickets_bookmark
+        tickets_bookmark = self.timedelta_formatted(
+            reference_state['bookmarks']['tickets']['updatedAt'],
+            days=-1, str_format=self.BASIC_DATE_FORMAT)
+        new_state['bookmarks']['tickets']['updatedAt'] = tickets_bookmark
 
         contacts_bookmark = self.timedelta_formatted(
             reference_state['bookmarks']['contacts']['updatedAt'],
@@ -55,12 +52,12 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
 
     def get_properties(self):
         #        'start_date' : '2021-08-19T00:00:00Z'
-        # return {'start_date' : '2017-11-22T00:00:00Z'}
-        return {
-            'start_date' : datetime.strftime(
-                datetime.today()-timedelta(days=5), self.START_DATE_FORMAT
-            ),
-        }
+        return {'start_date' : '2017-11-22T00:00:00Z'}
+        # return {
+        #     'start_date' : datetime.strftime(
+        #         datetime.today()-timedelta(days=5), self.START_DATE_FORMAT
+        #     ),
+        # }
 
     def setUp(self):
         self.maxDiff = None  # see all output in failure
