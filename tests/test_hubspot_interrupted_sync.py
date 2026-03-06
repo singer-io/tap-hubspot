@@ -133,6 +133,8 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         state_1 = menagerie.get_state(conn_id)
 
         # Update state to simulate a bookmark
+        self.ensure_engagement()
+        self.ensure_ticket()
         new_state = self.simulated_interruption(state_1)
         menagerie.set_state(conn_id, new_state)
 
@@ -143,10 +145,6 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
 
         # Test by Stream
         for stream in expected_streams:
-            if (stream == 'engagements'):
-                self.ensure_engagement()
-            elif (stream == 'tickets'):
-                self.ensure_ticket()
 
             with self.subTest(stream=stream):
 
