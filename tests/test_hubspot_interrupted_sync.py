@@ -21,21 +21,21 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         """expected streams minus the streams not under test"""
         return {'companies', 'contacts', 'tickets', 'engagements'}
 
-    def ensure_tickets_and_engagements(self):
+    def get_access_token(self):
+        payload = {
+            'grant_type': 'refresh_token'
+        }
+        payload.update(self.get_credentials())
+
+        resp = requests.post("https://api.hubapi.com/oauth/v1/token", data=payload)
+        return resp.json()['access_token']
+
+    def ensure_ticket(self, headers):
         access_token = self.get_access_token()
         headers = {
             'authorization': f'Bearer {access_token}',
             'content-type': 'application/json'
         }
-
-        engagement = {
-            'engagement': {
-                'type': 'EMAIL',
-                'active': True
-            },
-            'metadata': {}
-        }
-        requests.post('https://api.hubapi.com/engagements/v1/engagements', json=engagement, headers=headers)
 
         ticket = [
             {
@@ -53,18 +53,21 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         ]
         requests.post('https://api.hubapi.com/crm-objects/v1/objects/tickets', json=ticket, headers=headers)
 
-    def get_access_token(self):
-        creds = self.get_credentials()
-        payload = {
-            "grant_type": "refresh_token",
-            "redirect_uri": creds['redirect_uri'],
-            "refresh_token": creds['refresh_token'],
-            "client_id": creds['client_id'],
-            "client_secret": creds['client_secret']
+    def ensure_enagement(self, headers):
+        access_token = self.get_access_token()
+        headers = {
+            'authorization': f'Bearer {access_token}',
+            'content-type': 'application/json'
         }
 
-        resp = requests.post("https://api.hubapi.com/oauth/v1/token", data=payload)
-        return resp.json()['access_token']
+        engagement = {
+            'engagement': {
+                'type': 'EMAIL',
+                'active': True
+            },
+            'metadata': {}
+        }
+        requests.post('https://api.hubapi.com/engagements/v1/engagements', json=engagement, headers=headers)
 
     def simulated_interruption(self, reference_state):
 
@@ -97,8 +100,6 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         return new_state
 
     def get_properties(self):
-        #        'start_date' : '2021-08-19T00:00:00Z'
-        # return {'start_date' : '2017-11-22T00:00:00Z'}
         return {
             'start_date' : datetime.strftime(
                 datetime.today()-timedelta(days=5), self.START_DATE_FORMAT
@@ -127,7 +128,6 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
             )
 
         # Run sync 1
-        self.ensure_tickets_and_engagements()
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
         state_1 = menagerie.get_state(conn_id)
@@ -143,6 +143,10 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
 
         # Test by Stream
         for stream in expected_streams:
+            if (stream == 'engagements'):
+                self.ensure_engagement()
+            elif (stream == 'tickets'):
+                self.ensure_ticket()
 
             with self.subTest(stream=stream):
 
