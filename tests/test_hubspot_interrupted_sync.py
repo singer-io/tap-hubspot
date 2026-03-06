@@ -30,7 +30,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         resp = requests.post("https://api.hubapi.com/oauth/v1/token", data=payload)
         return resp.json()['access_token']
 
-    def ensure_ticket(self, headers):
+    def ensure_ticket(self):
         access_token = self.get_access_token()
         headers = {
             'authorization': f'Bearer {access_token}',
@@ -53,7 +53,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         ]
         requests.post('https://api.hubapi.com/crm-objects/v1/objects/tickets', json=ticket, headers=headers)
 
-    def ensure_engagement(self, headers):
+    def ensure_engagement(self):
         access_token = self.get_access_token()
         headers = {
             'authorization': f'Bearer {access_token}',
