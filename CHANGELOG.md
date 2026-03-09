@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.3.0
+  * Always write bookmarks for form_submissions and list_memberships streams, even when there are no records. [#292](https://github.com/singer-io/tap-hubspot/pull/292)
+
 ## 4.2.0
   * Refactor parent-stream metadata for contacts_by_company, form_submissions, and list_memberships [#290](https://github.com/singer-io/tap-hubspot/pull/290) 
 
