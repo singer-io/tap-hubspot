@@ -31,12 +31,6 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         return resp.json()['access_token']
 
     def ensure_ticket(self):
-        access_token = self.get_access_token()
-        headers = {
-            'authorization': f'Bearer {access_token}',
-            'content-type': 'application/json'
-        }
-
         ticket = [
             {
                 'name': 'subject',
@@ -53,13 +47,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         ]
         requests.post('https://api.hubapi.com/crm-objects/v1/objects/tickets', json=ticket, headers=headers)
 
-    def ensure_engagement(self):
-        access_token = self.get_access_token()
-        headers = {
-            'authorization': f'Bearer {access_token}',
-            'content-type': 'application/json'
-        }
-
+    def ensure_engagement(self, headers):
         engagement = {
             'engagement': {
                 'type': 'EMAIL',
@@ -68,6 +56,15 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
             'metadata': {}
         }
         requests.post('https://api.hubapi.com/engagements/v1/engagements', json=engagement, headers=headers)
+
+    def ensure_engagement_and_ticket(self):
+        access_token = self.get_access_token()
+        headers = {
+            'authorization': f'Bearer {access_token}',
+            'content-type': 'application/json'
+        }
+        self.ensure_engagement(headers)
+        self.ensure_ticket(headers)
 
     def simulated_interruption(self, reference_state):
 
@@ -128,13 +125,12 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
             )
 
         # Run sync 1
+        self.ensure_engagement_and_ticket()
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
         state_1 = menagerie.get_state(conn_id)
 
         # Update state to simulate a bookmark
-        self.ensure_engagement()
-        self.ensure_ticket()
         new_state = self.simulated_interruption(state_1)
         menagerie.set_state(conn_id, new_state)
 
