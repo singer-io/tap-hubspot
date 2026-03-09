@@ -30,7 +30,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         resp = requests.post("https://api.hubapi.com/oauth/v1/token", data=payload)
         return resp.json()['access_token']
 
-    def ensure_ticket(self):
+    def ensure_ticket(self, headers):
         ticket = [
             {
                 'name': 'subject',
