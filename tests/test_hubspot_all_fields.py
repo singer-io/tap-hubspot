@@ -101,6 +101,7 @@ KNOWN_MISSING_FIELDS = {
         'captchaVersion',  # New field returned by API
         'spamNotificationsEnabled',  # New field returned by API
         'spamNotificationsRecipients',  # New field returned by API
+        'processDeal',  # this field is deprecated in v3 API
     },
     'companies': {  # BUG https://jira.talendforge.org/browse/TDL-15003
         'mergeAudits',

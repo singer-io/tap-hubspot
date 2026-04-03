@@ -30,7 +30,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test
-        
+
         PERFORMANCE: Only test 3 representative streams instead of all 14+.
         Bookmark logic is the same across all incremental streams.
         """
@@ -38,7 +38,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
             'companies',   # Incremental stream
             'contacts',    # Incremental stream with associations
             'deals',       # Incremental with v3 properties
-        } 
+        }
 
     def get_properties(self):
         return {
@@ -59,7 +59,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.expected_records = {stream: []
                                  for stream in expected_streams}
         for stream in expected_streams - {'contacts_by_company', 'list_memberships'}:
-            if stream == 'contacts': 
+            if stream == 'contacts':
                 self.times=10
             elif stream == 'contact_lists':
                 self.times=2
@@ -142,17 +142,27 @@ class TestHubspotBookmarks(HubspotBaseTest):
             )
             self.expected_records['list_memberships'] += record
 
-        # Update 1 record from the test seutp for each stream that has an update endpoint
+        # Update 1 record from the test setup for each stream that has an update endpoint
         for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
             primary_key = list(self.expected_primary_keys()[stream])[0]
             record_id = self.expected_records[stream][0][primary_key]
             record = self.test_client.update(stream, record_id)
             self.expected_records[stream].append(record)
 
+        # # Delete 1 record from the test setup for each stream that has an update endpoint
+        # for stream in expected_streams - STREAMS_WITHOUT_UPDATES:
+        #     primary_key = list(self.expected_primary_keys()[stream])[0]
+        #     record_id = self.expected_records[stream][0][primary_key]
+        #     self.record_to_delete = self.expected_records[stream][0]
+        #     self.test_client.delete_contacts([record_id])
+
         #run second sync
         second_record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records_2 = runner.get_records_from_target_output()
         state_2 = menagerie.get_state(conn_id)
+
+        # # retrieve deleted contacts (debug)
+        # archived_contacts = self.test_client.get_contacts(archived=True)
 
         # Test by Stream
         for stream in expected_streams:
