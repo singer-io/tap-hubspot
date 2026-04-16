@@ -15,7 +15,8 @@ setup(name='tap-hubspot',
           'requests==2.12.4',
           'backoff==1.3.2',
           'requests_mock==1.3.0',
-          'nose'
+          'nose',
+          'pytz'
       ],
       entry_points='''
           [console_scripts]
