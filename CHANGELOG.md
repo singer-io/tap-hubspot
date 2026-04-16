@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.4.0
+  * Phase 1 safety mechanism for HubSpot Contacts API v1 and Contact Lists API v1 sunset (April 30, 2026): sync completes but job is failed at the end when `contacts` or `contact_lists` streams are selected, with a clear message directing customers to upgrade to tap-hubspot v4.
+
 ## 3.3.0
   * Add support for personal access tokens (api_key) instead of passing oauth creds [#276](https://github.com/singer-io/tap-hubspot/pull/276)
 

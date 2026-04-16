@@ -1220,6 +1220,8 @@ class Stream:
     replication_key = attr.ib()
     replication_method = attr.ib()
 
+DEPRECATED_STREAMS = {'contacts', 'contact_lists'}
+
 STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
@@ -1321,6 +1323,30 @@ def get_selected_streams(remaining_streams, ctx):
             selected_streams.append(stream)
     return selected_streams
 
+def raise_notification(selected_streams):
+    """
+    Phase 1 safety mechanism for HubSpot API v1 sunset (effective April 30, 2026).
+
+    Called after all streams have finished syncing. If any of the deprecated streams
+    ('contacts' or 'contact_lists') were selected, the sync job is intentionally failed
+    with a clear upgrade message to prevent silent data corruption or hard 404 failures
+    after the sunset date.
+    """
+    deprecated_selected = [
+        s.tap_stream_id for s in selected_streams
+        if s.tap_stream_id in DEPRECATED_STREAMS
+    ]
+    if deprecated_selected:
+        streams_str = ", ".join(deprecated_selected)
+        raise Exception(
+            "ACTION REQUIRED - HubSpot API v1 Sunset (April 30, 2026): "
+            "The following selected stream(s) will be completely removed from this tap on April 30, 2026: [{}]. "
+            "To continue extracting this data, upgrade your connection to tap-hubspot v4 which uses the supported APIs. "
+            "Alternatively, de-select the affected stream(s) from your catalog to continue syncing "
+            "all other streams without interruption.".format(streams_str)
+        )
+
+
 def deselect_unselected_fields(catalog):
     """
     If a field isn't manually deselected, it will be included in the sync by default,
@@ -1371,6 +1397,7 @@ def do_sync(STATE, catalog):
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
+    raise_notification(selected_streams)
 
 class Context:
     def __init__(self, catalog):
