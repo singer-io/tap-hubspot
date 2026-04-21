@@ -56,15 +56,15 @@ class TestSyncEngagements(unittest.TestCase):
         sync_engagements(state, self.make_ctx())
 
         args = mock_gen_request.call_args[0]
-        self.assertEqual(args[1:], (
-            'engagements',
-            'https://api.hubapi.com/engagements/v1/engagements/paged',
-            {'limit': 190},
-            'results',
-            'hasMore',
-            ['offset'],
-            ['offset']
-        ))
+        self.assertEqual(args[1], 'engagements')
+        self.assertEqual(args[2], 'https://api.hubapi.com/engagements/v1/engagements/recent/modified')
+        self.assertIn('count', args[3])
+        self.assertEqual(args[3]['count'], 190)
+        self.assertIn('since', args[3])
+        self.assertEqual(args[4], 'results')
+        self.assertEqual(args[5], 'hasMore')
+        self.assertEqual(args[6], ['offset'])
+        self.assertEqual(args[7], ['offset'])
 
     @patch('singer.write_state')
     @patch('singer.write_schema')
@@ -89,7 +89,31 @@ class TestSyncEngagements(unittest.TestCase):
             sync_engagements(state, self.make_ctx())
 
         args = mock_gen_request.call_args[0]
-        self.assertEqual(args[3], {'limit': 100})
+        self.assertEqual(args[3]['count'], 100)
+
+    @patch('singer.write_state')
+    @patch('singer.write_schema')
+    @patch('singer.utils.strptime_to_utc')
+    @patch('singer.utils.strftime')
+    @patch('tap_hubspot.utils.now')
+    @patch('tap_hubspot.get_current_sync_start', return_value=None)
+    @patch('tap_hubspot.get_start', return_value='2023-06-15T00:00:00.000000Z')
+    @patch('tap_hubspot.load_schema', return_value=ENGAGEMENTS_SCHEMA)
+    @patch('tap_hubspot.gen_request', return_value=[])
+    def test_since_param_derived_from_bookmark(
+        self, mock_gen_request, mock_load_schema, mock_get_start,
+        mock_get_current_sync_start, mock_now, mock_strftime, mock_strptime_to_utc,
+        mock_write_schema, mock_write_state
+    ):
+        state = {"currently_syncing": "engagements"}
+        mock_now.return_value = datetime(2023, 12, 1, tzinfo=timezone.utc)
+        mock_strftime.return_value = '2023-06-15T00:00:00.000000Z'
+        mock_strptime_to_utc.return_value = datetime(2023, 6, 15, tzinfo=timezone.utc)
+
+        sync_engagements(state, self.make_ctx())
+
+        args = mock_gen_request.call_args[0]
+        self.assertEqual(args[3]['since'], 1686787200000)
 
     @patch('singer.write_record')
     @patch('singer.write_state')

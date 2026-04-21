@@ -91,7 +91,7 @@ ENDPOINTS = {
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
-    "engagements_all":        "/engagements/v1/engagements/paged",
+    "engagements_all":        "/engagements/v1/engagements/recent/modified",
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
@@ -1113,7 +1113,11 @@ def sync_engagements(STATE, ctx):
     singer.write_state(STATE)
 
     url = get_url("engagements_all")
-    params = {'limit': int(CONFIG.get('engagements_page_size') or 190)}
+    since_ts = int(utils.strptime_to_utc(start).timestamp() * 1000)
+    params = {
+        'count': int(CONFIG.get('engagements_page_size') or 190),
+        'since': since_ts,
+    }
     top_level_key = "results"
     engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
 
