@@ -358,7 +358,9 @@ def request(url, params=None):
 def lift_properties_and_versions(record):
     for key, value in record.get('properties', {}).items():
         computed_key = "property_{}".format(key)
-        record[computed_key] = value
+        # The v3 API returns "" for unset properties; map to None so the Singer
+        # Transformer coerces them to null rather than false for boolean fields.
+        record[computed_key] = None if value == "" else value
         if isinstance(value, dict):
             versions = value.get('versions')
             if versions:
