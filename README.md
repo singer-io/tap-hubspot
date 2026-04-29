@@ -7,18 +7,16 @@ This tap:
 - Extracts the following resources from HubSpot
   - [Campaigns](http://developers.hubspot.com/docs/methods/email/get_campaign_data)
   - [Companies](http://developers.hubspot.com/docs/methods/companies/get_company)
-  - [Contacts](https://developers.hubspot.com/docs/methods/contacts/get_contacts)
-  - [Contact Lists](http://developers.hubspot.com/docs/methods/lists/get_lists)
+  - [Contacts by Company](https://developers.hubspot.com/docs/api/crm/associations)
   - [Deals](http://developers.hubspot.com/docs/methods/deals/get_deals_modified)
   - [Deal Pipelines](https://developers.hubspot.com/docs/methods/deal-pipelines/get-all-deal-pipelines)
   - [Email Events](http://developers.hubspot.com/docs/methods/email/get_events)
   - [Engagements](https://developers.hubspot.com/docs/methods/engagements/get-all-engagements)
   - [Forms](http://developers.hubspot.com/docs/methods/forms/v2/get_forms)
-  - [Keywords](http://developers.hubspot.com/docs/methods/keywords/get_keywords)
   - [Owners](http://developers.hubspot.com/docs/methods/owners/get_owners)
   - [Subscription Changes](http://developers.hubspot.com/docs/methods/email/get_subscriptions_timeline)
-  - [Workflows](http://developers.hubspot.com/docs/methods/workflows/v3/get_workflows)
   - [Tickets](https://developers.hubspot.com/docs/api/crm/tickets)
+  - [Workflows](http://developers.hubspot.com/docs/methods/workflows/v3/get_workflows)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
