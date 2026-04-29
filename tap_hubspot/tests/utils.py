@@ -36,15 +36,10 @@ def seed_tap_hubspot_config():
 def get_clear_state():
     return {
         "bookmarks": {
-            "contacts": {
-                "offset": {},
-                "lastmodifieddate": None
-            },
             "companies": {
                 "offset": {},
                 "hs_lastmodifieddate": None
             }
-
         },
         "currently_syncing": None
     }

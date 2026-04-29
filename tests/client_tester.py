@@ -54,17 +54,6 @@ class TestHubspotTestClient(HubspotBaseTest):
     #     assert len(old_records) < len(new_records), \
     #         f"Before companies post found {len(old_records)} records. After post found {len(new_records)} records"
 
-    # def test_contact_lists_create(self):
-    #     # Testing contact_lists POST
-
-    #     old_records = self.test_client.get_contact_lists()
-    #     our_record = self.test_client.create_contact_lists()
-    #     new_records = self.test_client.get_contact_lists()
-
-    #     assert len(old_records) < len(new_records), \
-    #         f"Before post found {len(old_records)} records. After post found {len(new_records)} records"
-
-
     # def test_contacts_by_company_create(self):
     #     # Testing contacts_by_company PUT
 
@@ -204,17 +193,6 @@ class TestHubspotTestClient(HubspotBaseTest):
 
     #     updated_record = self.test_client.update_companies(record_id)
     #     updated_value = updated_record['properties']['description']['value']
-
-    #     self.assertNotEqual(initial_value, updated_value)
-
-    # def test_contact_lists_update(self):
-    #     initial_record = self.test_client.create_contact_lists()
-
-    #     record_id = initial_record[0]['listId']
-    #     initial_value = initial_record[0]['name']
-
-    #     updated_record = self.test_client.update_contact_lists(record_id)
-    #     updated_value = updated_record['name']
 
     #     self.assertNotEqual(initial_value, updated_value)
 

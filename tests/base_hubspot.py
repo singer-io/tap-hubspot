@@ -15,10 +15,6 @@ class HubspotBaseCase(BaseCase):
     # set the default start date which can be overridden in the tests.
     start_date = BaseCase.timedelta_formatted(dt.utcnow(), delta=timedelta(days=-1))
 
-    EXTRA_FIELDS = {
-        "contacts": { "versionTimestamp" }
-    }
-
     def setUp(self):
         missing_envs = [x for x in [
             'TAP_HUBSPOT_REDIRECT_URI',
@@ -61,20 +57,6 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"property_hs_lastmodifieddate"},
                 BaseCase.API_LIMIT: 250,
-                BaseCase.OBEYS_START_DATE: True
-            },
-            "contact_lists": {
-                BaseCase.PRIMARY_KEYS: {"listId"},
-                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.API_LIMIT: 250,
-                BaseCase.OBEYS_START_DATE: True
-            },
-            "contacts": {
-                BaseCase.PRIMARY_KEYS: {"vid"},
-                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"versionTimestamp"},
-                BaseCase.API_LIMIT: 100,
                 BaseCase.OBEYS_START_DATE: True
             },
             "contacts_by_company": {

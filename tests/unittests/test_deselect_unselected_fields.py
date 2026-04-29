@@ -11,7 +11,7 @@ class TestMainImpl(unittest.TestCase):
     def test_main_impl_default_behavior(self, mock_do_sync, mock_do_discover, mock_parse_args):
         """Test the default behavior of the main_impl function when select_fields_by_default is not set."""
         mock_args = MagicMock()
-        mock_args.config = {}
+        mock_args.config = {'api_key': 'test_key'}
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
@@ -29,7 +29,7 @@ class TestMainImpl(unittest.TestCase):
     def test_main_impl_select_fields_by_default_true(self, mock_do_sync, mock_do_discover, mock_parse_args):
         """Test the behavior of the main_impl function when select_fields_by_default is set to true."""
         mock_args = MagicMock()
-        mock_args.config = {'select_fields_by_default': 'true'}
+        mock_args.config = {'api_key': 'test_key', 'select_fields_by_default': 'true'}
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
@@ -47,7 +47,7 @@ class TestMainImpl(unittest.TestCase):
     def test_main_impl_select_fields_by_default_false(self, mock_do_sync, mock_do_discover, mock_parse_args):
         """Test the behavior of the main_impl function when select_fields_by_default is set to false."""
         mock_args = MagicMock()
-        mock_args.config = {'select_fields_by_default': 'false'}
+        mock_args.config = {'api_key': 'test_key', 'select_fields_by_default': 'false'}
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
@@ -65,7 +65,7 @@ class TestMainImpl(unittest.TestCase):
     def test_main_impl_invalid_select_fields_by_default(self, mock_do_sync, mock_do_discover, mock_parse_args):
         """Test the behavior of the main_impl function when select_fields_by_default is set to an invalid value."""
         mock_args = MagicMock()
-        mock_args.config = {'select_fields_by_default': 'invalid'}
+        mock_args.config = {'api_key': 'test_key', 'select_fields_by_default': 'invalid'}
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
@@ -152,7 +152,7 @@ class TestDoSync(unittest.TestCase):
         mock_generate_custom_streams.return_value = []
 
         # Mocking the catalog and state
-        CONFIG.update({'select_fields_by_default': 'false'})
+        CONFIG.update({'select_fields_by_default': False})
         catalog = {'streams': []}
         state = {}
 

@@ -78,20 +78,6 @@ class HubspotBaseTest(BaseCase):
                 self.EXPECTED_PAGE_SIZE: 250,
                 self.OBEYS_START_DATE: True
             },
-            "contact_lists": {
-                self.PRIMARY_KEYS: {"listId"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"updatedAt"},
-                self.EXPECTED_PAGE_SIZE: 250,
-                self.OBEYS_START_DATE: True
-            },
-            "contacts": {
-                self.PRIMARY_KEYS: {"vid"},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"versionTimestamp"},
-                self.EXPECTED_PAGE_SIZE: 100,
-                self.OBEYS_START_DATE: True
-            },
             "contacts_by_company": {
                 self.PRIMARY_KEYS: {"company-id", "contact-id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,

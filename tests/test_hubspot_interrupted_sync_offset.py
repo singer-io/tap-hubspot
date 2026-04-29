@@ -10,13 +10,9 @@ from base import HubspotBaseTest
 from client import TestClient
 
 
-class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
-    """Testing interrupted syncs for streams that implement unique bookmarking logic."""
+class HubspotInterruptedSyncOffsetBase(HubspotBaseTest):
+    """Base class for testing interrupted syncs for streams that implement unique bookmarking logic."""
     synced_records = None
-
-    @staticmethod
-    def name():
-        return "tt_hubspot_interrupt_contact_lists"
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
@@ -38,13 +34,6 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
 
         return self.expected_streams() - untested
 
-    def stream_to_interrupt(self):
-        return 'contact_lists'
-
-    def state_to_inject(self, new_state):
-        new_state['bookmarks']['contact_lists'] = {'offset': {'offset': 250}}
-        return new_state
-
     def get_properties(self):
         return {
             'start_date' : datetime.strftime(
@@ -56,12 +45,6 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
         self.maxDiff = None  # see all output in failure
 
     def test_run(self):
-
-        # BUG TDL-16094 [tap-hubspot] `contacts` streams fails to recover from sync interruption
-        if self.stream_to_interrupt() == 'contacts':
-            self.skipTest("Skipping contacts TEST! See BUG[TDL-16094]")
-
-
         expected_streams = self.streams_to_test()
 
         conn_id = connections.ensure_connection(self)
@@ -117,28 +100,7 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
                                     msg="First sync bookmark should not be greater than the second bookmark.")
 
 
-class TestHubspotInterruptedSyncOffsetContacts(TestHubspotInterruptedSyncOffsetContactLists):
-    """Testing interrupted syncs for streams that implement unique bookmarking logic."""
-    @staticmethod
-    def name():
-        return "tt_hubspot_interrupt_contacts"
-
-    def get_properties(self):
-        return {
-            'start_date' : datetime.strftime(
-                datetime.today()-timedelta(days=3), self.START_DATE_FORMAT
-            ),
-        }
-
-
-    def stream_to_interrupt(self):
-        return 'contacts'
-
-    def state_to_inject(self, new_state):
-        new_state['bookmarks']['contacts'] = {'offset': {'vidOffset': 3502}}
-        return new_state
-
-class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetContactLists):
+class TestHubspotInterruptedSyncOffsetDeals(HubspotInterruptedSyncOffsetBase):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
     @staticmethod
     def name():
@@ -160,7 +122,7 @@ class TestHubspotInterruptedSyncOffsetDeals(TestHubspotInterruptedSyncOffsetCont
         return new_state
 
 
-class TestHubspotInterruptedSyncOffsetCompanies(TestHubspotInterruptedSyncOffsetContactLists):
+class TestHubspotInterruptedSyncOffsetCompanies(HubspotInterruptedSyncOffsetBase):
     """Testing interrupted syncs for streams that implement unique bookmarking logic."""
     @staticmethod
     def name():

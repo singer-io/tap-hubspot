@@ -55,12 +55,7 @@ class TestHubspotBookmarks(HubspotBaseTest):
         self.expected_records = {stream: []
                                  for stream in expected_streams}
         for stream in expected_streams - {'contacts_by_company'}:
-            if stream == 'contacts': 
-                self.times=10
-            elif stream == 'contact_lists':
-                self.times=2
-            else:
-                self.times =3
+            self.times = 3
 
             if stream == 'email_events':
                 email_records = self.test_client.create(stream, self.times)
@@ -71,16 +66,12 @@ class TestHubspotBookmarks(HubspotBaseTest):
                 for _ in range(self.times):
                     record = self.test_client.create(stream)
                     self.expected_records[stream] += record
-                if stream == 'contact_lists':
-                    static_list = self.test_client.create('static_contact_lists')
-                    self.expected_records[stream] += static_list
 
         if 'contacts_by_company' in expected_streams:  # do last
             company_ids = [record['companyId'] for record in self.expected_records['companies']]
-            contact_records = self.expected_records['contacts']
             for i in range(self.times):
                 record = self.test_client.create_contacts_by_company(
-                    company_ids=company_ids, contact_records=contact_records
+                    company_ids=company_ids
                 )
                 self.expected_records['contacts_by_company'] += record
 
@@ -117,9 +108,8 @@ class TestHubspotBookmarks(HubspotBaseTest):
 
         if 'contacts_by_company' in expected_streams:
             company_ids = [record['companyId'] for record in self.expected_records['companies'][:-1]]
-            contact_records = self.expected_records['contacts'][-1:]
             record = self.test_client.create_contacts_by_company(
-                company_ids=company_ids, contact_records=contact_records
+                company_ids=company_ids
             )
             self.expected_records['contacts_by_company'] += record
 

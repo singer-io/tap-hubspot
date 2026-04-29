@@ -17,7 +17,7 @@ from singer import metadata
 from singer import utils
 from singer import (transform,
                     UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING,
-                    Transformer, _transform_datetime)
+                    Transformer)
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -69,11 +69,6 @@ CONFIG = {
 }
 
 ENDPOINTS = {
-    "contacts_properties":  "/properties/v1/contacts/properties",
-    "contacts_all":         "/contacts/v1/lists/all/contacts/all",
-    "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
-    "contacts_detail":      "/contacts/v1/contact/vids/batch/",
-
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
@@ -97,7 +92,6 @@ ENDPOINTS = {
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
-    "contact_lists":        "/contacts/v1/lists",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/crm/v3/owners/",
@@ -215,7 +209,7 @@ def parse_custom_schema(entity_name, data, is_custom_object=False):
         }
 
     return {
-        field['name']: get_field_schema(field['type'], entity_name != 'contacts')
+        field['name']: get_field_schema(field['type'], extras=True)
         for field in data
     }
 
@@ -230,16 +224,9 @@ def get_v3_schema(entity_name):
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
-def load_associated_company_schema():
-    associated_company_schema = load_schema("companies")
-    #pylint: disable=line-too-long
-    associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
-    associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
-    return associated_company_schema
-
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals", "tickets"]:
+    if entity_name in ["companies", "deals", "tickets"]:
         custom_schema = get_custom_schema(entity_name)
 
         schema['properties']['properties'] = {
@@ -263,9 +250,6 @@ def load_schema(entity_name):
             # Make properties_versions selectable and share the same schema.
             versions_schema = utils.load_json(get_abs_path('schemas/versions.json'))
             schema['properties']['properties_versions'] = versions_schema
-
-    if entity_name == "contacts":
-        schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -493,74 +477,6 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     singer.write_state(STATE)
 
 
-def _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key):
-    if len(vids) == 0:
-        return
-
-    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True, "formSubmissionMode" : "all"}).json()
-    time_extracted = utils.now()
-    mdata = metadata.to_map(catalog.get('metadata'))
-    for record in data.values():
-        # Explicitly add the bookmark field "versionTimestamp" and its value in the record.
-        record[bookmark_key] = bookmark_values.get(record.get("vid"))
-        record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
-        singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-
-default_contact_params = {
-    'showListMemberships': True,
-    'includeVersion': True,
-    'count': 100,
-}
-
-def sync_contacts(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    bookmark_key = 'versionTimestamp'
-    start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
-    LOGGER.info("sync_contacts from %s", start)
-
-    max_bk_value = start
-    schema = load_schema("contacts")
-
-    singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
-
-    url = get_url("contacts_all")
-
-    vids = []
-    # Dict to store replication key value for each contact record
-    bookmark_values = {}
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
-            modified_time = None
-            if bookmark_key in row:
-                modified_time = utils.strptime_with_tz(
-                    _transform_datetime( # pylint: disable=protected-access
-                        row[bookmark_key],
-                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
-
-            if not modified_time or modified_time >= start:
-                vids.append(row['vid'])
-                # Adding replication key value in `bookmark_values` dict
-                # Here, key is vid(primary key) and value is replication key value.
-                bookmark_values[row['vid']] = utils.strftime(modified_time)
-
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
-
-            if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
-                vids = []
-
-        _sync_contact_vids(catalog, vids, schema, bumble_bee, bookmark_values, bookmark_key)
-
-    # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(max_bk_value, sync_start_time)
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(new_bookmark))
-    singer.write_state(STATE)
-    return STATE
-
 class ValidationPredFailed(Exception):
     pass
 
@@ -568,8 +484,6 @@ class ValidationPredFailed(Exception):
 # we'll need to use the companies_all endpoint
 def use_recent_companies_endpoint(response):
     return response["total"] < 10000
-
-default_contacts_by_company_params = {'count' : 100}
 
 # NB> to do: support stream aliasing and field selection
 def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
@@ -954,39 +868,6 @@ def sync_email_events(STATE, ctx):
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
     return STATE
 
-def sync_contact_lists(STATE, ctx):
-    catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
-    mdata = metadata.to_map(catalog.get('metadata'))
-    schema = load_schema("contact_lists")
-    bookmark_key = 'updatedAt'
-    singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
-
-    start = get_start(STATE, "contact_lists", bookmark_key)
-    max_bk_value = start
-
-    LOGGER.info("sync_contact_lists from %s", start)
-
-    url = get_url("contact_lists")
-    params = {'count': 250}
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
-            record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-
-            if record[bookmark_key] >= start:
-                singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-    # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-    STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, utils.strftime(new_bookmark))
-    singer.write_state(STATE)
-
-    return STATE
-
 def sync_forms(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -1220,20 +1101,16 @@ class Stream:
     replication_key = attr.ib()
     replication_method = attr.ib()
 
-DEPRECATED_STREAMS = {'contacts', 'contact_lists'}
-
 STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes, ['timestamp', 'portalId', 'recipient'], 'startTimestamp', 'INCREMENTAL'),
     Stream('email_events', sync_email_events, ['id'], 'startTimestamp', 'INCREMENTAL'),
-    Stream('contacts', sync_contacts, ["vid"], 'versionTimestamp', 'INCREMENTAL'),
     Stream('deals', sync_deals, ["dealId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('companies', sync_companies, ["companyId"], 'property_hs_lastmodifieddate', 'INCREMENTAL'),
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
-    Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
 
     # Do these last as they are full table
@@ -1323,30 +1200,6 @@ def get_selected_streams(remaining_streams, ctx):
             selected_streams.append(stream)
     return selected_streams
 
-def raise_notification(selected_streams):
-    """
-    Phase 1 safety mechanism for HubSpot API v1 sunset (effective April 30, 2026).
-
-    Called after all streams have finished syncing. If any of the deprecated streams
-    ('contacts' or 'contact_lists') were selected, the sync job is intentionally failed
-    with a clear upgrade message to prevent silent data corruption or hard 404 failures
-    after the sunset date.
-    """
-    deprecated_selected = [
-        s.tap_stream_id for s in selected_streams
-        if s.tap_stream_id in DEPRECATED_STREAMS
-    ]
-    if deprecated_selected:
-        streams_str = ", ".join(deprecated_selected)
-        raise Exception(
-            "ACTION REQUIRED - HubSpot API v1 Sunset (April 30, 2026): "
-            "The following selected stream(s) will be completely removed from this tap on April 30, 2026: [{}]. "
-            "To continue extracting this data, upgrade your connection to tap-hubspot v4 which uses the supported APIs. "
-            "Alternatively, de-select the affected stream(s) from your catalog to continue syncing "
-            "all other streams without interruption.".format(streams_str)
-        )
-
-
 def deselect_unselected_fields(catalog):
     """
     If a field isn't manually deselected, it will be included in the sync by default,
@@ -1397,7 +1250,6 @@ def do_sync(STATE, catalog):
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
-    raise_notification(selected_streams)
 
 class Context:
     def __init__(self, catalog):

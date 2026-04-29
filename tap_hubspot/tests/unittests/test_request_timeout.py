@@ -68,7 +68,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
         """
             Verify that if request_timeout is not provided in config then default value is used
         """
-        tap_hubspot.CONFIG = {}
+        tap_hubspot.CONFIG.pop('request_timeout', None)
         request_timeout = tap_hubspot.get_request_timeout()
 
         self.assertEqual(request_timeout, 300) # Verify timeout value

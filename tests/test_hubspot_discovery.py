@@ -78,13 +78,6 @@ class DiscoveryTest(HubspotBaseTest):
                 actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
                 # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
                 # verify the actual replication matches our expected replication method
-                if stream == "contacts":
-                    self.assertEqual(
-                        self.expected_replication_method().get(stream, None),
-                        actual_replication_method,
-                        msg="The actual replication method {} doesn't match the expected {}".format(
-                            actual_replication_method,
-                            self.expected_replication_method().get(stream, None)))
 
                 # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
                 actual_replication_method = stream_properties[0].get(
@@ -92,7 +85,7 @@ class DiscoveryTest(HubspotBaseTest):
                 if stream_properties[0].get(
                         "metadata", {self.REPLICATION_KEYS: []}).get(self.REPLICATION_KEYS, []):
               
-                    if stream in ["contacts", "companies", "deals"]:                        
+                    if stream in ["companies", "deals"]:                        
                         self.assertTrue(actual_replication_method == self.INCREMENTAL,
                                     msg="Expected INCREMENTAL replication "
                                     "since there is a replication key")
@@ -114,7 +107,7 @@ class DiscoveryTest(HubspotBaseTest):
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
-                if stream in ["contacts", "companies", "deals"]:
+                if stream in ["companies", "deals"]:
                     self.assertEqual(expected_automatic_fields,
                                     actual_automatic_fields,
                                     msg=f"expected {expected_automatic_fields} automatic fields but got {actual_automatic_fields}"
