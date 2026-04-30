@@ -56,11 +56,6 @@ CONFIG = {
 
 
 ENDPOINTS = {
-    "contacts_properties":  "/properties/v1/contacts/properties",
-    "contacts_all":         "/contacts/v1/lists/all/contacts/all",
-    "contacts_recent":      "/contacts/v1/lists/recently_updated/contacts/recent",
-    "contacts_detail":      "/contacts/v1/contact/vids/batch/",
-
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
@@ -81,7 +76,6 @@ ENDPOINTS = {
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
-    "contact_lists":        "/contacts/v1/lists",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
     "owners":               "/owners/v2/owners",
@@ -140,8 +134,7 @@ def get_field_schema(field_type, extras=False):
 
 def parse_custom_schema(entity_name, data):
     return {
-        field['name']: get_field_schema(
-            field['type'], entity_name != "contacts")
+        field['name']: get_field_schema(field['type'], extras=True)
         for field in data
     }
 
@@ -153,24 +146,14 @@ def get_custom_schema(entity_name):
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
-def load_associated_company_schema():
-    associated_company_schema = load_schema("companies")
-    #pylint: disable=line-too-long
-    associated_company_schema['properties']['company-id'] = associated_company_schema['properties'].pop('companyId')
-    associated_company_schema['properties']['portal-id'] = associated_company_schema['properties'].pop('portalId')
-    return associated_company_schema
-
 def load_schema(entity_name):
     schema = utils.load_json(get_abs_path('schemas/{}.json'.format(entity_name)))
-    if entity_name in ["contacts", "companies", "deals"]:
+    if entity_name in ["companies", "deals"]:
         custom_schema = get_custom_schema(entity_name)
         schema['properties']['properties'] = {
             "type": "object",
             "properties": custom_schema,
         }
-
-    if entity_name == "contacts":
-        schema['properties']['associated-company'] = load_associated_company_schema()
 
     return schema
 
@@ -294,60 +277,6 @@ def gen_request(STATE, tap_stream_id, url, params, path, more_key, offset_keys, 
     STATE = singer.clear_offset(STATE, tap_stream_id)
     singer.write_state(STATE)
 
-
-def _sync_contact_vids(catalog, vids, schema, bumble_bee):
-    if len(vids) == 0:
-        return
-
-    data = request(get_url("contacts_detail"), params={'vid': vids, 'showListMemberships' : True}).json()
-    time_extracted = utils.now()
-
-    for _, record in data.items():
-        record = bumble_bee.transform(record, schema)
-        singer.write_record("contacts", record, catalog.get('stream_alias'), time_extracted)
-
-default_contact_params = {
-    'showListMemberships': True,
-    'count': 100,
-}
-
-def sync_contacts(STATE, catalog):
-    bookmark_key = 'lastmodifieddate'
-    start = utils.strptime_with_tz(get_start(STATE, "contacts", bookmark_key))
-    LOGGER.info("sync_contacts from %s", start)
-
-    max_bk_value = start
-    schema = load_schema("contacts")
-
-    singer.write_schema("contacts", schema, ["vid"], [bookmark_key], catalog.get('stream_alias'))
-
-    url = get_url("contacts_all")
-
-    vids = []
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'contacts', url, default_contact_params, 'contacts', 'has-more', ['vid-offset'], ['vidOffset']):
-            modified_time = None
-            if bookmark_key in row['properties']:
-                modified_time = utils.strptime_with_tz(
-                    _transform_datetime( # pylint: disable=protected-access
-                        row['properties'][bookmark_key]['value'],
-                        UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING))
-
-            if not modified_time or modified_time >= start:
-                vids.append(row['vid'])
-
-            if modified_time and modified_time >= max_bk_value:
-                max_bk_value = modified_time
-
-            if len(vids) == 100:
-                _sync_contact_vids(catalog, vids, schema, bumble_bee)
-                vids = []
-
-        _sync_contact_vids(catalog, vids, schema, bumble_bee)
-
-    STATE = singer.write_bookmark(STATE, 'contacts', bookmark_key, utils.strftime(max_bk_value))
-    singer.write_state(STATE)
-    return STATE
 
 class ValidationPredFailed(Exception):
     pass
@@ -536,33 +465,6 @@ def sync_email_events(STATE, catalog):
     STATE = sync_entity_chunked(STATE, catalog, "email_events", ["id"], "events")
     return STATE
 
-def sync_contact_lists(STATE, catalog):
-    schema = load_schema("contact_lists")
-
-    bookmark_key = 'updatedAt'
-    singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
-
-    start = get_start(STATE, "contact_lists", bookmark_key)
-    max_bk_value = start
-
-    LOGGER.info("sync_contact_lists from %s", start)
-
-    url = get_url("contact_lists")
-    params = {'count': 250}
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in gen_request(STATE, 'contact_lists', url, params, "lists", "has-more", ["offset"], ["offset"]):
-            record = bumble_bee.transform(row, schema)
-
-            if record[bookmark_key] >= start:
-                singer.write_record("contact_lists", record, catalog.get('stream_alias'), utils.now())
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
-
-    STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, max_bk_value)
-    singer.write_state(STATE)
-
-    return STATE
-
 def sync_forms(STATE, catalog):
     schema = load_schema("forms")
     bookmark_key = 'updatedAt'
@@ -691,8 +593,6 @@ class Stream(object):
     tap_stream_id = attr.ib()
     sync = attr.ib()
 
-DEPRECATED_STREAMS = {'contacts', 'contact_lists'}
-
 STREAMS = [
     # Do these first as they are incremental
     Stream('subscription_changes', sync_subscription_changes),
@@ -703,8 +603,6 @@ STREAMS = [
     Stream('workflows', sync_workflows),
     Stream('owners', sync_owners),
     Stream('campaigns', sync_campaigns),
-    Stream('contact_lists', sync_contact_lists),
-    Stream('contacts', sync_contacts),
     Stream('companies', sync_companies),
     Stream('deals', sync_deals),
     Stream('deal_pipelines', sync_deal_pipelines),
@@ -734,30 +632,6 @@ def get_selected_streams(remaining_streams, annotated_schema):
     return selected_streams
 
 
-def raise_notification(selected_streams):
-    """
-    Phase 1 safety mechanism for HubSpot API v1 sunset (effective April 30, 2026).
-
-    Called after all streams have finished syncing. If any of the deprecated streams
-    ('contacts' or 'contact_lists') were selected, the sync job is intentionally failed
-    with a clear upgrade message to prevent silent data corruption or hard 404 failures
-    after the sunset date.
-    """
-    deprecated_selected = [
-        s.tap_stream_id for s in selected_streams
-        if s.tap_stream_id in DEPRECATED_STREAMS
-    ]
-    if deprecated_selected:
-        streams_str = ", ".join(deprecated_selected)
-        raise Exception(
-            "ACTION REQUIRED - HubSpot API v1 Sunset (April 30, 2026): "
-            "The following selected stream(s) will be completely removed from this tap on April 30, 2026: [{}]. "
-            "To continue extracting this data, upgrade your connection to tap-hubspot v4 which uses the supported APIs. "
-            "Alternatively, de-select the affected stream(s) from your catalog to continue syncing "
-            "all other streams without interruption.".format(streams_str)
-        )
-
-
 def do_sync(STATE, catalogs):
     remaining_streams = get_streams_to_sync(STREAMS, STATE)
     selected_streams = get_selected_streams(remaining_streams, catalogs)
@@ -778,7 +652,6 @@ def do_sync(STATE, catalogs):
     STATE = singer.set_currently_syncing(STATE, None)
     singer.write_state(STATE)
     LOGGER.info("Sync completed")
-    raise_notification(selected_streams)
 
 
 def load_discovered_schema(stream):
