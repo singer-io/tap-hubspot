@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.14.1
+  * Remove streams - `contacts` and `contact_lists`
+
 ## 2.14.0
   * Phase 1 safety mechanism for HubSpot Contacts API v1 and Contact Lists API v1 sunset (April 30, 2026): sync completes but job is failed at the end when `contacts` or `contact_lists` streams are selected, with a clear message directing customers to upgrade to tap-hubspot v4.
 
