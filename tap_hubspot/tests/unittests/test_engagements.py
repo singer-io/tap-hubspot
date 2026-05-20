@@ -83,24 +83,6 @@ class TestSyncEngagements(unittest.TestCase):
     @patch('singer.write_schema')
     @patch('tap_hubspot.request')
     @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00.000000Z')
-    def test_modified_after_request_resumes_from_in_flight_cursor_offset(
-        self, mock_get_start, mock_request, mock_write_schema, mock_write_state
-    ):
-        mock_request.return_value = make_response([])
-        in_flight_cursor = "in-flight-cursor-xyz"
-        state = {
-            "bookmarks": {"engagements": {"cursor": "old-cursor", "offset": {"cursor": in_flight_cursor}}}
-        }
-
-        sync_engagements(state, self.make_ctx())
-
-        call_params = mock_request.call_args[0][1]
-        self.assertEqual(call_params['after'], in_flight_cursor)
-
-    @patch('singer.write_state')
-    @patch('singer.write_schema')
-    @patch('tap_hubspot.request')
-    @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00.000000Z')
     def test_engagements_page_size_maps_to_delta_limit(
         self, mock_get_start, mock_request, mock_write_schema, mock_write_state
     ):

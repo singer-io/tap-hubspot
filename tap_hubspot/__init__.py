@@ -144,18 +144,17 @@ def write_current_sync_start(state, tap_stream_id, start):
     return singer.write_bookmark(state, tap_stream_id, "current_sync_start", value)
 
 def get_engagements_cursor(state, start):
-    offset = singer.get_offset(state, 'engagements') or {}
-    if offset.get('cursor'):
-        return offset['cursor']
-
+    # Continue from the opaque cursor written after a successful modified/after sync.
     cursor = singer.get_bookmark(state, 'engagements', 'cursor')
     if cursor:
         return cursor
 
+    # Support older state that stored the modified/after cursor as the after bookmark.
     previous_after = singer.get_bookmark(state, 'engagements', 'after')
     if previous_after:
         return previous_after
 
+    # Migrate timestamp-based state by seeding modified/after with epoch millis.
     return int(utils.strptime_to_utc(start).timestamp() * 1000)
 
 def clean_state(state):
@@ -1145,12 +1144,8 @@ def sync_engagements(STATE, ctx):
                 if not data.get('hasMore', False):
                     break
 
-                STATE = singer.clear_offset(STATE, 'engagements')
                 params['after'] = cursor
-                STATE = singer.set_offset(STATE, 'engagements', 'cursor', cursor)
-                singer.write_state(STATE)
 
-    STATE = singer.clear_offset(STATE, 'engagements')
     STATE = singer.write_bookmark(STATE, 'engagements', 'cursor', cursor)
     STATE = singer.clear_bookmark(STATE, 'engagements', bookmark_key)
     STATE = singer.clear_bookmark(STATE, 'engagements', 'after')
