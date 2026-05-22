@@ -768,7 +768,9 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
         with metrics.record_counter(stream_id) as counter:
+            raw_count = 0
             for row in get_v3_records(url, params, 'results', "paging"):
+                raw_count += 1
                 modified_time = utils.strptime_to_utc(row[bookmark_key])
 
                 if modified_time and modified_time >= bookmark_value:
@@ -778,6 +780,7 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
                     if modified_time >= max_bk_value:
                         max_bk_value = modified_time
                     counter.increment()
+            LOGGER.info("Fetched %d raw %s records, emitted %d after incremental filter", raw_count, stream_id, counter.value)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
@@ -1145,6 +1148,7 @@ def sync_engagements(STATE, ctx):
                     break
 
                 params['after'] = cursor
+            LOGGER.info('Fetched %d engagements records', counter.value)
 
     STATE = singer.write_bookmark(STATE, 'engagements', 'cursor', cursor)
     STATE = singer.clear_bookmark(STATE, 'engagements', bookmark_key)
