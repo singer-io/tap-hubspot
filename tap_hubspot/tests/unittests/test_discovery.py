@@ -79,7 +79,10 @@ class TestCheckStreamAccess(unittest.TestCase):
     @patch('tap_hubspot.post_search_endpoint')
     def test_contact_lists_returns_false_on_403(self, mock_post):
         """contact_lists returning 403 via POST should return False."""
-        mock_post.side_effect = SourceUnavailableException("Forbidden")
+        response = MagicMock()
+        response.status_code = 403
+        error = requests.exceptions.HTTPError(response=response)
+        mock_post.side_effect = error
         result = check_stream_access("contact_lists")
         self.assertFalse(result)
 
