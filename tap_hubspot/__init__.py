@@ -396,19 +396,9 @@ def check_stream_access(stream_name):
             request(url, params=params)
         return True
     except SourceUnavailableException:
-        LOGGER.warning(
-            "Stream '%s' is not accessible with the provided credentials (403 Forbidden). "
-            "Excluding from catalog.",
-            stream_name,
-        )
         return False
     except requests.exceptions.HTTPError as exc:
-        if exc.response is not None and exc.response.status_code == 403:
-            LOGGER.warning(
-                "Stream '%s' is not accessible with the provided credentials (403 Forbidden). "
-                "Excluding from catalog.",
-                stream_name,
-            )
+        if exc.response and exc.response.status_code == 403:
             return False
         raise
 
@@ -418,24 +408,29 @@ def _get_accessible_streams(streams):
     Child streams are included if their parent is accessible.
     Raises HubspotForbiddenError if no parent streams are accessible.
     """
-    accessible_endpoints = []
-    inaccessible_endpoints = []
+    accessible_streams = []
+    inaccessible_streams = []
 
     for stream in streams:
         # Child streams inherit access from their parent
         if stream.parent_tap_stream_id:
-            accessible_endpoints.append(stream)
+            accessible_streams.append(stream)
             continue
 
         if check_stream_access(stream.tap_stream_id):
-            accessible_endpoints.append(stream)
+            accessible_streams.append(stream)
         else:
-            inaccessible_endpoints.append(stream)
+            LOGGER.warning(
+                "Stream '%s' is not accessible with the provided credentials (403 Forbidden). "
+                "Excluding from catalog.",
+                stream.tap_stream_id,
+            )
+            inaccessible_streams.append(stream)
 
     # Prune child streams whose parent was excluded
-    excluded_parent_ids = {s.tap_stream_id for s in inaccessible_endpoints}
-    pruned = []
-    for stream in accessible_endpoints:
+    excluded_parent_ids = {s.tap_stream_id for s in inaccessible_streams}
+    streams_with_accessible_parents = []
+    for stream in accessible_streams:
         if stream.parent_tap_stream_id and stream.parent_tap_stream_id in excluded_parent_ids:
             LOGGER.warning(
                 "Stream '%s' excluded from catalog because its parent stream '%s' is not accessible.",
@@ -443,25 +438,23 @@ def _get_accessible_streams(streams):
                 stream.parent_tap_stream_id,
             )
         else:
-            pruned.append(stream)
-    accessible_endpoints = pruned
+            streams_with_accessible_parents.append(stream)
+    accessible_streams = streams_with_accessible_parents
 
     # If ALL parent streams are inaccessible, raise error
     parent_streams = [s for s in streams if not s.parent_tap_stream_id]
-    if inaccessible_endpoints and len(inaccessible_endpoints) == len(parent_streams):
+    if inaccessible_streams and len(inaccessible_streams) == len(parent_streams):
         raise HubspotForbiddenError(
-            "HTTP-error-code: 403, Error: The account credentials supplied do not have 'read' access to any "
-            "of the streams supported by the tap. Data collection cannot be initiated due to lack of permissions."
+            "403 Forbidden: No read access to supported streams. Data collection cannot start."
         )
 
-    if inaccessible_endpoints:
+    if inaccessible_streams:
         LOGGER.warning(
-            "The account credentials supplied do not have 'read' access to the following stream(s): %s. "
-            "These streams have been excluded from the catalog.",
-            ", ".join(s.tap_stream_id for s in inaccessible_endpoints),
+            "Excluding inaccessible streams: %s",
+            ", ".join(s.tap_stream_id for s in inaccessible_streams),
         )
 
-    return accessible_endpoints
+    return accessible_streams
 
 
 # {"bookmarks" : {"contacts" : { "lastmodifieddate" : "2001-01-01"
