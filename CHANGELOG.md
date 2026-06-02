@@ -1,5 +1,9 @@
 # Changelog
 
+# 4.3.1
+  * Bump requests to 2.33.0 for security updates [#303](https://github.com/singer-io/tap-hubspot/pull/303)
+
+
 ## 4.3.0
   * Always write bookmarks for form_submissions and list_memberships streams, even when there are no records. [#292](https://github.com/singer-io/tap-hubspot/pull/292)
 
