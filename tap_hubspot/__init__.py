@@ -36,7 +36,6 @@ class UriTooLongException(Exception):
     pass
 
 class HubspotForbiddenError(Exception):
-    """Raised when the API returns 403 Forbidden for all stream endpoints."""
     pass
 
 class DataFields:
