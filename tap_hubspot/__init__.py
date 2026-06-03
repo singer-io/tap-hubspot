@@ -914,7 +914,7 @@ def sync_contact_lists(STATE, ctx):
     bookmark_key = 'updatedAt'
     singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
 
-    start = get_start(STATE, "contact_lists", bookmark_key)
+    start = "2026-05-05T00:00:00Z"
     max_bk_value = start
 
     LOGGER.info("sync_contact_lists from %s", start)
@@ -931,7 +931,8 @@ def sync_contact_lists(STATE, ctx):
         LOGGER.info("sync list_memberships from %s", fs_start)
 
     url = get_url("contact_lists")
-    body = {'count': 250}
+    body = {'count': 250, "sort": "-HS_UPDATED_AT"}
+    first_record_bookmark = None
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
@@ -945,8 +946,8 @@ def sync_contact_lists(STATE, ctx):
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 if record[bookmark_key] >= start:
                     singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                if record[bookmark_key] >= max_bk_value:
-                    max_bk_value = record[bookmark_key]
+                if first_record_bookmark is None:
+                    first_record_bookmark = record[bookmark_key]
 
                 if "list_memberships" in ctx.selected_stream_ids:
                     STATE, fs_max_bk_value = sync_list_memberships(row['listId'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
@@ -954,8 +955,11 @@ def sync_contact_lists(STATE, ctx):
             has_more = data.get('hasMore')
             body["offset"] = data["offset"]
 
+    if first_record_bookmark is None:
+        first_record_bookmark = max_bk_value
+
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    new_bookmark = min(utils.strptime_to_utc(first_record_bookmark), sync_start_time)
     # Child stream list_memberships is INCREMENTAL and needs a bookmark even if no records are extracted
     if not has_synced_data and "list_memberships" in ctx.selected_stream_ids:
         STATE = singer.write_bookmark(STATE, 'list_memberships', fs_bookmark_key, utils.strftime(new_bookmark))
