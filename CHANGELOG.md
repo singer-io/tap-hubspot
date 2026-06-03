@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.4.0
+  * Upgrade OAuth v1 API to the latest date-based versioned API  [#302](https://github.com/singer-io/tap-hubspot/pull/302)
+
 ## 4.3.0
   * Always write bookmarks for form_submissions and list_memberships streams, even when there are no records. [#292](https://github.com/singer-io/tap-hubspot/pull/292)
 

@@ -274,7 +274,7 @@ def acquire_access_token_from_refresh_token():
     }
 
 
-    resp = requests.post(BASE_URL + "/oauth/v1/token", data=payload, timeout=get_request_timeout())
+    resp = requests.post(BASE_URL + "/oauth/2026-03/token", data=payload, timeout=get_request_timeout())
     if resp.status_code == 403:
         raise InvalidAuthException(resp.content)
 
