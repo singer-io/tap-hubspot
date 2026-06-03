@@ -914,7 +914,7 @@ def sync_contact_lists(STATE, ctx):
     bookmark_key = 'updatedAt'
     singer.write_schema("contact_lists", schema, ["listId"], [bookmark_key], catalog.get('stream_alias'))
 
-    start = "2026-05-05T00:00:00Z"
+    start = get_start(STATE, "contact_lists", bookmark_key)
     max_bk_value = start
 
     LOGGER.info("sync_contact_lists from %s", start)
