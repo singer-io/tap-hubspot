@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from time import sleep
 import copy
+import requests
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
@@ -18,7 +19,52 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
 
     def streams_to_test(self):
         """expected streams minus the streams not under test"""
-        return {'companies', 'engagements', 'tickets', 'contacts'}
+        return {'companies', 'contacts', 'tickets', 'engagements'}
+
+    def get_access_token(self):
+        payload = {
+            'grant_type': 'refresh_token'
+        }
+        payload.update(self.get_credentials())
+
+        resp = requests.post("https://api.hubapi.com/oauth/v1/token", data=payload)
+        return resp.json()['access_token']
+
+    def ensure_ticket(self, headers):
+        ticket = [
+            {
+                'name': 'subject',
+                'value': 'Example ticket subject'
+            },
+            {
+                'name': 'hs_pipeline',
+                'value': '0'
+            },
+            {
+                'name': 'hs_pipeline_stage',
+                'value': '1'
+            }
+        ]
+        requests.post('https://api.hubapi.com/crm-objects/v1/objects/tickets', json=ticket, headers=headers)
+
+    def ensure_engagement(self, headers):
+        engagement = {
+            'engagement': {
+                'type': 'EMAIL',
+                'active': True
+            },
+            'metadata': {}
+        }
+        requests.post('https://api.hubapi.com/engagements/v1/engagements', json=engagement, headers=headers)
+
+    def ensure_engagement_and_ticket(self):
+        access_token = self.get_access_token()
+        headers = {
+            'authorization': f'Bearer {access_token}',
+            'content-type': 'application/json'
+        }
+        self.ensure_engagement(headers)
+        self.ensure_ticket(headers)
 
     def simulated_interruption(self, reference_state):
 
@@ -51,8 +97,6 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         return new_state
 
     def get_properties(self):
-        #        'start_date' : '2021-08-19T00:00:00Z'
-        # return {'start_date' : '2017-11-22T00:00:00Z'}
         return {
             'start_date' : datetime.strftime(
                 datetime.today()-timedelta(days=5), self.START_DATE_FORMAT
@@ -81,6 +125,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
             )
 
         # Run sync 1
+        self.ensure_engagement_and_ticket()
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
         state_1 = menagerie.get_state(conn_id)

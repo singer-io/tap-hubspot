@@ -239,7 +239,10 @@ class HubspotBaseTest(BaseCase):
     
     def failed_sync_streams(self):
         """A set of streams that are known to have sync issues and should be skipped in assertion errors."""
-        return {"subscription_changes", "email_events"}
+        return {"email_events",
+                "form_submissions",  # Added Apr 2026, client creates not yet implemented
+                "subscription_changes",
+                }
     
     def validate_failed_sync_streams(self, stream, *synced_data_records):
         """

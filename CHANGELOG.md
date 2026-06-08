@@ -1,5 +1,15 @@
 # Changelog
 
+# 4.3.1
+  * Bump requests to 2.33.0 for security updates [#303](https://github.com/singer-io/tap-hubspot/pull/303)
+
+
+## 4.3.0
+  * Always write bookmarks for form_submissions and list_memberships streams, even when there are no records. [#292](https://github.com/singer-io/tap-hubspot/pull/292)
+
+## 4.2.0
+  * Refactor parent-stream metadata for contacts_by_company, form_submissions, and list_memberships [#290](https://github.com/singer-io/tap-hubspot/pull/290) 
+
 ## 4.1.0
   * Add new streams [#284](https://github.com/singer-io/tap-hubspot/pull/284)
     * [form_submissions](https://developers.hubspot.com/docs/api-reference/legacy/forms-v1/submissions/get-form-integrations-v1-submissions-forms-form_guid)

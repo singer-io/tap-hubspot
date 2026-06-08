@@ -886,7 +886,6 @@ def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, 
     }
     url = get_url("list_memberships", list_id=list_id)
     time_extracted = utils.now()
-    need_to_write_state = False
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
@@ -897,17 +896,14 @@ def sync_list_memberships(list_id, STATE, schema, catalog, bookmark_key, start, 
             record['listId'] = list_id
 
             if record[bookmark_key] >= start:
-                need_to_write_state = True
                 singer.write_record("list_memberships", record, catalog.get('stream_alias'), time_extracted=time_extracted)
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    # Write state only if new records were processed
-    if need_to_write_state:
-        # Don't bookmark past the start of this sync to account for updated records during the sync.
-        new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-        STATE = singer.write_bookmark(STATE, 'list_memberships', bookmark_key, utils.strftime(new_bookmark))
-        singer.write_state(STATE)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time) if max_bk_value else sync_start_time
+    STATE = singer.write_bookmark(STATE, 'list_memberships', bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
 
     return STATE, max_bk_value
 
@@ -941,9 +937,11 @@ def sync_contact_lists(STATE, ctx):
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
         has_more = True
+        has_synced_data = False
         while has_more:
             data = post_search_endpoint(url, body).json()
             for row in data["lists"]:
+                has_synced_data = True
                 record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
                 if record[bookmark_key] >= start:
                     singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
@@ -958,6 +956,9 @@ def sync_contact_lists(STATE, ctx):
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    # Child stream list_memberships is INCREMENTAL and needs a bookmark even if no records are extracted
+    if not has_synced_data and "list_memberships" in ctx.selected_stream_ids:
+        STATE = singer.write_bookmark(STATE, 'list_memberships', fs_bookmark_key, utils.strftime(new_bookmark))
     STATE = singer.write_bookmark(STATE, 'contact_lists', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
@@ -971,7 +972,6 @@ def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, 
         'limit': 50
     }
     time_extracted = utils.now()
-    need_to_write_state = False
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         # To handle records updated between start of the table sync and the end,
@@ -982,17 +982,14 @@ def sync_form_submissions(form_id, STATE, schema, catalog, bookmark_key, start, 
             record['formId'] = form_id
 
             if record[bookmark_key] >= start:
-                need_to_write_state = True
                 singer.write_record("form_submissions", record, catalog.get('stream_alias'), time_extracted=time_extracted)
             if record[bookmark_key] >= max_bk_value:
                 max_bk_value = record[bookmark_key]
 
-    # Write state only if new records were processed
-    if need_to_write_state:
-        # Don't bookmark past the start of this sync to account for updated records during the sync.
-        new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
-        STATE = singer.write_bookmark(STATE, 'form_submissions', bookmark_key, utils.strftime(new_bookmark))
-        singer.write_state(STATE)
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time) if max_bk_value else sync_start_time
+    STATE = singer.write_bookmark(STATE, 'form_submissions', bookmark_key, utils.strftime(new_bookmark))
+    singer.write_state(STATE)
 
     return STATE, max_bk_value
 
@@ -1026,7 +1023,9 @@ def sync_forms(STATE, ctx):
         # To handle records updated between start of the table sync and the end,
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
+        has_synced_data = False
         for row in data:
+            has_synced_data = True
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
 
             if record[bookmark_key] >= start:
@@ -1039,6 +1038,9 @@ def sync_forms(STATE, ctx):
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    # Child stream form_submissions is INCREMENTAL and needs a bookmark even if no records are extracted
+    if not has_synced_data and "form_submissions" in ctx.selected_stream_ids:
+        STATE = singer.write_bookmark(STATE, 'form_submissions', fs_bookmark_key, utils.strftime(new_bookmark))
     STATE = singer.write_bookmark(STATE, 'forms', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
 
@@ -1242,6 +1244,7 @@ class Stream:
     key_properties = attr.ib()
     replication_key = attr.ib()
     replication_method = attr.ib()
+    parent_tap_stream_id = attr.ib(default=None)
 
 STREAMS = [
     # Do these first as they are incremental
@@ -1253,15 +1256,16 @@ STREAMS = [
     Stream('tickets', sync_tickets, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('owners', sync_owners, ["id"], 'updatedAt', 'INCREMENTAL'),
     Stream('forms', sync_forms, ['guid'], 'updatedAt', 'INCREMENTAL'),
-    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL'),
+    Stream('form_submissions', sync_form_submissions, ['conversionId'], 'submittedAt', 'INCREMENTAL', 'forms'),
     Stream('workflows', sync_workflows, ['id'], 'updatedAt', 'INCREMENTAL'),
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
-    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL'),
+    Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL', 'contact_lists'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE')
+    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
+    Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE', 'companies')
 ]
 
 # pylint: disable=inconsistent-return-statements
@@ -1377,7 +1381,7 @@ def do_sync(STATE, catalog):
     LOGGER.info('Starting sync. Will sync these streams: %s',
                 [stream.tap_stream_id for stream in selected_streams])
     for stream in selected_streams:
-        if stream.tap_stream_id in ["list_memberships", "form_submissions"]:
+        if stream.parent_tap_stream_id:
             # These streams are synced as part of their parent streams
             continue
 
@@ -1415,21 +1419,15 @@ class Context:
     def get_catalog_from_id(self, tap_stream_id):
         return [c for c in self.catalog.get('streams') if c.get('stream') == tap_stream_id][0]
 
-# stream a is dependent on stream STREAM_DEPENDENCIES[a]
-STREAM_DEPENDENCIES = {
-    CONTACTS_BY_COMPANY: 'companies',
-    'form_submissions': 'forms',
-    'list_memberships': 'contact_lists',
-}
-
 def validate_dependencies(ctx):
     errs = []
     msg_tmpl = ("Unable to extract {0} data. "
                 "To receive {0} data, you also need to select {1}.")
 
-    for k, v in STREAM_DEPENDENCIES.items():
-        if k in ctx.selected_stream_ids and v not in ctx.selected_stream_ids:
-            errs.append(msg_tmpl.format(k, v))
+    for stream in STREAMS:
+        if stream.parent_tap_stream_id:
+            if stream.tap_stream_id in ctx.selected_stream_ids and stream.parent_tap_stream_id not in ctx.selected_stream_ids:
+                errs.append(msg_tmpl.format(stream.tap_stream_id, stream.parent_tap_stream_id))
     if errs:
         raise DependencyException(" ".join(errs))
 
@@ -1453,8 +1451,8 @@ def get_metadata(stream, schema):
         mdata = metadata.write(mdata, ('properties', 'engagement'), 'inclusion', 'automatic')
         mdata = metadata.write(mdata, ('properties', 'lastUpdated'), 'inclusion', 'automatic')
 
-    if parent_stream := STREAM_DEPENDENCIES.get(stream.tap_stream_id):
-        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', parent_stream)
+    if stream.parent_tap_stream_id:
+        mdata = metadata.write(mdata, (), 'parent-tap-stream-id', stream.parent_tap_stream_id)
 
     return metadata.to_list(mdata)
 
@@ -1486,16 +1484,6 @@ def discover_schemas():
                                   "table_name": custom_stream["custom_object_name"],
                                   'schema': custom_stream["schema"],
                                   'metadata': get_metadata(custom_stream["stream"], custom_stream["schema"])})
-
-    # Load the contacts_by_company schema
-    LOGGER.info('Loading schema for contacts_by_company')
-    contacts_by_company = Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE')
-    schema, mdata = load_discovered_schema(contacts_by_company)
-
-    result['streams'].append({'stream': CONTACTS_BY_COMPANY,
-                              'tap_stream_id': CONTACTS_BY_COMPANY,
-                              'schema': schema,
-                              'metadata': mdata})
 
     return result
 

@@ -336,7 +336,7 @@ class TestClient():
 
         return ",".join([record["name"] for record in records["results"]])
 
-    def get_contacts(self, pagination=False):
+    def get_contacts(self, pagination=False, archived=False):
         """
         Get all contacts.
         HubSpot API https://developers.hubspot.com/docs/api/crm/contacts
@@ -346,7 +346,7 @@ class TestClient():
         replication_key = list(self.replication_keys["contacts"])[0]
         records = []
 
-        params = {"limit": page_size, "associations": "tickets,company,deals", 'properties': self.get_contacts_properties()}
+        params = {"limit": page_size, "associations": "tickets,company,deals", 'properties': self.get_contacts_properties(), "archived": archived}
         while True:
             response = self.get(url, params=params)
 
@@ -359,10 +359,9 @@ class TestClient():
             if page_size and len(records) > page_size+10:
                 break
             params["after"] = response.get("paging").get("next").get("after")
-        
+
         records = self.denest_properties('contacts', records)
         return records
-
 
     def get_contacts_by_company(self, parent_ids, pagination=False):
         """
@@ -402,7 +401,7 @@ class TestClient():
         page_size = self.BaseTest.expected_metadata().get('list_memberships', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/crm/v3/lists/{{}}/memberships"
         records = []
-        
+
         for parent_id in parent_ids:
             params = {'count': page_size}
             while True:
@@ -412,7 +411,7 @@ class TestClient():
                 for record in response.get("results", []):
                     record['listId'] = parent_id
                     records.append(record)
-                
+
                 if not response.get("paging"):
                     break
                 if pagination and len(records) > page_size+10:
@@ -425,7 +424,7 @@ class TestClient():
         page_size = self.BaseTest.expected_metadata().get('form_submissions', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
         url = f"{BASE_URL}/form-integrations/v1/submissions/forms/{{}}"
         records = []
-        
+
         for parent_id in parent_ids:
             params = {'count': page_size}
             while True:
@@ -435,7 +434,7 @@ class TestClient():
                 for record in response.get("results", []):
                     record['formId'] = parent_id
                     records.append(record)
-                
+
                 if not response.get("paging"):
                     break
                 if pagination and len(records) > page_size+10:
@@ -734,10 +733,10 @@ class TestClient():
             if page_size and len(records) > page_size+10:
                 break
             params["after"] = response.get("paging").get("next").get("after")
-        
+
         records = self.denest_properties('tickets', records)
         return records
-    
+
     def _get_custom_object_record_by_pk(self, object_name, id):
         """
         Get a specific custom object record by pk value
@@ -747,7 +746,7 @@ class TestClient():
         url = f"{BASE_URL}/crm/v3/objects/p_{object_name}/{id}?associations={associations}"
         response = self.get(url)
         return response
-    
+
     def get_custom_objects_properties(self, object_name, source_name):
         """
         Get custom object properties.
@@ -785,7 +784,7 @@ class TestClient():
             params['after'] = response.get("paging", {}).get('next', {}).get('after', None)
             if params['after'] is None:
                 break
-        
+
         records = self.denest_properties(stream, records)
         return records
 
@@ -1051,7 +1050,7 @@ class TestClient():
                     }
                 ]
             }
-                
+
             }
         else:
             data = {
@@ -1059,7 +1058,7 @@ class TestClient():
                 "objectTypeId": "0-1",
                 "processingType": "MANUAL"
             }
-            
+
         # generate a record
         response = self.post(url, data)
         records = response["list"]
@@ -1845,7 +1844,7 @@ class TestClient():
         self.patch(url, data)
 
         return self._get_tickets_by_pk(ticket_id)
-    
+
     def update_custom_object_record(self, stream, id):
         """
         Updates a custom object record using the HubSpot CRM API.
@@ -1883,6 +1882,14 @@ class TestClient():
             self.delete_contact_lists(records, count)
         else:
             raise NotImplementedError(f"No delete method implemented for {stream}.")
+
+    def delete_contacts(self, record_ids=[]):
+        """
+        Delete a list of contact ids
+        """
+        for contactId in record_ids:
+            url = f"{BASE_URL}/crm/v3/objects/contacts/{contactId}"
+            self.delete(url)
 
     def delete_contact_lists(self, records=[], count=10):
         """
