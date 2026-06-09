@@ -931,35 +931,52 @@ def sync_contact_lists(STATE, ctx):
         LOGGER.info("sync list_memberships from %s", fs_start)
 
     url = get_url("contact_lists")
-    body = {'count': 250, "sort": "-HS_UPDATED_AT"}
-    first_record_bookmark = None
-    with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
-        has_more = True
-        has_synced_data = False
-        while has_more:
-            data = post_search_endpoint(url, body).json()
-            for row in data["lists"]:
-                has_synced_data = True
-                record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-                if record[bookmark_key] >= start:
-                    singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
-                if first_record_bookmark is None:
-                    first_record_bookmark = record[bookmark_key]
+    has_synced_data = False
 
-                if "list_memberships" in ctx.selected_stream_ids:
-                    STATE, fs_max_bk_value = sync_list_memberships(row['listId'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
+    # HubSpot's /crm/v3/lists/search endpoint enforces a hard 10,000 record offset ceiling.
+    # To maximize coverage:
+    #   - Historic sync (no bookmark): Fetch in BOTH ascending and descending order of HS_UPDATED_AT.
+    #     This gives up to ~20K unique records. After the ascending pass, `start` is updated to
+    #     `max_bk_value` so the descending pass only emits records newer than what was already seen,
+    #     effectively deduplicating (with at most 1 record overlap at the boundary).
+    #   - Incremental sync (bookmark present): Fetch only in descending order (-HS_UPDATED_AT).
+    #     This retrieves the latest 10K updated records. Records older than the bookmark are
+    #     still iterated (for list_memberships) but not written to contact_lists output.
+    # Limitation: If total lists exceed ~20K, records in the "middle" may be missed on historic sync.
+    if not singer.get_bookmark(STATE, "contact_lists", bookmark_key):
+        sort_options = ["HS_UPDATED_AT", "-HS_UPDATED_AT"]
+    else:
+        sort_options = ["-HS_UPDATED_AT"]
 
-            has_more = data.get('hasMore')
-            body["offset"] = data["offset"]
+    for _option in sort_options:
+        body = {'count': 250, 'sort': _option}
+        with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
+            # To handle records updated between start of the table sync and the end,
+            # store the current sync start in the state and not move the bookmark past this value.
+            sync_start_time = utils.now()
+            has_more = True
+            while has_more:
+                data = post_search_endpoint(url, body).json()
+                for row in data["lists"]:
+                    has_synced_data = True
+                    record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
+                    if record[bookmark_key] >= start:
+                        singer.write_record("contact_lists", record, catalog.get('stream_alias'), time_extracted=utils.now())
+                    if record[bookmark_key] >= max_bk_value:
+                        max_bk_value = record[bookmark_key]
 
-    if first_record_bookmark is None:
-        first_record_bookmark = max_bk_value
+                    if "list_memberships" in ctx.selected_stream_ids:
+                        STATE, fs_max_bk_value = sync_list_memberships(row['listId'], STATE, fs_schema, fs_catalog, fs_bookmark_key, fs_start, fs_max_bk_value)
+
+                has_more = data.get('hasMore')
+                body["offset"] = data["offset"]
+
+        # Update `start` so that the next pass (descending) only writes records
+        # newer than what was already emitted in the ascending pass.
+        start = max_bk_value
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(first_record_bookmark), sync_start_time)
+    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
     # Child stream list_memberships is INCREMENTAL and needs a bookmark even if no records are extracted
     if not has_synced_data and "list_memberships" in ctx.selected_stream_ids:
         STATE = singer.write_bookmark(STATE, 'list_memberships', fs_bookmark_key, utils.strftime(new_bookmark))

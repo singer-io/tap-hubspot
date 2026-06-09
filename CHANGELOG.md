@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.3.1
+  * Sync contact_lists in reverse order. [#304](https://github.com/singer-io/tap-hubspot/pull/304)
+
 ## 4.3.0
   * Always write bookmarks for form_submissions and list_memberships streams, even when there are no records. [#292](https://github.com/singer-io/tap-hubspot/pull/292)
 
