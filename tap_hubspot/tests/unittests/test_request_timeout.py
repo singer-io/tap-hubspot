@@ -112,6 +112,7 @@ class TestRequestTimeoutBackoff(unittest.TestCase):
             Verify request function is backoff for only 5 times instead of 25 times on Timeout exception that thrown from `acquire_access_token_from_refresh_token` method.
             Here get_params_and_headers method called from request method and acquire_access_token_from_refresh_token called from get_params_and_headers method.
         """
+        pre_config = tap_hubspot.CONFIG
         tap_hubspot.CONFIG = {
             'hapikey': None,
             'api_key': None,
@@ -126,6 +127,9 @@ class TestRequestTimeoutBackoff(unittest.TestCase):
             tap_hubspot.post_search_endpoint('dummy_url', {})
         except Exception:
             pass
+        finally:
+            # Restore the original CONFIG after the test
+            tap_hubspot.CONFIG = pre_config
 
         # Verify that requests.post is called 5 times
         self.assertEqual(mocked_post.call_count, 5)

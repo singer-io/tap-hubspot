@@ -948,12 +948,13 @@ def sync_contact_lists(STATE, ctx):
     else:
         sort_options = ["-HS_UPDATED_AT"]
 
+    # To handle records updated between start of the table sync and the end,
+    # store the current sync start in the state and not move the bookmark past this value.
+    sync_start_time = utils.now()
+
     for _option in sort_options:
         body = {'count': 250, 'sort': _option}
         with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-            # To handle records updated between start of the table sync and the end,
-            # store the current sync start in the state and not move the bookmark past this value.
-            sync_start_time = utils.now()
             has_more = True
             while has_more:
                 data = post_search_endpoint(url, body).json()
