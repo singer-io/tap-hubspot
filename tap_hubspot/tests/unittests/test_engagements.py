@@ -1,7 +1,9 @@
 import json
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
+
+import singer
 
 from tap_hubspot import sync_engagements
 
@@ -9,19 +11,6 @@ from tap_hubspot import sync_engagements
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'schemas', 'engagements.json')
 with open(_SCHEMA_PATH) as _f:
     ENGAGEMENTS_SCHEMA = json.load(_f)
-
-
-def make_engagement(eid, last_updated_millis):
-    return {
-        "engagement": {
-            "id": eid,
-            "lastUpdated": last_updated_millis,
-            "type": "NOTE"
-        },
-        "associations": {"contactIds": [], "companyIds": [], "dealIds": []},
-        "attachments": [],
-        "metadata": {"body": "test"}
-    }
 
 
 def make_response(results, has_more=False, after=None):
@@ -94,3 +83,44 @@ class TestSyncEngagements(unittest.TestCase):
 
         call_params = mock_request.call_args[0][1]
         self.assertEqual(call_params['limit'], 50)
+
+    @patch('singer.write_state')
+    @patch('singer.write_schema')
+    @patch('tap_hubspot.request')
+    @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00.000000Z')
+    def test_inflight_offset_takes_precedence_over_cursor_bookmark(
+        self, mock_get_start, mock_request, mock_write_schema, mock_write_state
+    ):
+        mock_request.return_value = make_response([])
+        state = {
+            "bookmarks": {"engagements": {
+                "cursor": "old-cursor",
+                "offset": {"after": "inflight-cursor-xyz"},
+            }},
+        }
+
+        sync_engagements(state, self.make_ctx())
+
+        call_params = mock_request.call_args[0][1]
+        self.assertEqual(call_params['after'], "inflight-cursor-xyz")
+
+    @patch('singer.write_state')
+    @patch('singer.write_schema')
+    @patch('tap_hubspot.request')
+    @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00.000000Z')
+    def test_offset_persisted_per_page_and_cleared_on_completion(
+        self, mock_get_start, mock_request, mock_write_schema, mock_write_state
+    ):
+        mock_request.side_effect = [
+            make_response([], has_more=True, after="cursor-page-1"),
+            make_response([], has_more=False, after="cursor-page-2"),
+        ]
+        state = {"bookmarks": {"engagements": {}}}
+
+        result = sync_engagements(state, self.make_ctx())
+
+        self.assertNotIn('engagements', result.get('offset', {}))
+        self.assertEqual(
+            singer.get_bookmark(result, 'engagements', 'cursor'),
+            'cursor-page-2'
+        )

@@ -1117,7 +1117,13 @@ def sync_engagements(STATE, ctx):
     LOGGER.info("sync_engagements from %s", start)
 
     url = get_url("engagements_modified_after")
-    cursor = get_engagements_cursor(STATE, start)
+
+    inflight = singer.get_offset(STATE, 'engagements')
+    if inflight and inflight.get('after'):
+        cursor = inflight['after']
+    else:
+        cursor = get_engagements_cursor(STATE, start)
+
     params = {
         'limit': int(CONFIG.get('engagements_page_size') or 190),
         'after': cursor,
@@ -1148,8 +1154,12 @@ def sync_engagements(STATE, ctx):
                     break
 
                 params['after'] = cursor
+                STATE = singer.set_offset(STATE, 'engagements', 'after', cursor)
+                singer.write_state(STATE)
+
             LOGGER.info('Fetched %d engagements records', counter.value)
 
+    STATE = singer.clear_offset(STATE, 'engagements')
     STATE = singer.write_bookmark(STATE, 'engagements', 'cursor', cursor)
     STATE = singer.clear_bookmark(STATE, 'engagements', bookmark_key)
     STATE = singer.clear_bookmark(STATE, 'engagements', 'after')
