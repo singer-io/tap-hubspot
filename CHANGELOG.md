@@ -3,6 +3,9 @@
 ## 4.4.0
   * Migrate engagements sync from `/paged` to `/engagements/v1/engagements/modified/after` with opaque cursor-based pagination for incremental, crash-safe resume.
 
+## 4.3.1
+  * Bump requests to 2.33.0 for security updates [#303](https://github.com/singer-io/tap-hubspot/pull/303)
+
 ## 4.3.0
   * Always write bookmarks for form_submissions and list_memberships streams, even when there are no records. [#292](https://github.com/singer-io/tap-hubspot/pull/292)
 
