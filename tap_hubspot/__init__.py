@@ -91,7 +91,6 @@ ENDPOINTS = {
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
-    "engagements_all":        "/engagements/v1/engagements/paged",
     "engagements_modified_after": "/engagements/v1/engagements/modified/after",
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
