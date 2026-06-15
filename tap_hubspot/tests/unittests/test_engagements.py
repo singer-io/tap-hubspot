@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import unittest
@@ -124,3 +125,40 @@ class TestSyncEngagements(unittest.TestCase):
             singer.get_bookmark(result, 'engagements', 'cursor'),
             'cursor-page-2'
         )
+
+    @patch('singer.write_schema')
+    @patch('tap_hubspot.request')
+    @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00.000000Z')
+    def test_offset_persists_page_one_cursor_before_fetching_page_two(
+        self, mock_get_start, mock_request, mock_write_schema
+    ):
+        # Crash-recovery guarantee: after emitting page 1 we must persist the
+        # cursor that fetches page 2, so an interrupted run resumes there
+        # instead of re-reading from the last completed sync.
+        mock_request.side_effect = [
+            make_response([], has_more=True, after="cursor-page-1"),
+            make_response([], has_more=False, after="cursor-page-2"),
+        ]
+        state = {"bookmarks": {"engagements": {}}}
+
+        snapshots = []
+        with patch('singer.write_state', side_effect=lambda s: snapshots.append(copy.deepcopy(s))):
+            sync_engagements(state, self.make_ctx())
+
+        # An intermediate state must have carried the page-1 cursor as the
+        # in-flight offset (this is the page-2 request cursor).
+        intermediate_offsets = [
+            singer.get_offset(s, 'engagements')
+            for s in snapshots
+            if singer.get_offset(s, 'engagements')
+        ]
+        self.assertIn({'after': 'cursor-page-1'}, intermediate_offsets)
+
+        # The page-2 request must have actually used that persisted cursor.
+        page_two_params = mock_request.call_args_list[1][0][1]
+        self.assertEqual(page_two_params['after'], 'cursor-page-1')
+
+        # Final persisted state: offset cleared, durable cursor advanced.
+        final = snapshots[-1]
+        self.assertIsNone(singer.get_offset(final, 'engagements'))
+        self.assertEqual(singer.get_bookmark(final, 'engagements', 'cursor'), 'cursor-page-2')
