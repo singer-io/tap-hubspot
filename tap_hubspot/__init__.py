@@ -69,22 +69,22 @@ CONFIG = {
 }
 
 ENDPOINTS = {
-    "contacts_properties":  "/crm/v3/properties/contacts",
-    "contacts":         "/crm/v3/objects/contacts",
+    "contacts_properties":  "/crm/properties/2026-03/contacts",
+    "contacts":         "/crm/objects/2026-03/contacts",
 
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
-    "contacts_by_company_v3": "/crm/v3/associations/company/contact/batch/read",
+    "contacts_by_company_v3": "/crm/associations/2026-03/company/contact/batch/read",
 
     "deals_properties":     "/properties/v1/deals/properties",
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
 
-    "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
-    "deals_v3_properties":  "/crm/v3/properties/deals",
+    "deals_v3_batch_read":  "/crm/objects/2026-03/deals/batch/read",
+    "deals_v3_properties":  "/crm/properties/2026-03/deals",
 
     "deal_pipelines":       "/deals/v1/pipelines",
 
@@ -95,19 +95,19 @@ ENDPOINTS = {
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
-    "contact_lists":        "/crm/v3/lists/search",
+    "contact_lists":        "/crm/lists/2026-03/search",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
-    "owners":               "/crm/v3/owners/",
+    "owners":               "/crm/owners/2026-03",
 
-    "tickets_properties":   "/crm/v3/properties/tickets",
-    "tickets":              "/crm/v4/objects/tickets",
+    "tickets_properties":   "/crm/properties/2026-03/tickets",
+    "tickets":              "/crm/objects/2026-03/tickets",
 
     "form_submissions":   "/form-integrations/v1/submissions/forms/{form_id}",
-    "list_memberships":   "/crm/v3/lists/{list_id}/memberships",
+    "list_memberships":   "/crm/lists/2026-03/{list_id}/memberships",
 
-    "custom_objects_schema":        "/crm/v3/schemas",
-    "custom_objects": "/crm/v3/objects/p_{object_name}"
+    "custom_objects_schema":        "/crm-object-schemas/2026-03/schemas",
+    "custom_objects": "/crm/objects/2026-03/p_{object_name}"
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
