@@ -919,6 +919,7 @@ def sync_contact_lists(STATE, ctx):
 
     LOGGER.info("sync_contact_lists from %s", start)
 
+    fs_max_bk_value = None
     if "list_memberships" in ctx.selected_stream_ids:
         fs_schema = load_schema("list_memberships")
         fs_catalog = ctx.get_catalog_from_id("list_memberships")
@@ -975,6 +976,7 @@ def sync_contact_lists(STATE, ctx):
         # Update `start` so that the next pass (descending) only writes records
         # newer than what was already emitted in the ascending pass.
         start = max_bk_value
+        fs_start = fs_max_bk_value
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
