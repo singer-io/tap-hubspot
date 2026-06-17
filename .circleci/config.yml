@@ -87,7 +87,7 @@ workflows:
   version: 2
 
   # Fast suite - runs on every commit/PR push
-  commit:
+  commit: &commit_jobs
     jobs:
       - ensure_env:
           context:
@@ -99,8 +99,24 @@ workflows:
             - tier-1-tap-user
           requires:
             - ensure_env
-      # Comprehensive test covers discovery metadata, automatic fields,
-      # sync validation, and bookmark behavior in a single run
+      - integration_test:
+          name: "Pagination Test"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
+          requires:
+            - ensure_env
+      - integration_test:
+          name: "Bookmarks Test CRUD"
+          context:
+            - circleci-user
+            - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+          requires:
+            - ensure_env
       - integration_test:
           name: "Comprehensive Test"
           context:
@@ -128,26 +144,15 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_interrupted_sync.py
           requires:
             - ensure_env
-      - build:
+      - integration_test:
+          name: "Discovery Test"
           context:
             - circleci-user
             - tier-1-tap-user
+          test_command: |-
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_discovery.py
           requires:
-            - run_pylint_and_unittests
-            - "Comprehensive Test"
-            - "Child Streams Test"
-            - "Interrupted State Test"
-
-  # Full suite - runs only on master merges
-  master: &full_suite
-    jobs:
-      - ensure_env:
-          context:
-            - circleci-user
-            - tier-1-tap-user
-          filters:
-            branches:
-              only: master
+            - ensure_env
       - integration_test:
           name: "Start Date Test"
           context:
@@ -157,6 +162,7 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_start_date.py
           requires:
             - ensure_env
+            - "Pagination Test"
       - integration_test:
           name: "All Fields Test"
           context:
@@ -166,24 +172,30 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_all_fields.py
           requires:
             - ensure_env
+            - "Bookmarks Test CRUD"
+            - "Pagination Test"
       - integration_test:
-          name: "Pagination Test"
+          name: "Automatic Fields Test"
           context:
             - circleci-user
             - tier-1-tap-user
           test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_automatic_fields.py
           requires:
             - ensure_env
+            - "Bookmarks Test CRUD"
+            - "Pagination Test"
       - integration_test:
-          name: "Bookmarks Test CRUD"
+          name: "New All Fields Test"
           context:
             - circleci-user
             - tier-1-tap-user
           test_command: |-
-            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_bookmarks.py
+            run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_newfw_all_fields.py
           requires:
             - ensure_env
+            - "Bookmarks Test CRUD"
+            - "Pagination Test"
       - integration_test:
           name: "Bookmarks Test Static Data"
           context:
@@ -208,14 +220,11 @@ workflows:
             - circleci-user
             - tier-1-tap-user
           requires:
-            - "Start Date Test"
-            - "All Fields Test"
-            - "Pagination Test"
-            - "Interrupted State with Offset Test"
+            - run_pylint_and_unittests
 
   # Full suite on a daily schedule to catch API changes
   build_daily:
-    <<: *full_suite
+    <<: *commit_jobs
     triggers:
       - schedule:
           cron: "0 1 * * *"
