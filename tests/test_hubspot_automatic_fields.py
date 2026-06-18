@@ -87,13 +87,25 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
                     )
 
 
+                pk = self.expected_primary_keys()[stream]
+                pks_values = [tuple([message['data'][p] for p in pk]) for message in data['messages']]
+
+                if stream == 'contact_lists':
+                    # We run sync twice in case of historic sync - One in asc order and another in desc order.
+                    # Find more details in PR: https://github.com/singer-io/tap-hubspot/pull/304
+                    # So we expect to see 1 boundary record in both syncs
+                    self.assertEqual(len(pks_values), len(set(pks_values))+1)
+                    continue
+
+                if stream == 'list_memberships':
+                    # So we expect to see 2 boundary record in both syncs since it is child stream of contact_lists
+                    self.assertEqual(len(pks_values), len(set(pks_values))+2)
+                    continue
+
                 # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
                 #               The subscription_changes stream does not have a valid pk to ensure no dupes are sent
                 if stream != 'subscription_changes':
-
                     # make sure there are no duplicate records by using the pks
-                    pk = self.expected_primary_keys()[stream]
-                    pks_values = [tuple([message['data'][p] for p in pk]) for message in data['messages']]
                     self.assertEqual(len(pks_values), len(set(pks_values)))
 
 

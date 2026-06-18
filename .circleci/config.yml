@@ -108,6 +108,7 @@ workflows:
             run-test --tap=${CIRCLE_PROJECT_REPONAME} tests/test_hubspot_pagination.py
           requires:
             - ensure_env
+            - "Bookmarks Test CRUD"
       - integration_test:
           name: "Bookmarks Test CRUD"
           context:
@@ -184,6 +185,7 @@ workflows:
           requires:
             - ensure_env
             - "Bookmarks Test CRUD"
+            - "Start Date Test"
             - "Pagination Test"
       - integration_test:
           name: "New All Fields Test"
@@ -195,6 +197,7 @@ workflows:
           requires:
             - ensure_env
             - "Bookmarks Test CRUD"
+            - "Start Date Test"
             - "Pagination Test"
       - integration_test:
           name: "Bookmarks Test Static Data"

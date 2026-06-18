@@ -29,10 +29,16 @@ class TestHubspotStartDate(HubspotBaseTest):
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
         for stream in streams_under_test:
+            records = self.test_client.read(stream, since=self.my_start_date)
+            if len(records) > 3:
+                continue
             if stream == 'contacts_by_company':
                 companies_records = self.test_client.read('companies', since=self.my_start_date)
                 company_ids = [company['companyId'] for company in companies_records]
                 self.test_client.create(stream, company_ids)
+            elif stream == 'list_memberships':
+                list_ids = [contact_list['listId'] for contact_list in self.test_client.read('contact_lists', since=self.my_start_date)]
+                self.test_client.create(stream, list_ids=list_ids)
             else:
                 self.test_client.create(stream)
 
@@ -45,7 +51,6 @@ class TestHubspotStartDate(HubspotBaseTest):
         return self.expected_check_streams().difference({
             'owners', # static test data, covered in separate test
             'form_submissions',
-            'list_memberships',
             'workflows',
             'campaigns', # static test data, covered in separate test
         })
@@ -153,26 +158,26 @@ class TestHubspotStartDate(HubspotBaseTest):
                 self.assertGreater(second_sync_count, 0,
                                    msg='start date usage is not confirmed when no records are replicated')
 
-# class TestHubspotStartDateStatic(TestHubspotStartDate):
-#     @staticmethod
-#     def name():
-#         return "tt_hubspot_start_date_static"
+class TestHubspotStartDateStatic(TestHubspotStartDate):
+    @staticmethod
+    def name():
+        return "tt_hubspot_start_date_static"
 
-#     def expected_streams(self):
-#         """expected streams minus the streams not under test"""
-#         return {
-#             'owners',
-#             'campaigns',
-#         }
+    def expected_streams(self):
+        """expected streams minus the streams not under test"""
+        return {
+            'owners',
+            'campaigns',
+        }
 
-#     def get_properties(self, original=True):
-#         if original:
-#             return {'start_date' : '2017-11-22T00:00:00Z'}
+    def get_properties(self, original=True):
+        if original:
+            return {'start_date' : '2017-11-22T00:00:00Z'}
 
-#         else:
-#             return {
-#                 'start_date' : '2026-02-25T00:00:00Z'
-#             }
+        else:
+            return {
+                'start_date' : '2026-02-25T00:00:00Z'
+            }
 
-#     def setUp(self):
-#         LOGGER.info("running streams with no creates")
+    def setUp(self):
+        LOGGER.info("running streams with no creates")

@@ -1010,8 +1010,12 @@ class TestClient():
             url = f"{BASE_URL}/crm/v3/lists/{list_id}/memberships/add"
             data = ["462631815886", "462622843639"]
             LOGGER.info("Post URL is %s", url)
-            # generate a record
-            self.put(url, data)
+            try:
+                # generate a record
+                self.put(url, data)
+            except requests.exceptions.HTTPError as err:
+                LOGGER.debug("Update failed for %s", list_id)
+                continue
             records.extend([{'listId': list_id, 'recordId': '462631815886'}, {'listId': list_id, 'recordId': '462622843639'}])
         return records
 
