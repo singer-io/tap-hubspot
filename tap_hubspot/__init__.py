@@ -68,23 +68,25 @@ CONFIG = {
     "select_fields_by_default": None,
 }
 
+CRM_API_VERSION = "2026-03"
+
 ENDPOINTS = {
-    "contacts_properties":  "/crm/properties/2026-03/contacts",
-    "contacts":         "/crm/objects/2026-03/contacts",
+    "contacts_properties":  f"/crm/properties/{CRM_API_VERSION}/contacts",
+    "contacts":             f"/crm/objects/{CRM_API_VERSION}/contacts",
 
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
     "companies_recent":     "/companies/v2/companies/recent/modified",
     "companies_detail":     "/companies/v2/companies/{company_id}",
-    "contacts_by_company_v3": "/crm/associations/2026-03/company/contact/batch/read",
+    "contacts_by_company_v3": f"/crm/associations/{CRM_API_VERSION}/company/contact/batch/read",
 
     "deals_properties":     "/properties/v1/deals/properties",
     "deals_all":            "/deals/v1/deal/paged",
     "deals_recent":         "/deals/v1/deal/recent/modified",
     "deals_detail":         "/deals/v1/deal/{deal_id}",
 
-    "deals_v3_batch_read":  "/crm/objects/2026-03/deals/batch/read",
-    "deals_v3_properties":  "/crm/properties/2026-03/deals",
+    "deals_v3_batch_read":  f"/crm/objects/{CRM_API_VERSION}/deals/batch/read",
+    "deals_v3_properties":  f"/crm/properties/{CRM_API_VERSION}/deals",
 
     "deal_pipelines":       "/deals/v1/pipelines",
 
@@ -95,19 +97,19 @@ ENDPOINTS = {
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
-    "contact_lists":        "/crm/lists/2026-03/search",
+    "contact_lists":        f"/crm/lists/{CRM_API_VERSION}/search",
     "forms":                "/forms/v2/forms",
     "workflows":            "/automation/v3/workflows",
-    "owners":               "/crm/owners/2026-03",
+    "owners":               f"/crm/owners/{CRM_API_VERSION}",
 
-    "tickets_properties":   "/crm/properties/2026-03/tickets",
-    "tickets":              "/crm/objects/2026-03/tickets",
+    "tickets_properties":   f"/crm/properties/{CRM_API_VERSION}/tickets",
+    "tickets":              f"/crm/objects/{CRM_API_VERSION}/tickets",
 
-    "form_submissions":   "/form-integrations/v1/submissions/forms/{form_id}",
-    "list_memberships":   "/crm/lists/2026-03/{list_id}/memberships",
+    "form_submissions":     "/form-integrations/v1/submissions/forms/{form_id}",
+    "list_memberships":     f"/crm/lists/{CRM_API_VERSION}/{{list_id}}/memberships",
 
-    "custom_objects_schema":        "/crm-object-schemas/2026-03/schemas",
-    "custom_objects": "/crm/objects/2026-03/p_{object_name}"
+    "custom_objects_schema": f"/crm-object-schemas/{CRM_API_VERSION}/schemas",
+    "custom_objects":        f"/crm/objects/{CRM_API_VERSION}/p_{{object_name}}"
 }
 
 def get_start(state, tap_stream_id, bookmark_key, older_bookmark_key=None):
