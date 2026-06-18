@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.3.2
+  * Sync contact_lists in sorted order. [#304](https://github.com/singer-io/tap-hubspot/pull/304)
+
 # 4.3.1
   * Bump requests to 2.33.0 for security updates [#303](https://github.com/singer-io/tap-hubspot/pull/303)
 
