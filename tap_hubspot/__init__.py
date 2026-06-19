@@ -519,7 +519,7 @@ def _sync_contacts_by_company_batch_read(STATE, ctx, company_ids):
                 for contact in row['to']:
                     counter.increment()
                     record = {'company-id' : row['from']['id'],
-                              'contact-id' : contact['id']}
+                              'contact-id' : contact['toObjectId']}
                     record = bumble_bee.transform(lift_properties_and_versions(record), schema, mdata)
                     singer.write_record("contacts_by_company", record, time_extracted=utils.now())
     STATE = singer.set_offset(STATE, "contacts_by_company", 'offset', company_ids[-1])
