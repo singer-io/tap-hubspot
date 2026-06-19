@@ -305,10 +305,10 @@ class TestClient():
         """
         Get all contact_lists by paginating using 'has-more' and 'offset'.
         """
-        url = f"{BASE_URL}/crm/v3/lists/search"
+        url = f"{BASE_URL}/crm/lists/2026-03/search"
 
         if list_id:
-            url = f"{BASE_URL}/crm/v3/lists/{list_id}"
+            url = f"{BASE_URL}/crm/lists/2026-03/{list_id}"
             response = self.get(url)
 
             return response['list']
@@ -321,7 +321,7 @@ class TestClient():
         Get a specific contact_id by pk value
         HubSpot API https://developers.hubspot.com/docs/api/crm/contact_id
         """
-        url = f"{BASE_URL}/crm/v3/objects/contacts/{contact_id}?associations=ticket,company,deals"
+        url = f"{BASE_URL}/crm/objects/2026-03/contacts/{contact_id}?associations=ticket,company,deals"
         response = self.get(url)
         return response
 
@@ -330,7 +330,7 @@ class TestClient():
         Get contacts properties.
         HubSpot API https://developers.hubspot.com/docs/api/crm/contacts
         """
-        url = f"{BASE_URL}/crm/v3/properties/contacts"
+        url = f"{BASE_URL}/crm/properties/2026-03/contacts"
         # records = []
         records = self.get(url)
 
@@ -342,7 +342,7 @@ class TestClient():
         HubSpot API https://developers.hubspot.com/docs/api/crm/contacts
         """
         page_size = self.BaseTest.expected_metadata().get('contacts',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        url = f"{BASE_URL}/crm/v3/objects/contacts"
+        url = f"{BASE_URL}/crm/objects/2026-03/contacts"
         replication_key = list(self.replication_keys["contacts"])[0]
         records = []
 
@@ -399,7 +399,7 @@ class TestClient():
 
     def get_list_memberships(self, parent_ids, pagination=False):
         page_size = self.BaseTest.expected_metadata().get('list_memberships', {}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        url = f"{BASE_URL}/crm/v3/lists/{{}}/memberships"
+        url = f"{BASE_URL}/crm/lists/2026-03/{{}}/memberships"
         records = []
 
         for parent_id in parent_ids:
@@ -495,41 +495,41 @@ class TestClient():
         for i in range(0, len(v1_ids), batch_size):
             batches.append(v1_ids[i:i + batch_size])
 
-        # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
-        v3_url = f"{BASE_URL}/crm/v3/objects/deals/batch/read"
-        v3_property = ['hs_v2_date_entered_appointmentscheduled']
-        v3_records = []
+        # hit the date-based CRM endpoint to get the special hs_<whatever> fields from 'properties'
+        crm_batch_url = f"{BASE_URL}/crm/objects/2026-03/deals/batch/read"
+        crm_property = ['hs_v2_date_entered_appointmentscheduled']
+        crm_records = []
         for batch in batches:
             data = {'inputs': batch,
-                    'properties': v3_property}
-            v3_response = self.post(v3_url, data)
-            v3_records += v3_response['results']
+                    'properties': crm_property}
+            crm_response = self.post(crm_batch_url, data)
+            crm_records += crm_response['results']
 
-        # pull the desired properties from the v3 records and add them to correspond  v1 records
-        for v3_record in v3_records:
+        # pull the desired properties from the CRM records and add them to correspond v1 records
+        for crm_record in crm_records:
             for record in records:
-                if v3_record['id'] == str(record['dealId']):
-                    # don't inclue the v3 property if the value is None
-                    non_null_v3_properties = {v3_property_key: v3_property_value
-                                              for v3_property_key, v3_property_value in
-                                              v3_record['properties'].items()
-                                              if v3_property_value is not None}
+                if crm_record['id'] == str(record['dealId']):
+                    # don't include the CRM property if the value is None
+                    non_null_crm_properties = {crm_property_key: crm_property_value
+                                               for crm_property_key, crm_property_value in
+                                               crm_record['properties'].items()
+                                               if crm_property_value is not None}
 
-                    # only grab v3 properties with a specific prefix
-                    trimmed_v3_properties = {v3_property_key: v3_property_value
-                                             for v3_property_key, v3_property_value in
-                                             non_null_v3_properties.items()
-                                             if any([v3_property_key.startswith(prefix)
-                                                     for prefix in
-                                                     self.V3_DEALS_PROPERTY_PREFIXES])}
+                    # only grab CRM properties with a specific prefix
+                    trimmed_crm_properties = {crm_property_key: crm_property_value
+                                              for crm_property_key, crm_property_value in
+                                              non_null_crm_properties.items()
+                                              if any([crm_property_key.startswith(prefix)
+                                                      for prefix in
+                                                      self.V3_DEALS_PROPERTY_PREFIXES])}
 
-                    # the v3 properties must be restructured into objects to match v1
-                    v3_properties = {v3_property_key: {'value': v3_property_value}
-                                     for v3_property_key, v3_property_value in
-                                     trimmed_v3_properties.items()}
+                    # the CRM properties must be restructured into objects to match v1
+                    crm_properties = {crm_property_key: {'value': crm_property_value}
+                                      for crm_property_key, crm_property_value in
+                                      trimmed_crm_properties.items()}
 
-                    # add the v3 record properties to the v1 record
-                    record['properties'].update(v3_properties)
+                    # add the CRM record properties to the v1 record
+                    record['properties'].update(crm_properties)
 
         records = self.denest_properties('deals', records)
         return records
@@ -629,7 +629,7 @@ class TestClient():
         """
         Get all owners.
         """
-        url = f"{BASE_URL}/crm/v3/owners"
+        url = f"{BASE_URL}/crm/owners/2026-03"
         records = self.get(url)
         transformed_records = self.datatype_transformations('owners', records['results'])
         return transformed_records
@@ -668,7 +668,7 @@ class TestClient():
 
     def _get_workflows_by_pk(self, workflow_id=''):
         """Get a specific workflow by pk value"""
-        url = f"{BASE_URL}/automation/v3/workflows/{workflow_id}"
+        url = f"{BASE_URL}/automation/v3/workflows/{workflow_id}"  # automation/v3 not yet in 2026-03 scope
 
         response = self.get(url)
 
@@ -693,7 +693,7 @@ class TestClient():
         Get a specific ticket by pk value
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
-        url = f"{BASE_URL}/crm/v4/objects/tickets/{ticket_id}?associations=contact,company,deals"
+        url = f"{BASE_URL}/crm/objects/2026-03/tickets/{ticket_id}?associations=contact,company,deals"
         response = self.get(url)
         return response
 
@@ -702,7 +702,7 @@ class TestClient():
         Get tickets properties.
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
-        url = f"{BASE_URL}/crm/v3/properties/tickets"
+        url = f"{BASE_URL}/crm/properties/2026-03/tickets"
         # records = []
         records = self.get(url)
 
@@ -714,7 +714,7 @@ class TestClient():
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
         page_size = self.BaseTest.expected_metadata().get('tickets',{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        url = f"{BASE_URL}/crm/v4/objects/tickets"
+        url = f"{BASE_URL}/crm/objects/2026-03/tickets"
         replication_key = list(self.replication_keys["tickets"])[0]
         records = []
 
@@ -743,7 +743,7 @@ class TestClient():
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
         """
         associations = 'emails,meetings,notes,tasks,calls,conversations,contacts,companies,deals,tickets'
-        url = f"{BASE_URL}/crm/v3/objects/p_{object_name}/{id}?associations={associations}"
+        url = f"{BASE_URL}/crm/objects/2026-03/p_{object_name}/{id}?associations={associations}"
         response = self.get(url)
         return response
 
@@ -752,7 +752,7 @@ class TestClient():
         Get custom object properties.
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
         """
-        url = f"{BASE_URL}/crm/v3/properties/p_{source_name or object_name}"
+        url = f"{BASE_URL}/crm/properties/2026-03/p_{source_name or object_name}"
         records = self.get(url)
 
         return ",".join([record["name"] for record in records["results"]])
@@ -763,7 +763,7 @@ class TestClient():
         HubSpot API https://developers.hubspot.com/docs/api/crm/crm-custom-objects
         """
         page_size = self.BaseTest.expected_metadata().get(stream,{}).get(self.BaseTest.EXPECTED_PAGE_SIZE)
-        url = f"{BASE_URL}/crm/v3/objects/p_{source_name or stream}"
+        url = f"{BASE_URL}/crm/objects/2026-03/p_{source_name or stream}"
         replication_key = list(self.replication_keys[stream])[0]
         records = []
 
@@ -850,7 +850,7 @@ class TestClient():
     def create_custom_contact_properties(self):
         """Create custom contact properties of all the types"""
 
-        url = f"{BASE_URL}/crm/v3/properties/contacts"
+        url = f"{BASE_URL}/crm/properties/2026-03/contacts"
         data = []
         property = {
             "name": "custom_string",
@@ -955,7 +955,7 @@ class TestClient():
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}/crm/v3/objects/contacts"
+        url = f"{BASE_URL}/crm/objects/2026-03/contacts"
         data = {
             "properties": {
                 "custom_string": "custom_string_value",
@@ -1007,7 +1007,7 @@ class TestClient():
     def create_list_memberships(self, list_ids):
         records = []
         for list_id in list_ids:
-            url = f"{BASE_URL}/crm/v3/lists/{list_id}/memberships/add"
+            url = f"{BASE_URL}/crm/lists/2026-03/{list_id}/memberships/add"
             data = ["462631815886", "462622843639"]
             LOGGER.info("Post URL is %s", url)
             try:
@@ -1029,7 +1029,7 @@ class TestClient():
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}/crm/v3/lists"
+        url = f"{BASE_URL}/crm/lists/2026-03"
         if dynamic:
             data = {
                 "name": f"tweeters{record_uuid}",
@@ -1134,7 +1134,7 @@ class TestClient():
         return random_string
 
     def create_custom_object_record(self, stream):
-        url = f"{BASE_URL}/crm/v3/objects/p_{stream}"
+        url = f"{BASE_URL}/crm/objects/2026-03/p_{stream}"
 
         if stream == "cars":
             data = {
@@ -1160,7 +1160,7 @@ class TestClient():
                 }
             }
         elif stream == "campaigns":
-            url = f"{BASE_URL}/crm/v3/objects/p_campaigns"
+            url = f"{BASE_URL}/crm/objects/2026-03/p_campaigns"
             data = {
                 "properties": {
                     "co_campaign_id": random.randint(1, 100000),
@@ -1283,7 +1283,7 @@ class TestClient():
         """
         HubSpot API https://developers.hubspot.com/docs/api/crm/tickets
         """
-        url = f"{BASE_URL}/crm/v4/objects/tickets"
+        url = f"{BASE_URL}/crm/objects/2026-03/tickets"
         record_uuid = str(uuid.uuid4()).replace('-', '')
         data = {
             "properties": {
@@ -1541,7 +1541,7 @@ class TestClient():
         """
         record_uuid = str(uuid.uuid4()).replace('-', '')
 
-        url = f"{BASE_URL}/automation/v3/workflows"
+        url = f"{BASE_URL}/automation/v3/workflows"  # automation/v3 not yet in 2026-03 scope
         data = {
             "name": "Test Workflow",
             "type": "DRIP_DELAY",
@@ -1659,7 +1659,7 @@ class TestClient():
         :params contact_id: the pk value of the ticket record to update
         :return:
         """
-        url = f"{BASE_URL}/crm/v3/objects/contacts/{contact_id}"
+        url = f"{BASE_URL}/crm/objects/2026-03/contacts/{contact_id}"
 
         record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
@@ -1681,7 +1681,7 @@ class TestClient():
         :param list_id: the primary key value of the record to update
         :return: the updated record using the get_contracts_by_pks method
         """
-        url = f"{BASE_URL}/crm/v3/lists/{list_id}/update-list-filters"
+        url = f"{BASE_URL}/crm/lists/2026-03/{list_id}/update-list-filters"
 
         data = {
             "filterBranch": {
@@ -1831,7 +1831,7 @@ class TestClient():
         :params ticket_id: the pk value of the ticket record to update
         :return:
         """
-        url = f"{BASE_URL}/crm/v4/objects/tickets/{ticket_id}"
+        url = f"{BASE_URL}/crm/objects/2026-03/tickets/{ticket_id}"
 
         record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
@@ -1853,7 +1853,7 @@ class TestClient():
         :param id: The primary key value of the custom object record to update.
         :return: The updated custom object record.
         """
-        url = f"{BASE_URL}/crm/v3/objects/p_{stream}/{id}"
+        url = f"{BASE_URL}/crm/objects/2026-03/p_{stream}/{id}"
 
         record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
@@ -1887,7 +1887,7 @@ class TestClient():
         Delete a list of contact ids
         """
         for contactId in record_ids:
-            url = f"{BASE_URL}/crm/v3/objects/contacts/{contactId}"
+            url = f"{BASE_URL}/crm/objects/2026-03/contacts/{contactId}"
             self.delete(url)
 
     def delete_contact_lists(self, records=[], count=10):
@@ -1905,7 +1905,7 @@ class TestClient():
                 "need to have at least one record remaining"
             )
         for record_id in record_ids_to_delete[:count]:
-            url = f"{BASE_URL}/crm/v3/lists/{record_id}"
+            url = f"{BASE_URL}/crm/lists/2026-03/{record_id}"
 
             self.delete(url)
 
