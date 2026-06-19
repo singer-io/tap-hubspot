@@ -77,14 +77,14 @@ class DiscoveryTest(HubspotBaseTest):
                         )
                 actual_replication_method = stream_properties[0]['metadata'].get('forced-replication-method')
                 # BUG https://jira.talendforge.org/browse/TDL-9939 all streams are set to full-table in the metadata
-                # verify the actual replication matches our expected replication method
+                # verify the actual replication matches our expected replication method   
                 if stream == "contacts":
                     self.assertEqual(
                         self.expected_replication_method().get(stream, None),
                         actual_replication_method,
                         msg="The actual replication method {} doesn't match the expected {}".format(
                             actual_replication_method,
-                            self.expected_replication_method().get(stream, None)))
+                            self.expected_replication_method().get(stream, None)))        
 
                 # verify that if there is a replication key we are doing INCREMENTAL otherwise FULL
                 actual_replication_method = stream_properties[0].get(
@@ -105,7 +105,7 @@ class DiscoveryTest(HubspotBaseTest):
                                         "since there is no replication key")
 
                 expected_primary_keys = self.expected_primary_keys()[stream]
-                expected_replication_keys = self.expected_replication_keys()[stream]
+                expected_replication_keys = self.expected_replication_keys()[stream]      
                 expected_automatic_fields = expected_primary_keys | expected_replication_keys
 
                 # verify that primary, replication and foreign keys are given the inclusion of automatic in metadata.
