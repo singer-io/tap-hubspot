@@ -495,41 +495,41 @@ class TestClient():
         for i in range(0, len(v1_ids), batch_size):
             batches.append(v1_ids[i:i + batch_size])
 
-        # hit the v3 endpoint to get the special hs_<whatever> fields from v3 'properties'
-        v3_url = f"{BASE_URL}/crm/objects/2026-03/deals/batch/read"
-        v3_property = ['hs_v2_date_entered_appointmentscheduled']
-        v3_records = []
+        # hit the date-based CRM endpoint to get the special hs_<whatever> fields from 'properties'
+        crm_batch_url = f"{BASE_URL}/crm/objects/2026-03/deals/batch/read"
+        crm_property = ['hs_v2_date_entered_appointmentscheduled']
+        crm_records = []
         for batch in batches:
             data = {'inputs': batch,
-                    'properties': v3_property}
-            v3_response = self.post(v3_url, data)
-            v3_records += v3_response['results']
+                    'properties': crm_property}
+            crm_response = self.post(crm_batch_url, data)
+            crm_records += crm_response['results']
 
-        # pull the desired properties from the v3 records and add them to correspond  v1 records
-        for v3_record in v3_records:
+        # pull the desired properties from the CRM records and add them to correspond v1 records
+        for crm_record in crm_records:
             for record in records:
-                if v3_record['id'] == str(record['dealId']):
-                    # don't inclue the v3 property if the value is None
-                    non_null_v3_properties = {v3_property_key: v3_property_value
-                                              for v3_property_key, v3_property_value in
-                                              v3_record['properties'].items()
-                                              if v3_property_value is not None}
+                if crm_record['id'] == str(record['dealId']):
+                    # don't include the CRM property if the value is None
+                    non_null_crm_properties = {crm_property_key: crm_property_value
+                                               for crm_property_key, crm_property_value in
+                                               crm_record['properties'].items()
+                                               if crm_property_value is not None}
 
-                    # only grab v3 properties with a specific prefix
-                    trimmed_v3_properties = {v3_property_key: v3_property_value
-                                             for v3_property_key, v3_property_value in
-                                             non_null_v3_properties.items()
-                                             if any([v3_property_key.startswith(prefix)
-                                                     for prefix in
-                                                     self.V3_DEALS_PROPERTY_PREFIXES])}
+                    # only grab CRM properties with a specific prefix
+                    trimmed_crm_properties = {crm_property_key: crm_property_value
+                                              for crm_property_key, crm_property_value in
+                                              non_null_crm_properties.items()
+                                              if any([crm_property_key.startswith(prefix)
+                                                      for prefix in
+                                                      self.V3_DEALS_PROPERTY_PREFIXES])}
 
-                    # the v3 properties must be restructured into objects to match v1
-                    v3_properties = {v3_property_key: {'value': v3_property_value}
-                                     for v3_property_key, v3_property_value in
-                                     trimmed_v3_properties.items()}
+                    # the CRM properties must be restructured into objects to match v1
+                    crm_properties = {crm_property_key: {'value': crm_property_value}
+                                      for crm_property_key, crm_property_value in
+                                      trimmed_crm_properties.items()}
 
-                    # add the v3 record properties to the v1 record
-                    record['properties'].update(v3_properties)
+                    # add the CRM record properties to the v1 record
+                    record['properties'].update(crm_properties)
 
         records = self.denest_properties('deals', records)
         return records
