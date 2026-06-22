@@ -1142,12 +1142,12 @@ def sync_engagements(STATE, ctx):
                 cursor = data.get('after', cursor)
 
                 for engagement in data[top_level_key]:
-                    counter.increment()
                     record = bumble_bee.transform(lift_properties_and_versions(engagement), schema, mdata)
                     if start is None or record['engagement'][bookmark_key] >= start:
                         record['engagement_id'] = record['engagement']['id']
                         record[bookmark_key] = record['engagement'][bookmark_key]
                         singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                        counter.increment()
 
                 if not data.get('hasMore', False):
                     break

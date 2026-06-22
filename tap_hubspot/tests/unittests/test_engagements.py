@@ -2,7 +2,7 @@ import copy
 import json
 import os
 import unittest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 import singer
 
@@ -120,7 +120,7 @@ class TestSyncEngagements(unittest.TestCase):
 
         result = sync_engagements(state, self.make_ctx())
 
-        self.assertNotIn('engagements', result.get('offset', {}))
+        self.assertIsNone(singer.get_offset(result, 'engagements'))
         self.assertEqual(
             singer.get_bookmark(result, 'engagements', 'cursor'),
             'cursor-page-2'
