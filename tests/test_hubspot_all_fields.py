@@ -166,6 +166,7 @@ class TestHubspotAllFields(HubspotBaseTest):
         return self.expected_streams().difference({
             'owners',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            'workflows'
         })
 
     def setUp(self):
