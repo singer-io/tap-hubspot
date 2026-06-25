@@ -1953,7 +1953,7 @@ class TestClient():
             "client_secret": self.CONFIG['client_secret'],
         }
 
-        response = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+        response = requests.post(BASE_URL + "/oauth/2026-03/token", data=payload)
         response.raise_for_status()
         auth = response.json()
         self.CONFIG['access_token'] = auth['access_token']

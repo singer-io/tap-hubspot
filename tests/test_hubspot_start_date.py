@@ -36,6 +36,8 @@ class TestHubspotStartDate(HubspotBaseTest):
                 companies_records = self.test_client.read('companies', since=self.my_start_date)
                 company_ids = [company['companyId'] for company in companies_records]
                 self.test_client.create(stream, company_ids)
+            elif stream == 'contact_lists':
+                self.test_client.create('static_contact_lists')
             elif stream == 'list_memberships':
                 list_ids = [contact_list['listId'] for contact_list in self.test_client.read('contact_lists', since=self.my_start_date)]
                 self.test_client.create(stream, list_ids=list_ids)
