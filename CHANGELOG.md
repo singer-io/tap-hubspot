@@ -1,7 +1,7 @@
 # Changelog
 
 ## 4.4.0
-  * Upgrade OAuth v1 API to the latest date-based versioned API  [#302](https://github.com/singer-io/tap-hubspot/pull/302)
+  * Upgrade OAuth v1 API to the latest date-based versioned API  [#306](https://github.com/singer-io/tap-hubspot/pull/306)
 
 ## 4.3.2
   * Sync contact_lists in sorted order. [#304](https://github.com/singer-io/tap-hubspot/pull/304)
