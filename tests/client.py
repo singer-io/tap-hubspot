@@ -1219,8 +1219,15 @@ class TestClient():
         }
 
         # generate a record
-        response = self.post(url, data)
-        records = [response]
+        try:
+            response = self.post(url, data)
+            records = [response]
+        except requests.exceptions.HTTPError as err:
+            if 'pipelines limit' in err.response.text:
+                LOGGER.debug("Pipelines limit reached, skipping creation of new pipeline.")
+                records = []
+            else:
+                raise
         return records
 
     def create_deals(self):

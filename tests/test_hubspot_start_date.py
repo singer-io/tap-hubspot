@@ -28,10 +28,8 @@ class TestHubspotStartDate(HubspotBaseTest):
         streams_under_test = self.expected_streams() - {'email_events', 'workflows'} # we get this for free with subscription_changes
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
-        for stream in streams_under_test:
-            records = self.test_client.read(stream, since=self.my_start_date)
-            if len(records) > 3:
-                continue
+        # We already create test data for below skipped streams in bookmark test
+        for stream in streams_under_test - {'deals', 'contacts_by_company', 'contacts', 'companies'}:
             if stream == 'contacts_by_company':
                 companies_records = self.test_client.read('companies', since=self.my_start_date)
                 company_ids = [company['companyId'] for company in companies_records]
@@ -39,7 +37,7 @@ class TestHubspotStartDate(HubspotBaseTest):
             elif stream == 'contact_lists':
                 self.test_client.create('static_contact_lists')
             elif stream == 'list_memberships':
-                list_ids = [contact_list['listId'] for contact_list in self.test_client.read('contact_lists', since=self.my_start_date)]
+                list_ids = [contact_list['listId'] for contact_list in self.test_client.read('contact_lists', since=self.my_start_date) if contact_list['processingType'] == 'MANUAL']
                 self.test_client.create(stream, list_ids=list_ids)
             else:
                 self.test_client.create(stream)
