@@ -1219,8 +1219,15 @@ class TestClient():
         }
 
         # generate a record
-        response = self.post(url, data)
-        records = [response]
+        try:
+            response = self.post(url, data)
+            records = [response]
+        except requests.exceptions.HTTPError as err:
+            if 'pipelines limit' in err.response.text:
+                LOGGER.debug("Pipelines limit reached, skipping creation of new pipeline.")
+                records = []
+            else:
+                raise
         return records
 
     def create_deals(self):
@@ -1953,7 +1960,7 @@ class TestClient():
             "client_secret": self.CONFIG['client_secret'],
         }
 
-        response = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+        response = requests.post(BASE_URL + "/oauth/2026-03/token", data=payload)
         response.raise_for_status()
         auth = response.json()
         self.CONFIG['access_token'] = auth['access_token']
