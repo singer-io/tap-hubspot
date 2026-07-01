@@ -443,7 +443,8 @@ def _get_accessible_streams(streams):
 
     # If ALL parent streams are inaccessible, raise error
     parent_streams = [s for s in streams if not s.parent_tap_stream_id]
-    if inaccessible_streams and len(inaccessible_streams) == len(parent_streams):
+    inaccessible_parent_streams = [s for s in inaccessible_streams if not s.parent_tap_stream_id]
+    if inaccessible_parent_streams and len(inaccessible_parent_streams) == len(parent_streams):
         raise HubspotForbiddenError(
             "403 Forbidden: No read access to supported streams. Data collection cannot start."
         )
