@@ -35,6 +35,9 @@ class DependencyException(Exception):
 class UriTooLongException(Exception):
     pass
 
+class HubspotForbiddenError(Exception):
+    pass
+
 class DataFields:
     offset = 'offset'
 
@@ -66,6 +69,24 @@ CONFIG = {
     "hapikey": None,
     "include_inactives": None,
     "select_fields_by_default": None,
+}
+
+# Maps each parent stream to the endpoint key and minimal params for access probing.
+# Child streams are excluded since their access is governed by the parent.
+STREAM_ACCESS_ENDPOINTS = {
+    "subscription_changes": {"endpoint": "subscription_changes", "params": {"startTimestamp": 0, "endTimestamp": 1, "limit": 1}},
+    "email_events":         {"endpoint": "email_events", "params": {"startTimestamp": 0, "endTimestamp": 1, "limit": 1}},
+    "contacts":             {"endpoint": "contacts", "params": {"limit": 1}},
+    "deals":                {"endpoint": "deals_all", "params": {"limit": 1}},
+    "companies":            {"endpoint": "companies_all", "params": {"limit": 1}},
+    "tickets":              {"endpoint": "tickets", "params": {"limit": 1}},
+    "owners":               {"endpoint": "owners", "params": {"limit": 1}},
+    "forms":                {"endpoint": "forms"},
+    "workflows":            {"endpoint": "workflows"},
+    "contact_lists":        {"endpoint": "contact_lists", "method": "POST", "body": {"count": 1}},
+    "engagements":          {"endpoint": "engagements_all", "params": {"limit": 1}},
+    "campaigns":            {"endpoint": "campaigns_all", "params": {"limit": 1}},
+    "deal_pipelines":       {"endpoint": "deal_pipelines"},
 }
 
 ENDPOINTS = {
@@ -347,6 +368,96 @@ def request(url, params=None):
         resp.raise_for_status()
 
     return resp
+
+def check_stream_access(stream_name):
+    """
+    Probe the HubSpot API endpoint for the given stream with a minimal request
+    to verify that the credentials have read access.
+
+    Returns True if accessible, False if a 403 Forbidden error is raised.
+    Child streams always return True (access is governed by their parent).
+    """
+    access_config = STREAM_ACCESS_ENDPOINTS.get(stream_name)
+    if access_config is None:
+        # Unknown stream or child stream — assume accessible
+        return True
+
+    endpoint = access_config["endpoint"]
+    url = get_url(endpoint)
+    method = access_config.get("method", "GET")
+    params = access_config.get("params")
+
+    try:
+        if method == "POST":
+            body = access_config.get("body", {})
+            post_search_endpoint(url, body, params=params)
+        else:
+            request(url, params=params)
+        return True
+    except SourceUnavailableException:
+        return False
+    except requests.exceptions.HTTPError as exc:
+        if exc.response and exc.response.status_code == 403:
+            return False
+        raise
+
+def _get_accessible_streams(streams):
+    """
+    Filter the list of streams to only those the credentials can read.
+    Child streams are included if their parent is accessible.
+    Raises HubspotForbiddenError if no parent streams are accessible.
+    """
+    accessible_streams = []
+    inaccessible_streams = []
+
+    for stream in streams:
+        # Child streams inherit access from their parent
+        if stream.parent_tap_stream_id:
+            accessible_streams.append(stream)
+            continue
+
+        if check_stream_access(stream.tap_stream_id):
+            accessible_streams.append(stream)
+        else:
+            LOGGER.warning(
+                "Stream '%s' is not accessible with the provided credentials (403 Forbidden). "
+                "Excluding from catalog.",
+                stream.tap_stream_id,
+            )
+            inaccessible_streams.append(stream)
+
+    # Prune child streams whose parent was excluded
+    excluded_parent_ids = {s.tap_stream_id for s in inaccessible_streams}
+    streams_with_accessible_parents = []
+    for stream in accessible_streams:
+        if stream.parent_tap_stream_id and stream.parent_tap_stream_id in excluded_parent_ids:
+            LOGGER.warning(
+                "Stream '%s' excluded from catalog because its parent stream '%s' is not accessible.",
+                stream.tap_stream_id,
+                stream.parent_tap_stream_id,
+            )
+            inaccessible_streams.append(stream)
+        else:
+            streams_with_accessible_parents.append(stream)
+    accessible_streams = streams_with_accessible_parents
+
+    # If ALL parent streams are inaccessible, raise error
+    parent_streams = [s for s in streams if not s.parent_tap_stream_id]
+    inaccessible_parent_streams = [s for s in inaccessible_streams if not s.parent_tap_stream_id]
+    if inaccessible_parent_streams and len(inaccessible_parent_streams) == len(parent_streams):
+        raise HubspotForbiddenError(
+            "403 Forbidden: No read access to supported streams. Data collection cannot start."
+        )
+
+    if inaccessible_streams:
+        LOGGER.warning(
+            "Excluding inaccessible streams: %s",
+            ", ".join(s.tap_stream_id for s in inaccessible_streams),
+        )
+
+    return accessible_streams
+
+
 # {"bookmarks" : {"contacts" : { "lastmodifieddate" : "2001-01-01"
 #                                "offset" : {"vidOffset": 1234
 #                                           "timeOffset": "3434434 }}
@@ -1488,7 +1599,11 @@ def load_discovered_schema(stream):
 
 def discover_schemas():
     result = {'streams': []}
-    for stream in STREAMS:
+
+    # Filter streams based on access checks before loading schemas
+    accessible_streams = _get_accessible_streams(STREAMS)
+
+    for stream in accessible_streams:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         try:
             schema, mdata = load_discovered_schema(stream)
