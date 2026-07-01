@@ -436,6 +436,7 @@ def _get_accessible_streams(streams):
                 stream.tap_stream_id,
                 stream.parent_tap_stream_id,
             )
+            inaccessible_streams.append(stream)
         else:
             streams_with_accessible_parents.append(stream)
     accessible_streams = streams_with_accessible_parents
