@@ -27,7 +27,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         }
         payload.update(self.get_credentials())
 
-        resp = requests.post("https://api.hubapi.com/oauth/v1/token", data=payload)
+        resp = requests.post("https://api.hubapi.com/oauth/2026-03/token", data=payload)
         return resp.json()['access_token']
 
     def ensure_ticket(self, headers):
