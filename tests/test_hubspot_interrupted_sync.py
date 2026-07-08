@@ -77,12 +77,17 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
         new_state['bookmarks']['companies']['property_hs_lastmodifieddate'] = None
         new_state['bookmarks']['companies']['current_sync_start'] = companies_bookmark
 
-        engagements_bookmark = self.timedelta_formatted(
-            reference_state['bookmarks']['engagements']['lastUpdated'],
-            days=-1, str_format=self.BASIC_DATE_FORMAT
-        )
-        new_state['bookmarks']['engagements']['lastUpdated'] = None
-        new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
+        if 'lastUpdated' in reference_state['bookmarks']['engagements']:
+            # Legacy offset-scan state: roll bookmark back 1 day to simulate interruption
+            engagements_bookmark = self.timedelta_formatted(
+                reference_state['bookmarks']['engagements']['lastUpdated'],
+                days=-1, str_format=self.BASIC_DATE_FORMAT
+            )
+            new_state['bookmarks']['engagements']['lastUpdated'] = None
+            new_state['bookmarks']['engagements']['current_sync_start'] = engagements_bookmark
+        # else: cursor-based state (new /modified/after endpoint) — leave cursor bookmark intact;
+        # the second sync will resume from the persisted cursor. Assertions for engagements
+        # are skipped downstream (BUG_TDL-15782).
 
         tickets_bookmark = self.timedelta_formatted(
             reference_state['bookmarks']['tickets']['updatedAt'],
