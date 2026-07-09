@@ -91,7 +91,7 @@ ENDPOINTS = {
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
 
-    "engagements_all":        "/engagements/v1/engagements/paged",
+    "engagements_modified_after": "/engagements/v1/engagements/modified/after",
 
     "subscription_changes": "/email/public/v1/subscriptions/timeline",
     "email_events":         "/email/public/v1/events",
@@ -141,6 +141,20 @@ def write_current_sync_start(state, tap_stream_id, start):
     if start is not None:
         value = utils.strftime(start)
     return singer.write_bookmark(state, tap_stream_id, "current_sync_start", value)
+
+def get_engagements_cursor(state, start):
+    # Continue from the opaque cursor written after a successful modified/after sync.
+    cursor = singer.get_bookmark(state, 'engagements', 'cursor')
+    if cursor:
+        return cursor
+
+    # Support older state that stored the modified/after cursor as the after bookmark.
+    previous_after = singer.get_bookmark(state, 'engagements', 'after')
+    if previous_after:
+        return previous_after
+
+    # Migrate timestamp-based state by seeding modified/after with epoch millis.
+    return int(utils.strptime_to_utc(start).timestamp() * 1000)
 
 def clean_state(state):
     """ Clear deprecated keys out of state. """
@@ -753,7 +767,9 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         # store the current sync start in the state and not move the bookmark past this value.
         sync_start_time = utils.now()
         with metrics.record_counter(stream_id) as counter:
+            raw_count = 0
             for row in get_v3_records(url, params, 'results', "paging"):
+                raw_count += 1
                 modified_time = utils.strptime_to_utc(row[bookmark_key])
 
                 if modified_time and modified_time >= bookmark_value:
@@ -763,6 +779,7 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
                     if modified_time >= max_bk_value:
                         max_bk_value = modified_time
                     counter.increment()
+            LOGGER.info("Fetched %d raw %s records, emitted %d after incremental filter", raw_count, stream_id, counter.value)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
     new_bookmark = min(max_bk_value, sync_start_time)
@@ -1120,44 +1137,56 @@ def sync_engagements(STATE, ctx):
     singer.write_schema("engagements", schema, ["engagement_id"], [bookmark_key], catalog.get('stream_alias'))
     start = get_start(STATE, "engagements", bookmark_key)
 
-    # Because this stream doesn't query by `lastUpdated`, it cycles
-    # through the data set every time. The issue with this is that there
-    # is a race condition by which records may be updated between the
-    # start of this table's sync and the end, causing some updates to not
-    # be captured, in order to combat this, we must store the current
-    # sync's start in the state and not move the bookmark past this value.
-    current_sync_start = get_current_sync_start(STATE, "engagements") or utils.now()
-    STATE = write_current_sync_start(STATE, "engagements", current_sync_start)
-    singer.write_state(STATE)
-
-    max_bk_value = start
     LOGGER.info("sync_engagements from %s", start)
 
-    STATE = singer.write_bookmark(STATE, 'engagements', bookmark_key, start)
-    singer.write_state(STATE)
+    url = get_url("engagements_modified_after")
 
-    url = get_url("engagements_all")
-    params = {'limit': int(CONFIG.get('engagements_page_size') or 190)}
+    inflight = singer.get_offset(STATE, 'engagements')
+    if inflight and inflight.get('after'):
+        cursor = inflight['after']
+    else:
+        cursor = get_engagements_cursor(STATE, start)
+
+    params = {
+        'limit': int(CONFIG.get('engagements_page_size') or 190),
+        'after': cursor,
+    }
     top_level_key = "results"
-    engagements = gen_request(STATE, 'engagements', url, params, top_level_key, "hasMore", ["offset"], ["offset"])
 
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for engagement in engagements:
-            record = bumble_bee.transform(lift_properties_and_versions(engagement), schema, mdata)
-            if record['engagement'][bookmark_key] >= start:
-                # hoist PK and bookmark field to top-level record
-                record['engagement_id'] = record['engagement']['id']
-                record[bookmark_key] = record['engagement'][bookmark_key]
-                singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-                if record['engagement'][bookmark_key] >= max_bk_value:
-                    max_bk_value = record['engagement'][bookmark_key]
+        with metrics.record_counter('engagements') as counter:
+            while True:
+                data = request(url, dict(params)).json()
 
-    # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), current_sync_start)
-    STATE = singer.write_bookmark(STATE, 'engagements', bookmark_key, utils.strftime(new_bookmark))
-    STATE = write_current_sync_start(STATE, 'engagements', None)
+                if data.get(top_level_key) is None:
+                    raise RuntimeError("Unexpected API response: {} not in {}".format(top_level_key, data.keys()))
+
+                cursor = data.get('after', cursor)
+
+                for engagement in data[top_level_key]:
+                    record = bumble_bee.transform(lift_properties_and_versions(engagement), schema, mdata)
+                    if start is None or record['engagement'][bookmark_key] >= start:
+                        record['engagement_id'] = record['engagement']['id']
+                        record[bookmark_key] = record['engagement'][bookmark_key]
+                        singer.write_record("engagements", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+                        counter.increment()
+
+                if not data.get('hasMore', False):
+                    break
+
+                params['after'] = cursor
+                STATE = singer.set_offset(STATE, 'engagements', 'after', cursor)
+                singer.write_state(STATE)
+
+            LOGGER.info('Fetched %d engagements records', counter.value)
+
+    STATE = singer.clear_offset(STATE, 'engagements')
+    STATE = singer.write_bookmark(STATE, 'engagements', 'cursor', cursor)
+    STATE = singer.clear_bookmark(STATE, 'engagements', bookmark_key)
+    STATE = singer.clear_bookmark(STATE, 'engagements', 'after')
+    STATE = singer.clear_bookmark(STATE, 'engagements', 'current_sync_start')
     singer.write_state(STATE)
     return STATE
 
@@ -1394,7 +1423,6 @@ def do_sync(STATE, catalog):
         deselect_unselected_fields(catalog)
 
     custom_objects = generate_custom_streams(mode="SYNC", catalog=catalog)
-    # Clear out keys that are no longer used
     clean_state(STATE)
 
     ctx = Context(catalog)
