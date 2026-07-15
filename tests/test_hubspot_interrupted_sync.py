@@ -153,11 +153,8 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
                 replication_method = self.expected_replication_method()[stream]
                 primary_keys = self.expected_primary_keys()[stream]
 
-                # BUG_TDL-15782 [tap-hubspot] Failure to recover from interrupted sync (engagements, companies, contacts)
-                # Skip before data gathering to avoid KeyError when a stream produces no records
-                # in the second sync (e.g. engagements cursor-based state stays at end-of-data).
                 if stream in {'companies', 'engagements', 'contacts'}:
-                    continue
+                    self.skipTest('BUG_TDL-15782: interrupted-sync assertions are skipped for this stream')
 
                 # gather replicated records
                 actual_record_count_2 = second_record_count_by_stream[stream]
