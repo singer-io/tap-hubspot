@@ -154,7 +154,7 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
                 primary_keys = self.expected_primary_keys()[stream]
 
                 if stream in {'companies', 'engagements', 'contacts'}:
-                    self.skipTest('BUG_TDL-15782: interrupted-sync assertions are skipped for this stream')
+                    continue  # BUG_TDL-15782: skip assertions for this stream without aborting the full test
 
                 # gather replicated records
                 actual_record_count_2 = second_record_count_by_stream[stream]
