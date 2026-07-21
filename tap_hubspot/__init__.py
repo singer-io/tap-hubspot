@@ -84,7 +84,7 @@ STREAM_ACCESS_ENDPOINTS = {
     "forms":                {"endpoint": "forms"},
     "workflows":            {"endpoint": "workflows"},
     "contact_lists":        {"endpoint": "contact_lists", "method": "POST", "body": {"count": 1}},
-    "engagements":          {"endpoint": "engagements_all", "params": {"limit": 1}},
+    "engagements":          {"endpoint": "engagements_modified_after", "params": {"limit": 1}},
     "campaigns":            {"endpoint": "campaigns_all", "params": {"limit": 1}},
     "deal_pipelines":       {"endpoint": "deal_pipelines"},
 }
