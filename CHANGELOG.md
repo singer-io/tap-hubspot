@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.0
+  * Migrate engagements sync from `/paged` to `/engagements/v1/engagements/modified/after` with opaque cursor-based pagination for incremental, crash-safe resume.
+
 ## 4.4.0
   * Exclude 403-forbidden streams from discovery instead of failing [#302](https://github.com/singer-io/tap-hubspot/pull/302)
   * Raise HubspotForbiddenError when no streams are accessible
