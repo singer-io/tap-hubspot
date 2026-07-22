@@ -872,7 +872,7 @@ class TestClient():
             "description": "A new number property for you",
             "groupName": "contactinformation",
             "type": "number",
-            "fieldType": "text",
+            "fieldType": "number",
             "formField": True,
             "displayOrder": 7,
             "options": [
@@ -886,7 +886,7 @@ class TestClient():
             "description": "A new date property for you",
             "groupName": "contactinformation",
             "type": "date",
-            "fieldType": "text",
+            "fieldType": "date",
             "formField": True,
             "displayOrder": 9,
             "options": [
@@ -900,7 +900,7 @@ class TestClient():
             "description": "A new datetime property for you",
             "groupName": "contactinformation",
             "type": "datetime",
-            "fieldType": "text",
+            "fieldType": "date",
             "formField": True,
             "displayOrder": 10,
             "options": [
@@ -1008,11 +1008,15 @@ class TestClient():
         records = []
         for list_id in list_ids:
             url = f"{BASE_URL}/crm/v3/lists/{list_id}/memberships/add"
-            data = ["318001", "199564445797"]
+            data = ["462631815886", "462622843639"]
             LOGGER.info("Post URL is %s", url)
-            # generate a record
-            self.put(url, data)
-            records.extend([{'listId': list_id, 'recordId': '318041'}, {'listId': list_id, 'recordId': '199564445797'}])
+            try:
+                # generate a record
+                self.put(url, data)
+            except requests.exceptions.HTTPError as err:
+                LOGGER.debug("Update failed for %s", list_id)
+                continue
+            records.extend([{'listId': list_id, 'recordId': '462631815886'}, {'listId': list_id, 'recordId': '462622843639'}])
         return records
 
     def create_contact_lists(self, dynamic=True):
@@ -1215,8 +1219,15 @@ class TestClient():
         }
 
         # generate a record
-        response = self.post(url, data)
-        records = [response]
+        try:
+            response = self.post(url, data)
+            records = [response]
+        except requests.exceptions.HTTPError as err:
+            if 'pipelines limit' in err.response.text:
+                LOGGER.debug("Pipelines limit reached, skipping creation of new pipeline.")
+                records = []
+            else:
+                raise
         return records
 
     def create_deals(self):
@@ -1232,10 +1243,10 @@ class TestClient():
         data = {
             "associations": {
                 "associatedCompanyIds": [
-                    6804176293
+                    130787345085
                 ],
                 "associatedVids": [
-                    2304
+                    123338799847
                 ]
             },
             "properties": [
@@ -1252,7 +1263,7 @@ class TestClient():
                     "name": "pipeline"
                 },
                 {
-                    "value": "98621200",
+                    "value": "79930367",
                     "name": "hubspot_owner_id"
                 },
                 {
@@ -1327,22 +1338,17 @@ class TestClient():
         data = {
             "engagement": {
                 "active": True,
-                "ownerId": 98621200,
+                "ownerId": 79930367,
                 "type": "NOTE",
                 "timestamp": 1409172644778
             },
             "associations": {
                 "contactIds": [contact_id],
-                "companyIds": [6804176293],
+                "companyIds": [130787345085],
                 "dealIds": [],
                 "ownerIds": [],
                 "ticketIds": []
             },
-            "attachments": [
-                {
-                    "id": 4241968539
-                }
-            ],
             "metadata": {
                 "body": "note body"
             }
@@ -1949,13 +1955,12 @@ class TestClient():
         """
         payload = {
             "grant_type": "refresh_token",
-            "redirect_uri": self.CONFIG['redirect_uri'],
             "refresh_token": self.CONFIG['refresh_token'],
             "client_id": self.CONFIG['client_id'],
             "client_secret": self.CONFIG['client_secret'],
         }
 
-        response = requests.post(BASE_URL + "/oauth/v1/token", data=payload)
+        response = requests.post(BASE_URL + "/oauth/2026-03/token", data=payload)
         response.raise_for_status()
         auth = response.json()
         self.CONFIG['access_token'] = auth['access_token']

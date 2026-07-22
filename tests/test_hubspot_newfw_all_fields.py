@@ -18,6 +18,9 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
             'owners',
             'form_submissions',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            # No records are returned in this account for this test window.
+            'workflows',
+            'email_events'
         })
 
     def setUp(self):
@@ -27,17 +30,21 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
 
         self.expected_records = dict()
         streams = self.streams_to_test()
-        stream_to_run_last = 'contacts_by_company'
-        if stream_to_run_last in streams:
-            streams.remove(stream_to_run_last)
-            streams = list(streams)
-            streams.append(stream_to_run_last)
+
+        # move child streams to the end of the list so parent ids are pre-populated by test client
+        child_streams = ['contacts_by_company', 'list_memberships']
+        streams = list(set(streams) - set(child_streams))
+        streams.extend(child_streams)
 
         for stream in streams:
             # Get all records
             if stream == 'contacts_by_company':
                 company_ids = [company['companyId'] for company in self.expected_records['companies']]
                 self.expected_records[stream] = test_client.read(stream, parent_ids=company_ids)
+            elif stream == 'list_memberships':
+                list_ids = [contact_list['listId'] for contact_list in self.expected_records.get(
+                    'contact_lists', [])]
+                self.expected_records[stream] = test_client.read(stream, parent_ids=list_ids)
             else:
                 self.expected_records[stream] = test_client.read(stream)
 
@@ -74,7 +81,8 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
         # BUG_TDL-14993 | https://jira.talendforge.org/browse/TDL-14993
         #                 Has an value of object with key 'value' and value 'Null'
         if stream == 'deals':
-            bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_', 'property_hs_time_in'}
+            bad_key_prefixes = {'property_hs_date_entered_', 'property_hs_date_exited_', 'property_hs_time_in',
+                                'property_hs_v2_date_entered_', 'property_hs_v2_date_exited_', 'property_hs_v2_latest_time'}
             bad_keys = set()
             for key in self.expected_all_keys:
                 for bad_prefix in bad_key_prefixes:

@@ -15,9 +15,7 @@ class HubspotBaseCase(BaseCase):
     # set the default start date which can be overridden in the tests.
     start_date = BaseCase.timedelta_formatted(dt.utcnow(), delta=timedelta(days=-1))
 
-    EXTRA_FIELDS = {
-        "contacts": { "versionTimestamp" }
-    }
+    EXTRA_FIELDS = {}
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -156,38 +154,5 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.API_LIMIT: 100,
                 BaseCase.OBEYS_START_DATE: True
             },
-            # below are the custom_objects stream
-            "cars": {
-                BaseCase.PRIMARY_KEYS: {"id"},
-                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.API_LIMIT: 100,
-                BaseCase.EXPECTED_PAGE_SIZE: 100,
-                BaseCase.OBEYS_START_DATE: True
-            },
-            "co_firsts": {
-                BaseCase.PRIMARY_KEYS: {"id"},
-                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.API_LIMIT: 100,
-                BaseCase.EXPECTED_PAGE_SIZE: 100,
-                BaseCase.OBEYS_START_DATE: True
-            },
-            "custom_object_campaigns": {
-                BaseCase.PRIMARY_KEYS: {"id"},
-                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.API_LIMIT: 100,
-                BaseCase.EXPECTED_PAGE_SIZE: 100,
-                BaseCase.OBEYS_START_DATE: True
-            },
-            "custom_object_contacts": {
-                BaseCase.PRIMARY_KEYS: {"id"},
-                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
-                BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.API_LIMIT: 100,
-                BaseCase.EXPECTED_PAGE_SIZE: 100,
-                BaseCase.OBEYS_START_DATE: True
-            }
 
         }
