@@ -156,7 +156,7 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
                 BaseCase.OBEYS_START_DATE: True,
-                BaseCase.IS_FORBIDDEN_STREAM: True
+                HubspotBaseCase.IS_FORBIDDEN_STREAM: True
             },
             "tickets": {
                 BaseCase.PRIMARY_KEYS: {"id"},
