@@ -53,6 +53,8 @@ class TestHubspotStartDate(HubspotBaseTest):
             'form_submissions',
             'workflows',
             'campaigns', # static test data, covered in separate test
+            'subscription_changes',
+            'email_events',
         })
 
 

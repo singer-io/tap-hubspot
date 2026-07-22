@@ -33,7 +33,8 @@ class HubspotPaginationTest(PaginationTest, HubspotBaseCase):
             'form_submissions',
             'contacts', # As of 10/22/25, this stream takes too long to test pagination
             'contact_lists', # As of 10/23/25, there is insufficient data in the test account for this stream to paginate,
-            'list_memberships'
+            'list_memberships',
+            'workflows'
         })
         return streams_to_test
 

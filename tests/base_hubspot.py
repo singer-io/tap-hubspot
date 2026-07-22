@@ -45,6 +45,11 @@ class HubspotBaseCase(BaseCase):
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
     @classmethod
+    def expected_stream_names(cls):
+        # workflows is excluded when the API returns 403
+        return set(cls.expected_metadata().keys()) - {'workflows'}
+
+    @classmethod
     def expected_metadata(cls):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""
 
