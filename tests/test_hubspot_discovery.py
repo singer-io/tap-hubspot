@@ -40,6 +40,13 @@ class DiscoveryTest(HubspotBaseTest):
         self.assertTrue(all([re.fullmatch(r"[a-z_]+", name) for name in found_catalog_names]),
                         msg="One or more streams don't follow standard naming")
 
+        # Verify inaccessible streams (e.g. workflows, which returns 403) are excluded from the catalog
+        inaccessible_streams = self.expected_inaccessible_streams()
+        self.assertFalse(
+            inaccessible_streams & found_catalog_names,
+            msg=f"Inaccessible streams should be excluded from catalog: {inaccessible_streams & found_catalog_names}"
+        )
+
         # Only test streams that are present in the discovered catalog (some may be excluded due to
         # insufficient credentials, e.g. workflows returns 403 and is excluded at discovery time)
         streams_to_test = self.expected_streams() & found_catalog_names

@@ -16,6 +16,7 @@ class HubspotBaseCase(BaseCase):
     start_date = BaseCase.timedelta_formatted(dt.utcnow(), delta=timedelta(days=-1))
 
     EXTRA_FIELDS = {}
+    IS_FORBIDDEN_STREAM = "is_forbidden_stream"
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -46,8 +47,12 @@ class HubspotBaseCase(BaseCase):
 
     @classmethod
     def expected_stream_names(cls):
-        # workflows is excluded when the API returns 403
-        return set(cls.expected_metadata().keys()) - {'workflows'}
+        """Return expected stream names, excluding streams that are inaccessible (forbidden) for this account."""
+        return {
+            stream_name
+            for stream_name, metadata in cls.expected_metadata().items()
+            if not metadata.get(cls.IS_FORBIDDEN_STREAM, False)
+        }
 
     @classmethod
     def expected_metadata(cls):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
@@ -150,7 +155,8 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.PRIMARY_KEYS: {"id"},
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.OBEYS_START_DATE: True
+                BaseCase.OBEYS_START_DATE: True,
+                BaseCase.IS_FORBIDDEN_STREAM: True
             },
             "tickets": {
                 BaseCase.PRIMARY_KEYS: {"id"},
