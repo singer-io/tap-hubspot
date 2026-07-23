@@ -15,8 +15,8 @@ class TestHubspotAutomaticFields(HubspotBaseTest):
 
     def streams_to_test(self):
         """streams to test"""
-        return self.expected_streams() - STATIC_DATA_STREAMS - {
-            'form_submissions', 'workflows', 'email_events', 'subscription_changes'
+        return self.expected_check_streams() - STATIC_DATA_STREAMS - {
+            'form_submissions', 'email_events', 'subscription_changes'
         }
 
     def test_run(self):

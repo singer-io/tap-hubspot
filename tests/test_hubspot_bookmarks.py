@@ -11,7 +11,7 @@ from client import TestClient
 from tap_tester import LOGGER
 
 
-STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company', 'workflows'}
+STREAMS_WITHOUT_UPDATES = {'email_events', 'contacts_by_company'}
 STREAMS_WITHOUT_CREATES = {'campaigns', 'owners', 'form_submissions', 'list_memberships'}
 
 class TestHubspotBookmarks(HubspotBaseTest):
@@ -55,7 +55,6 @@ class TestHubspotBookmarks(HubspotBaseTest):
     def create_test_data(self, expected_streams):
         """
         Creating more records(5) instead of 3 to get the update time to build the histogram - tdl-20939
-        Excluding workflows as it results in assertion failures with expected_pk and sync_pk at line#261
         """
 
         self.expected_records = {stream: []
