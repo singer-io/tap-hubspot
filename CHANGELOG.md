@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.1
+  * Read selected Contacts and Tickets properties through CRM Batch Read requests to avoid oversized list-request URLs.
+
 ## 4.5.0
   * Migrate engagements sync from `/paged` to `/engagements/v1/engagements/modified/after` with opaque cursor-based pagination for incremental, crash-safe resume.
 

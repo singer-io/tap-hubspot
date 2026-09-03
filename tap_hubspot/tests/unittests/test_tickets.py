@@ -120,27 +120,30 @@ class MockContext:
 
 class TestTickets(unittest.TestCase):
 
-    @patch('tap_hubspot.request', return_value=MockResponse(mock_response_data))
-    @patch('tap_hubspot.get_start', return_value='2023-01-01T00:00:00Z')
-    @patch('tap_hubspot.get_v3_records')
-    def test_ticket_params_are_validated(self, mocked_gen_request, mocked_get_start,
-                                         mock_request_response):
+    @patch('tap_hubspot.sync_v3_stream')
+    def test_ticket_params_are_validated(self, mocked_sync_v3_stream):
         """
         # Validating the parameters passed while making the API request to list the tickets
         """
         mock_context = MockContext()
         expected_param = {'limit': 100,
                           'associations': 'contact,company,deals',
-                          'properties': 'hs_all_team_ids',
                           'archived': False
                           }
-        expected_return_value = {'currently_syncing': 'tickets', 'bookmarks': {
-            'tickets': {'updatedAt': '2023-01-01T00:00:00.000000Z'}}}
+        expected_return_value = {'currently_syncing': 'tickets'}
+        mocked_sync_v3_stream.return_value = expected_return_value
 
         return_value = sync_tickets({'currently_syncing': 'tickets'}, mock_context)
         self.assertEqual(
             expected_return_value,
             return_value
         )
-        mocked_gen_request.assert_called_once_with('https://api.hubapi.com/crm/v4/objects/tickets',
-                                                   expected_param, 'results', 'paging')
+        mocked_sync_v3_stream.assert_called_once_with(
+            {'currently_syncing': 'tickets'},
+            mock_context,
+            'tickets',
+            expected_param,
+            batch_read_url='https://api.hubapi.com/crm/v3/objects/tickets/batch/read',
+            selected_properties=['hs_all_team_ids'],
+            batch_read_params={'archived': False},
+        )

@@ -47,6 +47,7 @@ BASE_URL = "https://api.hubapi.com"
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
 DEFAULT_CHUNK_SIZE = 1000 * 60 * 60 * 24
+CRM_BATCH_READ_LIMIT = 100
 
 V3_PREFIXES = {'hs_v2_date_entered', 'hs_v2_date_exited', 'hs_v2_latest_time_in'}
 
@@ -71,6 +72,7 @@ CONFIG = {
 ENDPOINTS = {
     "contacts_properties":  "/crm/v3/properties/contacts",
     "contacts":         "/crm/v3/objects/contacts",
+    "contacts_batch_read": "/crm/v3/objects/contacts/batch/read",
 
     "companies_properties": "/companies/v2/properties",
     "companies_all":        "/companies/v2/companies/paged",
@@ -102,6 +104,7 @@ ENDPOINTS = {
 
     "tickets_properties":   "/crm/v3/properties/tickets",
     "tickets":              "/crm/v4/objects/tickets",
+    "tickets_batch_read":   "/crm/v3/objects/tickets/batch/read",
 
     "form_submissions":   "/form-integrations/v1/submissions/forms/{form_id}",
     "list_memberships":   "/crm/v3/lists/{list_id}/memberships",
@@ -163,7 +166,8 @@ def clean_state(state):
             LOGGER.info("%s - Removing last_sync_duration from state.", stream)
             state["bookmarks"][stream].pop("last_sync_duration", None)
 
-def get_selected_property_fields(catalog, mdata):
+def get_selected_property_field_names(catalog, mdata):
+    """Return selected HubSpot property names without the Singer field prefix."""
 
     fields = catalog.get("schema").get("properties").keys()
     property_field_names = []
@@ -173,7 +177,12 @@ def get_selected_property_fields(catalog, mdata):
             if utils.should_sync_field(field_metadata.get('inclusion'),
                                        field_metadata.get('selected')):
                 property_field_names.append(field.split("property_", 1)[1])
-    return ",".join(property_field_names)
+    return property_field_names
+
+
+def get_selected_property_fields(catalog, mdata):
+    """Return selected HubSpot property names as a comma-separated string."""
+    return ",".join(get_selected_property_field_names(catalog, mdata))
 
 def get_url(endpoint, **kwargs):
     if endpoint not in ENDPOINTS:
@@ -496,11 +505,17 @@ def sync_contacts(STATE, ctx):
     stream_id = "contacts"
     params = {
         'limit': 100,
-        'properties': get_selected_property_fields(catalog, mdata),
         'associations': 'tickets,companies,deals'
     }
 
-    return sync_v3_stream(STATE, ctx, stream_id, params)
+    return sync_v3_stream(
+        STATE,
+        ctx,
+        stream_id,
+        params,
+        batch_read_url=get_url("contacts_batch_read"),
+        selected_properties=get_selected_property_field_names(catalog, mdata),
+    )
 
 class ValidationPredFailed(Exception):
     pass
@@ -744,7 +759,70 @@ def get_v3_records(url, params, path, more_key):
             break
         params['after'] = data.get(more_key).get('next').get('after')
 
-def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt"):
+
+def _chunks(items, size):
+    """Yield ordered slices containing no more than size items."""
+    for index in range(0, len(items), size):
+        yield items[index:index + size]
+
+
+def _merge_crm_batch_rows(source_rows, batch_rows):
+    """Merge batch properties into list rows while retaining associations."""
+    batch_rows_by_id = {str(row.get("id")): row for row in batch_rows}
+    merged_rows = []
+
+    for source_row in source_rows:
+        record_id = str(source_row.get("id"))
+        batch_row = batch_rows_by_id.get(record_id)
+        if batch_row is None:
+            raise RuntimeError(f"Batch read response did not include requested record id {record_id}")
+
+        merged_row = {**source_row, **batch_row}
+        if "associations" in source_row:
+            merged_row["associations"] = source_row["associations"]
+        merged_rows.append(merged_row)
+
+    return merged_rows
+
+
+def get_v3_records_with_batch_read(url, params, batch_read_url,
+                                   selected_properties, batch_read_params=None):
+    """List CRM object IDs, then read selected properties in request bodies."""
+    path = "results"
+    more_key = "paging"
+    list_params = dict(params)
+    while True:
+        data = request(url, dict(list_params)).json()
+
+        if data.get(path) is None:
+            raise RuntimeError(
+                "Unexpected API response: {} not in {}".format(path, data.keys()))
+
+        source_rows = data[path]
+        if selected_properties:
+            for source_chunk in _chunks(source_rows, CRM_BATCH_READ_LIMIT):
+                body = {
+                    "inputs": [{"id": str(row["id"])} for row in source_chunk],
+                    "properties": selected_properties,
+                }
+                batch_data = post_search_endpoint(
+                    batch_read_url, body, batch_read_params).json()
+                if batch_data.get(path) is None:
+                    raise RuntimeError(
+                        f"Unexpected batch API response: {path} not in {batch_data.keys()}")
+                for row in _merge_crm_batch_rows(source_chunk, batch_data[path]):
+                    yield row
+        else:
+            for row in source_rows:
+                yield row
+
+        if not data.get(more_key) or not data[more_key].get('next'):
+            break
+        list_params['after'] = data.get(more_key).get('next').get('after')
+
+
+def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt",
+                   batch_read_url=None, selected_properties=None, batch_read_params=None):
     """
     Function to sync streams that are using v3 endpoints
     """
@@ -768,7 +846,18 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         sync_start_time = utils.now()
         with metrics.record_counter(stream_id) as counter:
             raw_count = 0
-            for row in get_v3_records(url, params, 'results', "paging"):
+            if batch_read_url:
+                rows = get_v3_records_with_batch_read(
+                    url,
+                    params,
+                    batch_read_url,
+                    selected_properties or [],
+                    batch_read_params,
+                )
+            else:
+                rows = get_v3_records(url, params, 'results', "paging")
+
+            for row in rows:
                 raw_count += 1
                 modified_time = utils.strptime_to_utc(row[bookmark_key])
 
@@ -796,10 +885,17 @@ def sync_tickets(STATE, ctx):
     stream_id = "tickets"
     params = {'limit': 100,
               'associations': 'contact,company,deals',
-              'properties': get_selected_property_fields(catalog, mdata),
               'archived': False
               }
-    return sync_v3_stream(STATE, ctx, stream_id, params)
+    return sync_v3_stream(
+        STATE,
+        ctx,
+        stream_id,
+        params,
+        batch_read_url=get_url("tickets_batch_read"),
+        selected_properties=get_selected_property_field_names(catalog, mdata),
+        batch_read_params={'archived': False},
+    )
 
 # NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
 def sync_campaigns(STATE, ctx):
