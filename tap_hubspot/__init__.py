@@ -435,37 +435,30 @@ def check_stream_access(stream_name, return_reason=False):
     """
     access_config = STREAM_ACCESS_ENDPOINTS.get(stream_name)
     if access_config is None:
-        # Unknown stream or child stream — assume accessible
-        if return_reason:
-            return True, None
-        return True
+        is_accessible, reason = True, None
+        return (is_accessible, reason) if return_reason else is_accessible
 
     endpoint = access_config["endpoint"]
     url = get_url(endpoint)
     method = access_config.get("method", "GET")
     params = access_config.get("params")
 
+    is_accessible, reason = True, None
     try:
         if method == "POST":
             body = access_config.get("body", {})
             post_search_endpoint(url, body, params=params)
         else:
             request(url, params=params)
-        if return_reason:
-            return True, None
-        return True
     except SourceUnavailableException as exc:
-        reason = format_forbidden_reason(exc)
-        if return_reason:
-            return False, reason
-        return False
+        is_accessible, reason = False, format_forbidden_reason(exc)
     except requests.exceptions.HTTPError as exc:
         if exc.response and exc.response.status_code == 403:
-            reason = format_forbidden_reason(exc)
-            if return_reason:
-                return False, reason
-            return False
-        raise
+            is_accessible, reason = False, format_forbidden_reason(exc)
+        else:
+            raise
+
+    return (is_accessible, reason) if return_reason else is_accessible
 
 def _get_accessible_streams(streams):
     """
