@@ -332,6 +332,42 @@ def on_giveup(details):
     raise Exception("Giving up on request after {} tries with url {} and params {}" \
                     .format(details['tries'], url, params))
 
+def sanitize_error_message(error_message):
+    """Redact credentials from error messages before logging."""
+    message = str(error_message)
+    credentials = [CONFIG.get('access_token'), CONFIG.get('api_key'), CONFIG.get('hapikey')]
+    for credential in credentials:
+        if credential:
+            message = message.replace(credential, 10 * '*')
+
+    message = re.sub(r'Bearer\s+[A-Za-z0-9\-\._~\+/]+=*', 'Bearer **********', message, flags=re.IGNORECASE)
+    return message
+
+def format_forbidden_reason(error):
+    """Extract a concise, sanitized 403 reason for discovery warnings."""
+    if isinstance(error, requests.exceptions.HTTPError) and error.response is not None:
+        status_code = error.response.status_code
+        reason = error.response.reason or "Forbidden"
+        response_text = (error.response.text or "").strip()
+        if response_text:
+            return sanitize_error_message(f"HTTP {status_code} {reason}: {response_text}")
+        return f"HTTP {status_code} {reason}"
+
+    raw_error = error.args[0] if getattr(error, 'args', None) else error
+    if isinstance(raw_error, bytes):
+        raw_error = raw_error.decode('utf-8', errors='replace')
+
+    try:
+        parsed_error = json.loads(raw_error)
+        if isinstance(parsed_error, dict):
+            reason = parsed_error.get('message') or parsed_error.get('error') or parsed_error.get('status')
+            if reason:
+                return sanitize_error_message(reason)
+    except (TypeError, json.JSONDecodeError):
+        pass
+
+    return sanitize_error_message(raw_error or "HTTP 403 Forbidden")
+
 def get_params_and_headers(params):
     """
     This function makes a params object and headers object based on the
@@ -375,6 +411,11 @@ def request(url, params=None):
     with metrics.http_request_timer(url) as timer:
         resp = SESSION.send(req, timeout=get_request_timeout())
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
+        if resp.status_code == 401:
+            reason = sanitize_error_message(resp.text or resp.content)
+            raise InvalidAuthException(
+                f"HTTP 401 Unauthorized. Verify the configured credentials or OAuth token. {reason}"
+            )
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
         elif resp.status_code == 414:
@@ -383,17 +424,20 @@ def request(url, params=None):
 
     return resp
 
-def check_stream_access(stream_name):
+def check_stream_access(stream_name, return_reason=False):
     """
     Probe the HubSpot API endpoint for the given stream with a minimal request
     to verify that the credentials have read access.
 
     Returns True if accessible, False if a 403 Forbidden error is raised.
     Child streams always return True (access is governed by their parent).
+    If return_reason is True, returns a tuple: (is_accessible, forbidden_reason).
     """
     access_config = STREAM_ACCESS_ENDPOINTS.get(stream_name)
     if access_config is None:
         # Unknown stream or child stream — assume accessible
+        if return_reason:
+            return True, None
         return True
 
     endpoint = access_config["endpoint"]
@@ -407,11 +451,19 @@ def check_stream_access(stream_name):
             post_search_endpoint(url, body, params=params)
         else:
             request(url, params=params)
+        if return_reason:
+            return True, None
         return True
-    except SourceUnavailableException:
+    except SourceUnavailableException as exc:
+        reason = format_forbidden_reason(exc)
+        if return_reason:
+            return False, reason
         return False
     except requests.exceptions.HTTPError as exc:
         if exc.response and exc.response.status_code == 403:
+            reason = format_forbidden_reason(exc)
+            if return_reason:
+                return False, reason
             return False
         raise
 
@@ -430,13 +482,22 @@ def _get_accessible_streams(streams):
             accessible_streams.append(stream)
             continue
 
-        if check_stream_access(stream.tap_stream_id):
+        access_check = check_stream_access(stream.tap_stream_id, return_reason=True)
+        if isinstance(access_check, tuple):
+            has_access, forbidden_reason = access_check
+        else:
+            has_access = access_check
+            forbidden_reason = None
+
+        if has_access:
             accessible_streams.append(stream)
         else:
+            reason_suffix = f" Reason: {forbidden_reason}" if forbidden_reason else ""
             LOGGER.warning(
                 "Stream '%s' is not accessible with the provided credentials (403 Forbidden). "
-                "Excluding from catalog.",
+                "Excluding from catalog.%s",
                 stream.tap_stream_id,
+                reason_suffix,
             )
             inaccessible_streams.append(stream)
 
@@ -514,6 +575,12 @@ def post_search_endpoint(url, data, params=None):
             timeout=get_request_timeout(),
             headers=headers
         )
+
+        if resp.status_code == 401:
+            reason = sanitize_error_message(resp.text or resp.content)
+            raise InvalidAuthException(
+                f"HTTP 401 Unauthorized. Verify the configured credentials or OAuth token. {reason}"
+            )
 
         resp.raise_for_status()
 

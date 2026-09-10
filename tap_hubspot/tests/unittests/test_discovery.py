@@ -10,6 +10,7 @@ from tap_hubspot import (
     ENDPOINTS,
     Stream,
     SourceUnavailableException,
+    InvalidAuthException,
     HubspotForbiddenError,
     STREAMS,
     STREAM_ACCESS_ENDPOINTS,
@@ -32,6 +33,21 @@ class TestCheckStreamAccess(unittest.TestCase):
         mock_request.side_effect = SourceUnavailableException("Forbidden")
         result = check_stream_access("contacts")
         self.assertFalse(result)
+
+    @patch('tap_hubspot.request')
+    def test_returns_reason_on_403_when_requested(self, mock_request):
+        """403 should return a sanitized reason when return_reason=True."""
+        mock_request.side_effect = SourceUnavailableException('{"message": "Missing scope crm.lists.read"}')
+        result, reason = check_stream_access("contacts", return_reason=True)
+        self.assertFalse(result)
+        self.assertIn("Missing scope", reason)
+
+    @patch('tap_hubspot.request')
+    def test_reraises_invalid_auth_exception(self, mock_request):
+        """Auth failures should fail fast and not be converted to False."""
+        mock_request.side_effect = InvalidAuthException("HTTP 401 Unauthorized")
+        with self.assertRaises(InvalidAuthException):
+            check_stream_access("contacts")
 
     @patch('tap_hubspot.request')
     def test_returns_true_for_unknown_stream(self, mock_request):
@@ -121,7 +137,7 @@ class TestGetAccessibleStreams(unittest.TestCase):
     @patch('tap_hubspot.check_stream_access')
     def test_partial_access(self, mock_check):
         """Only accessible streams should be returned."""
-        def side_effect(name):
+        def side_effect(name, return_reason=False):
             return name != "deals"
         mock_check.side_effect = side_effect
         streams = self._make_streams()
@@ -136,7 +152,7 @@ class TestGetAccessibleStreams(unittest.TestCase):
     @patch('tap_hubspot.check_stream_access')
     def test_child_excluded_when_parent_inaccessible(self, mock_check):
         """Child streams should be excluded when their parent is not accessible."""
-        def side_effect(name):
+        def side_effect(name, return_reason=False):
             return name != "companies"
         mock_check.side_effect = side_effect
         streams = self._make_streams()
@@ -167,13 +183,29 @@ class TestGetAccessibleStreams(unittest.TestCase):
     @patch('tap_hubspot.check_stream_access')
     def test_single_accessible_stream_no_error(self, mock_check):
         """Even if only one parent stream is accessible, no error should be raised."""
-        def side_effect(name):
+        def side_effect(name, return_reason=False):
             return name == "contacts"
         mock_check.side_effect = side_effect
         streams = self._make_streams()
         result = _get_accessible_streams(streams)
         result_ids = [s.tap_stream_id for s in result]
         self.assertEqual(result_ids, ["contacts"])
+
+    @patch('tap_hubspot.LOGGER.warning')
+    @patch('tap_hubspot.check_stream_access')
+    def test_warning_includes_forbidden_reason(self, mock_check, mock_warning):
+        """Warning for excluded stream should include sanitized reason."""
+        def side_effect(name, return_reason=False):
+            if name == "deals":
+                return (False, "Missing scope deals.read") if return_reason else False
+            return (True, None) if return_reason else True
+
+        mock_check.side_effect = side_effect
+        streams = self._make_streams()
+        _get_accessible_streams(streams)
+        flattened_args = [str(arg) for call in mock_warning.call_args_list for arg in call.args]
+        self.assertTrue(any("Reason:" in arg for arg in flattened_args))
+        self.assertTrue(any("Missing scope deals.read" in arg for arg in flattened_args))
 
 
 class TestDiscoverSchemasWithAccessCheck(unittest.TestCase):
