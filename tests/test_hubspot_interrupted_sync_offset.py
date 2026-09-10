@@ -27,7 +27,6 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
             #                   streams should implement the interruptible sync feature
             'forms', # TDL-16095
             'owners', # TDL-16095
-            'workflows', # TDL-16095
             # Streams that do not apply
             'deal_pipelines', # interruptible does not apply, child of deals
             'campaigns', # unable to manually find a partial state with our test data
@@ -38,7 +37,7 @@ class TestHubspotInterruptedSyncOffsetContactLists(HubspotBaseTest):
             'list_memberships'
         }
 
-        return self.expected_streams() - untested
+        return self.expected_check_streams() - untested
 
     def stream_to_interrupt(self):
         return 'contact_lists'

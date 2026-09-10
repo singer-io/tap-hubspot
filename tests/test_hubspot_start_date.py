@@ -25,7 +25,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         """
 
         LOGGER.info("running streams with creates")
-        streams_under_test = self.expected_streams() - {'email_events', 'workflows'} # we get this for free with subscription_changes
+        streams_under_test = self.expected_streams()
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
         # We already create test data for below skipped streams in bookmark test
@@ -51,8 +51,9 @@ class TestHubspotStartDate(HubspotBaseTest):
         return self.expected_check_streams().difference({
             'owners', # static test data, covered in separate test
             'form_submissions',
-            'workflows',
             'campaigns', # static test data, covered in separate test
+            'subscription_changes',
+            'email_events',
         })
 
 
