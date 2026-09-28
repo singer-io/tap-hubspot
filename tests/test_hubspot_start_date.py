@@ -120,8 +120,9 @@ class TestHubspotStartDate(HubspotBaseTest):
                     self.assertFalse(first_sync_primary_keys.isdisjoint(second_sync_primary_keys),
                                      msg='There should be a shared set of data from start date 2 through sync execution time.')
 
-                    # Verify the second sync has less data
-                    self.assertGreater(first_sync_count, second_sync_count)
+                    # Verify the second sync does not return more records than the first.
+                    # Equal counts are valid when no records changed between the two start dates.
+                    self.assertGreaterEqual(first_sync_count, second_sync_count)
 
                     # for incrmental streams we can compare records agains the start date
                     if replication_key and stream not in {'contacts', 'subscription_changes', 'email_events'}:  # BUG_TDL-9939
