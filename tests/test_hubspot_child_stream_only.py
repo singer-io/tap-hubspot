@@ -87,7 +87,7 @@ class FieldSelectionChildTest(HubspotBaseTest):
         except Exception as e:
             # Verify the expected dependency error is present in the tap output.
             LOGGER.warning("Expected sync failure caught: %s", e)
-        
+
         # Select only child and required parent and make sure there is no critical error
         streams_to_test = {"contacts_by_company", "companies"}
         catalog_entries = [ce for ce in found_catalogs if ce['tap_stream_id'] in streams_to_test]
