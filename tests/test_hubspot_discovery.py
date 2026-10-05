@@ -30,8 +30,6 @@ class DiscoveryTest(HubspotBaseTest):
           are given the inclusion of automatic (metadata and annotated schema).
         • verify that all other fields have inclusion of available (metadata and schema)
         """
-        streams_to_test = self.expected_streams()
-
         conn_id = self.create_connection_and_run_check()
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
@@ -41,6 +39,17 @@ class DiscoveryTest(HubspotBaseTest):
         found_catalog_names = {c['tap_stream_id'] for c in found_catalogs}
         self.assertTrue(all([re.fullmatch(r"[a-z_]+", name) for name in found_catalog_names]),
                         msg="One or more streams don't follow standard naming")
+
+        # Verify inaccessible streams (e.g. workflows, which returns 403) are excluded from the catalog
+        inaccessible_streams = self.expected_inaccessible_streams()
+        self.assertFalse(
+            inaccessible_streams & found_catalog_names,
+            msg=f"Inaccessible streams should be excluded from catalog: {inaccessible_streams & found_catalog_names}"
+        )
+
+        # Only test streams that are present in the discovered catalog (some may be excluded due to
+        # insufficient credentials, e.g. workflows returns 403 and is excluded at discovery time)
+        streams_to_test = self.expected_streams() & found_catalog_names
 
         for stream in streams_to_test:
             with self.subTest(stream=stream):

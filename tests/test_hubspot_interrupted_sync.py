@@ -178,7 +178,12 @@ class TestHubspotInterruptedSync1(HubspotBaseTest):
                     bookmark_2 = state_2['bookmarks'][stream][stream_replication_key]
 
                     # verify the uninterrupted sync and the simulated sync end with the same bookmark values
-                    self.assertEqual(bookmark_1, bookmark_2)
+                    # HubSpot may asynchronously update tickets after creation, so the
+                    # bookmark can advance between the two syncs.
+                    if stream == 'tickets':
+                        self.assertGreaterEqual(bookmark_2, bookmark_1)
+                    else:
+                        self.assertEqual(bookmark_1, bookmark_2)
 
                     # trim records down to just the primary key values
                     sync_1_pks = [tuple([record[pk] for pk in primary_keys]) for record in actual_records_1]

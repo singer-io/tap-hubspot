@@ -163,10 +163,9 @@ class TestHubspotAllFields(HubspotBaseTest):
     def streams_under_test(self):
         """expected streams minus the streams not under test"""
         # return {'forms'}  # scaled down streams for quick test
-        return self.expected_streams().difference({
+        return self.expected_check_streams().difference({
             'owners',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
-            'workflows'
         })
 
     def setUp(self):

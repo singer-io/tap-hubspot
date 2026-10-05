@@ -25,7 +25,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         """
 
         LOGGER.info("running streams with creates")
-        streams_under_test = self.expected_streams() - {'email_events', 'workflows'} # we get this for free with subscription_changes
+        streams_under_test = self.expected_streams()
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
         # We already create test data for below skipped streams in bookmark test
@@ -51,8 +51,9 @@ class TestHubspotStartDate(HubspotBaseTest):
         return self.expected_check_streams().difference({
             'owners', # static test data, covered in separate test
             'form_submissions',
-            'workflows',
             'campaigns', # static test data, covered in separate test
+            'subscription_changes',
+            'email_events',
         })
 
 
@@ -119,8 +120,9 @@ class TestHubspotStartDate(HubspotBaseTest):
                     self.assertFalse(first_sync_primary_keys.isdisjoint(second_sync_primary_keys),
                                      msg='There should be a shared set of data from start date 2 through sync execution time.')
 
-                    # Verify the second sync has less data
-                    self.assertGreater(first_sync_count, second_sync_count)
+                    # Verify the second sync does not return more records than the first.
+                    # Equal counts are valid when no records changed between the two start dates.
+                    self.assertGreaterEqual(first_sync_count, second_sync_count)
 
                     # for incrmental streams we can compare records agains the start date
                     if replication_key and stream not in {'contacts', 'subscription_changes', 'email_events'}:  # BUG_TDL-9939

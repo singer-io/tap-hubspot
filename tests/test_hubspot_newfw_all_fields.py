@@ -19,7 +19,6 @@ class HubspotAllFieldsTest(AllFieldsTest, HubspotBaseCase):
             'form_submissions',
             'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
             # No records are returned in this account for this test window.
-            'workflows',
             'email_events'
         })
 

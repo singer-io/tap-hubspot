@@ -25,6 +25,7 @@ class HubspotBaseTest(BaseCase):
     EXPECTED_PAGE_SIZE = "expected-page-size"
     OBEYS_START_DATE = "obey-start-date"
     PARENT_STREAM = "parent-stream"
+    IS_FORBIDDEN_STREAM = "is_forbidden_stream"
 
     #######################################
     #  Tap Configurable Metadata Methods  #
@@ -60,8 +61,17 @@ class HubspotBaseTest(BaseCase):
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
 
+    def expected_inaccessible_streams(self):
+        """Return streams that are inaccessible (forbidden) for this account and should be absent from the catalog."""
+        return {
+            stream_name
+            for stream_name, metadata in self.expected_metadata().items()
+            if metadata.get(self.IS_FORBIDDEN_STREAM, False)
+        }
+
     def expected_check_streams(self):
-        return set(self.expected_metadata().keys())
+        """Return expected streams, excluding streams that are inaccessible (forbidden) for this account."""
+        return set(self.expected_metadata().keys()) - self.expected_inaccessible_streams()
 
     def expected_metadata(self):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
         """The expected streams and metadata about the streams"""
@@ -162,6 +172,7 @@ class HubspotBaseTest(BaseCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updatedAt"},
+                self.IS_FORBIDDEN_STREAM: True,
                 self.OBEYS_START_DATE: True
             },
             "tickets": {

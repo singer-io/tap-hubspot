@@ -35,6 +35,9 @@ class DependencyException(Exception):
 class UriTooLongException(Exception):
     pass
 
+class HubspotForbiddenError(Exception):
+    pass
+
 class DataFields:
     offset = 'offset'
 
@@ -66,6 +69,24 @@ CONFIG = {
     "hapikey": None,
     "include_inactives": None,
     "select_fields_by_default": None,
+}
+
+# Maps each parent stream to the endpoint key and minimal params for access probing.
+# Child streams are excluded since their access is governed by the parent.
+STREAM_ACCESS_ENDPOINTS = {
+    "subscription_changes": {"endpoint": "subscription_changes", "params": {"startTimestamp": 0, "endTimestamp": 1, "limit": 1}},
+    "email_events":         {"endpoint": "email_events", "params": {"startTimestamp": 0, "endTimestamp": 1, "limit": 1}},
+    "contacts":             {"endpoint": "contacts", "params": {"limit": 1}},
+    "deals":                {"endpoint": "deals_all", "params": {"limit": 1}},
+    "companies":            {"endpoint": "companies_all", "params": {"limit": 1}},
+    "tickets":              {"endpoint": "tickets", "params": {"limit": 1}},
+    "owners":               {"endpoint": "owners", "params": {"limit": 1}},
+    "forms":                {"endpoint": "forms"},
+    "workflows":            {"endpoint": "workflows"},
+    "contact_lists":        {"endpoint": "contact_lists", "method": "POST", "body": {"count": 1}},
+    "engagements":          {"endpoint": "engagements_modified_after", "params": {"limit": 1}},
+    "campaigns":            {"endpoint": "campaigns_all", "params": {"limit": 1}},
+    "deal_pipelines":       {"endpoint": "deal_pipelines"},
 }
 
 ENDPOINTS = {
@@ -311,6 +332,42 @@ def on_giveup(details):
     raise Exception("Giving up on request after {} tries with url {} and params {}" \
                     .format(details['tries'], url, params))
 
+def sanitize_error_message(error_message):
+    """Redact credentials from error messages before logging."""
+    message = str(error_message)
+    credentials = [CONFIG.get('access_token'), CONFIG.get('api_key'), CONFIG.get('hapikey')]
+    for credential in credentials:
+        if credential:
+            message = message.replace(credential, 10 * '*')
+
+    message = re.sub(r'Bearer\s+[A-Za-z0-9\-\._~\+/]+=*', 'Bearer **********', message, flags=re.IGNORECASE)
+    return message
+
+def format_forbidden_reason(error):
+    """Extract a concise, sanitized 403 reason for discovery warnings."""
+    if isinstance(error, requests.exceptions.HTTPError) and error.response is not None:
+        status_code = error.response.status_code
+        reason = error.response.reason or "Forbidden"
+        response_text = (error.response.text or "").strip()
+        if response_text:
+            return sanitize_error_message(f"HTTP {status_code} {reason}: {response_text}")
+        return f"HTTP {status_code} {reason}"
+
+    raw_error = error.args[0] if getattr(error, 'args', None) else error
+    if isinstance(raw_error, bytes):
+        raw_error = raw_error.decode('utf-8', errors='replace')
+
+    try:
+        parsed_error = json.loads(raw_error)
+        if isinstance(parsed_error, dict):
+            reason = parsed_error.get('message') or parsed_error.get('error') or parsed_error.get('status')
+            if reason:
+                return sanitize_error_message(reason)
+    except (TypeError, json.JSONDecodeError):
+        pass
+
+    return sanitize_error_message(raw_error or "HTTP 403 Forbidden")
+
 def get_params_and_headers(params):
     """
     This function makes a params object and headers object based on the
@@ -354,6 +411,11 @@ def request(url, params=None):
     with metrics.http_request_timer(url) as timer:
         resp = SESSION.send(req, timeout=get_request_timeout())
         timer.tags[metrics.Tag.http_status_code] = resp.status_code
+        if resp.status_code == 401:
+            reason = sanitize_error_message(resp.text or resp.content)
+            raise InvalidAuthException(
+                f"HTTP 401 Unauthorized. Verify the configured credentials or OAuth token. {reason}"
+            )
         if resp.status_code == 403:
             raise SourceUnavailableException(resp.content)
         elif resp.status_code == 414:
@@ -361,6 +423,109 @@ def request(url, params=None):
         resp.raise_for_status()
 
     return resp
+
+def check_stream_access(stream_name, return_reason=False):
+    """
+    Probe the HubSpot API endpoint for the given stream with a minimal request
+    to verify that the credentials have read access.
+
+    Returns True if accessible, False if a 403 Forbidden error is raised.
+    Child streams always return True (access is governed by their parent).
+    If return_reason is True, returns a tuple: (is_accessible, forbidden_reason).
+    """
+    access_config = STREAM_ACCESS_ENDPOINTS.get(stream_name)
+    if access_config is None:
+        is_accessible, reason = True, None
+        return (is_accessible, reason) if return_reason else is_accessible
+
+    endpoint = access_config["endpoint"]
+    url = get_url(endpoint)
+    method = access_config.get("method", "GET")
+    params = access_config.get("params")
+
+    is_accessible, reason = True, None
+    try:
+        if method == "POST":
+            body = access_config.get("body", {})
+            post_search_endpoint(url, body, params=params)
+        else:
+            request(url, params=params)
+    except SourceUnavailableException as exc:
+        is_accessible, reason = False, format_forbidden_reason(exc)
+    except requests.exceptions.HTTPError as exc:
+        if exc.response and exc.response.status_code == 403:
+            is_accessible, reason = False, format_forbidden_reason(exc)
+        else:
+            raise
+
+    return (is_accessible, reason) if return_reason else is_accessible
+
+def _get_accessible_streams(streams):
+    """
+    Filter the list of streams to only those the credentials can read.
+    Child streams are included if their parent is accessible.
+    Raises HubspotForbiddenError if no parent streams are accessible.
+    """
+    accessible_streams = []
+    inaccessible_streams = []
+
+    for stream in streams:
+        # Child streams inherit access from their parent
+        if stream.parent_tap_stream_id:
+            accessible_streams.append(stream)
+            continue
+
+        access_check = check_stream_access(stream.tap_stream_id, return_reason=True)
+        if isinstance(access_check, tuple):
+            has_access, forbidden_reason = access_check
+        else:
+            has_access = access_check
+            forbidden_reason = None
+
+        if has_access:
+            accessible_streams.append(stream)
+        else:
+            reason_suffix = f" Reason: {forbidden_reason}" if forbidden_reason else ""
+            LOGGER.warning(
+                "Stream '%s' is not accessible with the provided credentials (403 Forbidden). "
+                "Excluding from catalog.%s",
+                stream.tap_stream_id,
+                reason_suffix,
+            )
+            inaccessible_streams.append(stream)
+
+    # Prune child streams whose parent was excluded
+    excluded_parent_ids = {s.tap_stream_id for s in inaccessible_streams}
+    streams_with_accessible_parents = []
+    for stream in accessible_streams:
+        if stream.parent_tap_stream_id and stream.parent_tap_stream_id in excluded_parent_ids:
+            LOGGER.warning(
+                "Stream '%s' excluded from catalog because its parent stream '%s' is not accessible.",
+                stream.tap_stream_id,
+                stream.parent_tap_stream_id,
+            )
+            inaccessible_streams.append(stream)
+        else:
+            streams_with_accessible_parents.append(stream)
+    accessible_streams = streams_with_accessible_parents
+
+    # If ALL parent streams are inaccessible, raise error
+    parent_streams = [s for s in streams if not s.parent_tap_stream_id]
+    inaccessible_parent_streams = [s for s in inaccessible_streams if not s.parent_tap_stream_id]
+    if inaccessible_parent_streams and len(inaccessible_parent_streams) == len(parent_streams):
+        raise HubspotForbiddenError(
+            "403 Forbidden: No read access to supported streams. Data collection cannot start."
+        )
+
+    if inaccessible_streams:
+        LOGGER.warning(
+            "Excluding inaccessible streams: %s",
+            ", ".join(s.tap_stream_id for s in inaccessible_streams),
+        )
+
+    return accessible_streams
+
+
 # {"bookmarks" : {"contacts" : { "lastmodifieddate" : "2001-01-01"
 #                                "offset" : {"vidOffset": 1234
 #                                           "timeOffset": "3434434 }}
@@ -403,6 +568,12 @@ def post_search_endpoint(url, data, params=None):
             timeout=get_request_timeout(),
             headers=headers
         )
+
+        if resp.status_code == 401:
+            reason = sanitize_error_message(resp.text or resp.content)
+            raise InvalidAuthException(
+                f"HTTP 401 Unauthorized. Verify the configured credentials or OAuth token. {reason}"
+            )
 
         resp.raise_for_status()
 
@@ -1516,7 +1687,11 @@ def load_discovered_schema(stream):
 
 def discover_schemas():
     result = {'streams': []}
-    for stream in STREAMS:
+
+    # Filter streams based on access checks before loading schemas
+    accessible_streams = _get_accessible_streams(STREAMS)
+
+    for stream in accessible_streams:
         LOGGER.info('Loading schema for %s', stream.tap_stream_id)
         try:
             schema, mdata = load_discovered_schema(stream)

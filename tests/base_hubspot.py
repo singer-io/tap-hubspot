@@ -16,6 +16,7 @@ class HubspotBaseCase(BaseCase):
     start_date = BaseCase.timedelta_formatted(dt.utcnow(), delta=timedelta(days=-1))
 
     EXTRA_FIELDS = {}
+    IS_FORBIDDEN_STREAM = "is_forbidden_stream"
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -43,6 +44,15 @@ class HubspotBaseCase(BaseCase):
                 'client_secret': os.getenv('TAP_HUBSPOT_CLIENT_SECRET'),
                 'redirect_uri':  os.getenv('TAP_HUBSPOT_REDIRECT_URI'),
                 'client_id':     os.getenv('TAP_HUBSPOT_CLIENT_ID')}
+
+    @classmethod
+    def expected_stream_names(cls):
+        """Return expected stream names, excluding streams that are inaccessible (forbidden) for this account."""
+        return {
+            stream_name
+            for stream_name, metadata in cls.expected_metadata().items()
+            if not metadata.get(cls.IS_FORBIDDEN_STREAM, False)
+        }
 
     @classmethod
     def expected_metadata(cls):  # DOCS_BUG https://stitchdata.atlassian.net/browse/DOC-1523)
@@ -145,7 +155,8 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.PRIMARY_KEYS: {"id"},
                 BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
                 BaseCase.REPLICATION_KEYS: {"updatedAt"},
-                BaseCase.OBEYS_START_DATE: True
+                BaseCase.OBEYS_START_DATE: True,
+                HubspotBaseCase.IS_FORBIDDEN_STREAM: True
             },
             "tickets": {
                 BaseCase.PRIMARY_KEYS: {"id"},
