@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.7.0
+  * Include archived (deactivated) owners and archived (deleted) tickets in sync by querying HubSpot's `archived=true` records in addition to active ones [SUPPORT-12339]
+
 ## 4.6.0
   * Exclude 403-forbidden streams from discovery instead of failing [#302](https://github.com/singer-io/tap-hubspot/pull/302)
   * Raise HubspotForbiddenError when no streams are accessible

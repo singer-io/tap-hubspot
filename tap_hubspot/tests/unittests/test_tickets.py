@@ -126,13 +126,14 @@ class TestTickets(unittest.TestCase):
     def test_ticket_params_are_validated(self, mocked_gen_request, mocked_get_start,
                                          mock_request_response):
         """
-        # Validating the parameters passed while making the API request to list the tickets
+        # Validating the parameters passed while making the API requests to list the tickets.
+        # Both active (archived=False) and archived (archived=True) tickets should be
+        # requested so deleted tickets are replicated with archived=true instead of omitted.
         """
         mock_context = MockContext()
-        expected_param = {'limit': 100,
+        expected_base_param = {'limit': 100,
                           'associations': 'contact,company,deals',
                           'properties': 'hs_all_team_ids',
-                          'archived': False
                           }
         expected_return_value = {'currently_syncing': 'tickets', 'bookmarks': {
             'tickets': {'updatedAt': '2023-01-01T00:00:00.000000Z'}}}
@@ -142,5 +143,8 @@ class TestTickets(unittest.TestCase):
             expected_return_value,
             return_value
         )
-        mocked_gen_request.assert_called_once_with('https://api.hubapi.com/crm/v4/objects/tickets',
-                                                   expected_param, 'results', 'paging')
+        self.assertEqual(mocked_gen_request.call_count, 2)
+        mocked_gen_request.assert_any_call('https://api.hubapi.com/crm/v4/objects/tickets',
+                                           {**expected_base_param, 'archived': False}, 'results', 'paging')
+        mocked_gen_request.assert_any_call('https://api.hubapi.com/crm/v4/objects/tickets',
+                                           {**expected_base_param, 'archived': True}, 'results', 'paging')
