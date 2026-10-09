@@ -77,6 +77,28 @@ class TestMainImpl(unittest.TestCase):
         mock_do_discover.assert_not_called()
         mock_do_sync.assert_not_called()
 
+    @patch('tap_hubspot.utils.parse_args')
+    @patch('tap_hubspot.do_discover')
+    @patch('tap_hubspot.do_sync')
+    def test_main_impl_catalog_flag_triggers_sync(self, mock_do_sync, mock_do_discover, mock_parse_args):
+        """--catalog (args.catalog) must trigger do_sync, same as the deprecated --properties flag."""
+        catalog_dict = {'streams': [{'tap_stream_id': 'owners'}]}
+        mock_catalog = MagicMock()
+        mock_catalog.to_dict.return_value = catalog_dict
+
+        mock_args = MagicMock()
+        mock_args.config = {'api_key': 'dummy'}
+        mock_args.state = None
+        mock_args.discover = False
+        mock_args.catalog = mock_catalog
+        mock_args.properties = None
+        mock_parse_args.return_value = mock_args
+
+        main_impl()
+
+        mock_do_discover.assert_not_called()
+        mock_do_sync.assert_called_once_with({}, catalog_dict)
+
 class TestDoSync(unittest.TestCase):
 
     @patch('tap_hubspot.deselect_unselected_fields')

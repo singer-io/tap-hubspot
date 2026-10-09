@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.7.0
+  * Include archived (deactivated) owners and archived (deleted) tickets in sync by querying HubSpot's `archived=true` records in addition to active ones [SUPPORT-12339] [#309](https://github.com/singer-io/tap-hubspot/pull/309)
+  * Fix `--catalog` CLI flag being silently ignored (main_impl only checked the deprecated `--properties` flag, causing syncs run with `--catalog` to do nothing) [#309](https://github.com/singer-io/tap-hubspot/pull/309)
+
 ## 4.6.0
   * Exclude 403-forbidden streams from discovery instead of failing [#302](https://github.com/singer-io/tap-hubspot/pull/302)
   * Raise HubspotForbiddenError when no streams are accessible
