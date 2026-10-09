@@ -1751,6 +1751,8 @@ def main_impl():
 
     if args.discover:
         do_discover()
+    elif args.catalog:
+        do_sync(STATE, args.catalog.to_dict())
     elif args.properties:
         do_sync(STATE, args.properties)
     else:
