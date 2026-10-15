@@ -15,6 +15,7 @@ class TestMainImpl(unittest.TestCase):
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
+        mock_args.catalog = None
         mock_parse_args.return_value = mock_args
 
         main_impl()
@@ -33,6 +34,7 @@ class TestMainImpl(unittest.TestCase):
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
+        mock_args.catalog = None
         mock_parse_args.return_value = mock_args
 
         main_impl()
@@ -51,6 +53,7 @@ class TestMainImpl(unittest.TestCase):
         mock_args.state = None
         mock_args.discover = False
         mock_args.properties = None
+        mock_args.catalog = None
         mock_parse_args.return_value = mock_args
 
         main_impl()
