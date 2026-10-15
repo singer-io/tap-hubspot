@@ -918,6 +918,12 @@ def get_v3_records(url, params, path, more_key):
 def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key="updatedAt"):
     """
     Function to sync streams that are using v3 endpoints
+
+    `params` may be a single dict of query params, or a list of dicts. A list is
+    used to issue multiple requests against the same endpoint (e.g. one with
+    archived=False and one with archived=True) and merge the results into a
+    single sync/bookmark pass, since HubSpot's v3 CRM APIs only return
+    active (non-archived) records by default.
     """
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
@@ -932,6 +938,7 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
                         [bookmark_key], catalog.get('stream_alias'))
 
     url = get_url(stream_id)
+    param_variants = params if isinstance(params, list) else [params]
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as transformer:
         # To handle records updated between start of the table sync and the end,
@@ -939,17 +946,18 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
         sync_start_time = utils.now()
         with metrics.record_counter(stream_id) as counter:
             raw_count = 0
-            for row in get_v3_records(url, params, 'results', "paging"):
-                raw_count += 1
-                modified_time = utils.strptime_to_utc(row[bookmark_key])
+            for variant_params in param_variants:
+                for row in get_v3_records(url, variant_params, 'results', "paging"):
+                    raw_count += 1
+                    modified_time = utils.strptime_to_utc(row[bookmark_key])
 
-                if modified_time and modified_time >= bookmark_value:
-                    record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
-                    singer.write_record(stream_id, record, catalog.get(
-                        'stream_alias'), time_extracted=utils.now())
-                    if modified_time >= max_bk_value:
-                        max_bk_value = modified_time
-                    counter.increment()
+                    if modified_time and modified_time >= bookmark_value:
+                        record = transformer.transform(lift_properties_and_versions(row), schema, mdata)
+                        singer.write_record(stream_id, record, catalog.get(
+                            'stream_alias'), time_extracted=utils.now())
+                        if modified_time >= max_bk_value:
+                            max_bk_value = modified_time
+                        counter.increment()
             LOGGER.info("Fetched %d raw %s records, emitted %d after incremental filter", raw_count, stream_id, counter.value)
 
     # Don't bookmark past the start of this sync to account for updated records during the sync.
@@ -961,15 +969,22 @@ def sync_v3_stream(STATE, ctx, stream_id, params, primary_key="id", bookmark_key
 def sync_tickets(STATE, ctx):
     """
     Function to sync `tickets` stream records
+
+    HubSpot's CRM v4 objects endpoint only returns active records unless
+    archived=true is requested, so deleted tickets would otherwise be
+    silently omitted instead of replicated with archived=true.
     """
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     stream_id = "tickets"
-    params = {'limit': 100,
-              'associations': 'contact,company,deals',
-              'properties': get_selected_property_fields(catalog, mdata),
-              'archived': False
-              }
+    base_params = {'limit': 100,
+                    'associations': 'contact,company,deals',
+                    'properties': get_selected_property_fields(catalog, mdata),
+                    }
+    params = [
+        {**base_params, 'archived': False},
+        {**base_params, 'archived': True},
+    ]
     return sync_v3_stream(STATE, ctx, stream_id, params)
 
 # NB> no suitable bookmark is available: https://developers.hubspot.com/docs/methods/email/get_campaigns_by_id
@@ -1295,9 +1310,15 @@ def sync_workflows(STATE, ctx):
 def sync_owners(STATE, ctx):
     """
     Function to sync `owners` stream records
+
+    HubSpot's v3 owners endpoint only returns active owners by default;
+    deactivated/archived owners require a separate archived=true request.
     """
     stream_id = "owners"
-    params = {'limit': 500}
+    params = [
+        {'limit': 500, 'archived': False},
+        {'limit': 500, 'archived': True},
+    ]
     return sync_v3_stream(STATE, ctx, stream_id, params)
 
 def sync_engagements(STATE, ctx):
@@ -1751,6 +1772,8 @@ def main_impl():
 
     if args.discover:
         do_discover()
+    elif args.catalog:
+        do_sync(STATE, args.catalog.to_dict())
     elif args.properties:
         do_sync(STATE, args.properties)
     else:
