@@ -453,7 +453,7 @@ def check_stream_access(stream_name, return_reason=False):
     except SourceUnavailableException as exc:
         is_accessible, reason = False, format_forbidden_reason(exc)
     except requests.exceptions.HTTPError as exc:
-        if exc.response and exc.response.status_code == 403:
+        if exc.response is not None and exc.response.status_code == 403:
             is_accessible, reason = False, format_forbidden_reason(exc)
         else:
             raise
@@ -574,6 +574,8 @@ def post_search_endpoint(url, data, params=None):
             raise InvalidAuthException(
                 f"HTTP 401 Unauthorized. Verify the configured credentials or OAuth token. {reason}"
             )
+        if resp.status_code == 403:
+            raise SourceUnavailableException(resp.content)
 
         resp.raise_for_status()
 
