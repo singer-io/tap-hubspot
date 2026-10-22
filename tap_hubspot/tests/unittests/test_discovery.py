@@ -16,6 +16,20 @@ from tap_hubspot import (
     STREAM_ACCESS_ENDPOINTS,
 )
 
+MISSING_SCOPES_BODY = (
+    b'{"status":"error","category":"MISSING_SCOPES",'
+    b'"message":"This app hasn\'t been granted all required scopes to make this call."}'
+)
+
+
+def _make_response(status_code, body=b'', reason=None):
+    """Build a real Response: unlike a MagicMock, a 4xx/5xx Response is falsy."""
+    response = requests.Response()
+    response.status_code = status_code
+    response.reason = reason
+    response._content = body
+    return response
+
 
 class TestCheckStreamAccess(unittest.TestCase):
     """Tests for the check_stream_access function."""
@@ -67,19 +81,15 @@ class TestCheckStreamAccess(unittest.TestCase):
     @patch('tap_hubspot.request')
     def test_reraises_non_403_errors(self, mock_request):
         """Non-403 errors should be re-raised, not suppressed."""
-        response = MagicMock()
-        response.status_code = 500
-        error = requests.exceptions.HTTPError(response=response)
+        error = requests.exceptions.HTTPError(response=_make_response(500))
         mock_request.side_effect = error
         with self.assertRaises(requests.exceptions.HTTPError):
             check_stream_access("contacts")
 
     @patch('tap_hubspot.request')
     def test_returns_false_on_http_error_403(self, mock_request):
-        """HTTPError with 403 status code should return False."""
-        response = MagicMock()
-        response.status_code = 403
-        error = requests.exceptions.HTTPError(response=response)
+        """HTTPError carrying a real (falsy) 403 Response should return False."""
+        error = requests.exceptions.HTTPError(response=_make_response(403, reason="Forbidden"))
         mock_request.side_effect = error
         result = check_stream_access("contacts")
         self.assertFalse(result)
@@ -92,16 +102,6 @@ class TestCheckStreamAccess(unittest.TestCase):
         self.assertTrue(result)
         mock_post.assert_called_once()
 
-    @patch('tap_hubspot.post_search_endpoint')
-    def test_contact_lists_returns_false_on_403(self, mock_post):
-        """contact_lists returning 403 via POST should return False."""
-        response = MagicMock()
-        response.status_code = 403
-        error = requests.exceptions.HTTPError(response=response)
-        mock_post.side_effect = error
-        result = check_stream_access("contact_lists")
-        self.assertFalse(result)
-
     @patch('tap_hubspot.request')
     def test_all_parent_streams_have_access_config(self, mock_request):
         """All parent streams in STREAMS should have an entry in STREAM_ACCESS_ENDPOINTS."""
@@ -112,6 +112,52 @@ class TestCheckStreamAccess(unittest.TestCase):
                 STREAM_ACCESS_ENDPOINTS,
                 f"Parent stream '{stream.tap_stream_id}' missing from STREAM_ACCESS_ENDPOINTS",
             )
+
+
+@patch('time.sleep')
+@patch('tap_hubspot.get_params_and_headers', return_value=({}, {}))
+class TestForbiddenPostThroughRetryDecorator(unittest.TestCase):
+    """Only the HTTP transport is mocked, so the backoff decorator and on_giveup stay in play."""
+
+    @patch('requests.post', return_value=_make_response(403, MISSING_SCOPES_BODY, "Forbidden"))
+    def test_post_search_endpoint_raises_without_retry_on_403(
+            self, mock_post, mock_headers, mock_sleep):
+        """A 403 is not transient: one request, no backoff, SourceUnavailableException like GET."""
+        with self.assertRaises(SourceUnavailableException) as ctx:
+            tap_hubspot.post_search_endpoint(tap_hubspot.get_url("contact_lists"), {"count": 1})
+        self.assertIn(b"MISSING_SCOPES", ctx.exception.args[0])
+        self.assertEqual(mock_post.call_count, 1)
+        mock_sleep.assert_not_called()
+
+    @patch('requests.post', return_value=_make_response(403, MISSING_SCOPES_BODY, "Forbidden"))
+    def test_contact_lists_probe_returns_reason_on_403(self, mock_post, mock_headers, mock_sleep):
+        """The contact_lists POST probe reports 403 as inaccessible, with HubSpot's reason."""
+        result, reason = check_stream_access("contact_lists", return_reason=True)
+        self.assertFalse(result)
+        self.assertIn("required scopes", reason)
+        self.assertEqual(mock_post.call_count, 1)
+
+    @patch('requests.post', return_value=_make_response(403, MISSING_SCOPES_BODY, "Forbidden"))
+    @patch.object(tap_hubspot.SESSION, 'send', return_value=_make_response(200, b'{}'))
+    def test_discovery_continues_past_forbidden_contact_lists(
+            self, mock_send, mock_post, mock_headers, mock_sleep):
+        """A forbidden contact_lists excludes itself and its child, and probing continues."""
+        accessible = [s.tap_stream_id for s in _get_accessible_streams(STREAMS)]
+        self.assertNotIn("contact_lists", accessible)
+        self.assertNotIn("list_memberships", accessible)
+        for stream_id in ("contacts", "deals", "companies", "owners", "engagements",
+                          "campaigns", "deal_pipelines", "contacts_by_company"):
+            self.assertIn(stream_id, accessible)
+        mock_sleep.assert_not_called()
+
+    @patch('requests.post', return_value=_make_response(500, b'{}', "Server Error"))
+    def test_post_search_endpoint_still_retries_server_errors(
+            self, mock_post, mock_headers, mock_sleep):
+        """Only 403 skips retries; a 5xx is still retried five times before giving up."""
+        with self.assertRaises(Exception) as ctx:
+            tap_hubspot.post_search_endpoint(tap_hubspot.get_url("contact_lists"), {"count": 1})
+        self.assertIn("Giving up on request after 5 tries", str(ctx.exception))
+        self.assertEqual(mock_post.call_count, 5)
 
 
 class TestGetAccessibleStreams(unittest.TestCase):

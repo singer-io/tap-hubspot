@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.7.1
+  * Handle HTTP 403 on POST endpoints like GET: raise `SourceUnavailableException` without retrying. Discovery now excludes a forbidden `contact_lists` stream and its child `list_memberships` instead of failing for every stream [SAC-32532]
+
 ## 4.7.0
   * Include archived (deactivated) owners and archived (deleted) tickets in sync by querying HubSpot's `archived=true` records in addition to active ones [SUPPORT-12339] [#309](https://github.com/singer-io/tap-hubspot/pull/309)
   * Fix `--catalog` CLI flag being silently ignored (main_impl only checked the deprecated `--properties` flag, causing syncs run with `--catalog` to do nothing) [#309](https://github.com/singer-io/tap-hubspot/pull/309)
