@@ -164,7 +164,8 @@ class TestForbiddenPostThroughRetryDecorator(unittest.TestCase):
     @patch('requests.post', return_value=_make_response(403, MISSING_SCOPES_BODY, "Forbidden"))
     @patch('tap_hubspot.generate_custom_streams', return_value=[])
     @patch('singer.messages.write_message')
-    @patch.dict(tap_hubspot.CONFIG, {"api_key": "test-token", "start_date": "2024-01-01T00:00:00Z"})
+    @patch.dict('tap_hubspot.CONFIG',
+                {"api_key": "test-token", "start_date": "2024-01-01T00:00:00Z"})
     def test_sync_fails_on_forbidden_post(
             self, mock_write, mock_custom, mock_post, mock_headers, mock_sleep):
         """A POST 403 during sync still gives up after retries and fails the tap."""
