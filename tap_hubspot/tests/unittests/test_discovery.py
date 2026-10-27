@@ -120,11 +120,12 @@ class TestForbiddenPostThroughRetryDecorator(unittest.TestCase):
     """Only the HTTP transport is mocked, so the backoff decorator and on_giveup stay in play."""
 
     @patch('requests.post', return_value=_make_response(403, MISSING_SCOPES_BODY, "Forbidden"))
-    def test_post_search_endpoint_raises_without_retry_on_403(
+    def test_probe_post_raises_without_retry_on_403(
             self, mock_post, mock_headers, mock_sleep):
-        """A 403 is not transient: one request, no backoff, SourceUnavailableException like GET."""
+        """Probe flag: a 403 gets one request, no backoff, SourceUnavailableException like GET."""
         with self.assertRaises(SourceUnavailableException) as ctx:
-            tap_hubspot.post_search_endpoint(tap_hubspot.get_url("contact_lists"), {"count": 1})
+            tap_hubspot.post_search_endpoint(tap_hubspot.get_url("contact_lists"), {"count": 1},
+                                             forbidden_as_unavailable=True)
         self.assertIn(b"MISSING_SCOPES", ctx.exception.args[0])
         self.assertEqual(mock_post.call_count, 1)
         mock_sleep.assert_not_called()
@@ -153,10 +154,30 @@ class TestForbiddenPostThroughRetryDecorator(unittest.TestCase):
     @patch('requests.post', return_value=_make_response(500, b'{}', "Server Error"))
     def test_post_search_endpoint_still_retries_server_errors(
             self, mock_post, mock_headers, mock_sleep):
-        """Only 403 skips retries; a 5xx is still retried five times before giving up."""
+        """The probe flag covers only 403; a 5xx is still retried five times before giving up."""
         with self.assertRaises(Exception) as ctx:
-            tap_hubspot.post_search_endpoint(tap_hubspot.get_url("contact_lists"), {"count": 1})
+            tap_hubspot.post_search_endpoint(tap_hubspot.get_url("contact_lists"), {"count": 1},
+                                             forbidden_as_unavailable=True)
         self.assertIn("Giving up on request after 5 tries", str(ctx.exception))
+        self.assertEqual(mock_post.call_count, 5)
+
+    @patch('requests.post', return_value=_make_response(403, MISSING_SCOPES_BODY, "Forbidden"))
+    @patch('tap_hubspot.generate_custom_streams', return_value=[])
+    @patch('singer.messages.write_message')
+    @patch.dict(tap_hubspot.CONFIG, {"api_key": "test-token", "start_date": "2024-01-01T00:00:00Z"})
+    def test_sync_fails_on_forbidden_post(
+            self, mock_write, mock_custom, mock_post, mock_headers, mock_sleep):
+        """A POST 403 during sync still gives up after retries and fails the tap."""
+        catalog = {"streams": [{
+            "stream": "contact_lists",
+            "tap_stream_id": "contact_lists",
+            "schema": {"type": "object", "properties": {}},
+            "metadata": [{"breadcrumb": [], "metadata": {"selected": True}}],
+        }]}
+        with self.assertRaises(Exception) as ctx:
+            tap_hubspot.do_sync({}, catalog)
+        self.assertIn("Giving up on request after 5 tries with url "
+                      "https://api.hubapi.com/crm/v3/lists/search", str(ctx.exception))
         self.assertEqual(mock_post.call_count, 5)
 
 

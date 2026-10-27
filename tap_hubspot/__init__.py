@@ -447,7 +447,7 @@ def check_stream_access(stream_name, return_reason=False):
     try:
         if method == "POST":
             body = access_config.get("body", {})
-            post_search_endpoint(url, body, params=params)
+            post_search_endpoint(url, body, params=params, forbidden_as_unavailable=True)
         else:
             request(url, params=params)
     except SourceUnavailableException as exc:
@@ -555,7 +555,7 @@ def lift_properties_and_versions(record):
                       jitter=None,
                       on_giveup=on_giveup,
                       interval=10)
-def post_search_endpoint(url, data, params=None):
+def post_search_endpoint(url, data, params=None, forbidden_as_unavailable=False):
 
     params, headers = get_params_and_headers(params)
     headers['content-type'] = "application/json"
@@ -574,7 +574,9 @@ def post_search_endpoint(url, data, params=None):
             raise InvalidAuthException(
                 f"HTTP 401 Unauthorized. Verify the configured credentials or OAuth token. {reason}"
             )
-        if resp.status_code == 403:
+        # Only the discovery probe opts in: do_sync logs SourceUnavailableException
+        # and exits 0, which would hide a forbidden POST during sync.
+        if resp.status_code == 403 and forbidden_as_unavailable:
             raise SourceUnavailableException(resp.content)
 
         resp.raise_for_status()
