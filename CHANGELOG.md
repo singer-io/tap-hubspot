@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.7.1
+  * Exclude `contact_lists` and `list_memberships` from discovery when the `contact_lists` access probe gets HTTP 403, without retrying, instead of failing discovery for every stream. A POST 403 during sync still fails the sync [SAC-32532] [#311](https://github.com/singer-io/tap-hubspot/pull/311)
+
 ## 4.7.0
   * Include archived (deactivated) owners and archived (deleted) tickets in sync by querying HubSpot's `archived=true` records in addition to active ones [SUPPORT-12339] [#309](https://github.com/singer-io/tap-hubspot/pull/309)
   * Fix `--catalog` CLI flag being silently ignored (main_impl only checked the deprecated `--properties` flag, causing syncs run with `--catalog` to do nothing) [#309](https://github.com/singer-io/tap-hubspot/pull/309)
