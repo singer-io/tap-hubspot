@@ -118,9 +118,11 @@ class HubspotBaseTest(BaseCase):
                 self.PARENT_STREAM: 'companies'
             },
             "deal_pipelines": {
-                self.PRIMARY_KEYS: {"pipelineId"},
-                self.REPLICATION_METHOD: self.FULL,
-                self.OBEYS_START_DATE: False,
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updatedAt"},
+                self.EXPECTED_PAGE_SIZE: 100,
+                self.OBEYS_START_DATE: True
             },
             "deals": {
                 self.PRIMARY_KEYS: {"dealId"},

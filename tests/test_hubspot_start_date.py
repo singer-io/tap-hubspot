@@ -128,7 +128,7 @@ class TestHubspotStartDate(HubspotBaseTest):
                     if replication_key and stream not in {'contacts', 'subscription_changes', 'email_events'}:  # BUG_TDL-9939
 
                         # BUG_TDL-9939 replication key is not listed correctly
-                        if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
+                        if stream in {"campaigns", "companies", "contacts_by_company", "deals"}:
                             # For deals stream, the replication key is already prefixed with 'property_'.
                             replication_key =  [replication_key[0]] if stream in ["deals", "companies"] else [f'property_{replication_key[0]}']
                             first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
