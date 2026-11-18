@@ -165,7 +165,8 @@ class TestHubspotAllFields(HubspotBaseTest):
         # return {'forms'}  # scaled down streams for quick test
         return self.expected_check_streams().difference({
             'owners',
-            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938,
+            'deal_pipelines', # synced with an older start_date, covered in separate test
         })
 
     def setUp(self):
@@ -339,7 +340,8 @@ class TestHubspotAllFieldsStatic(TestHubspotAllFields):
         """expected streams minus the streams not under test"""
         return {
             'owners',
-            # 'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938
+            # 'subscription_changes', # BUG_TDL-14938 https://jira.talendforge.org/browse/TDL-14938,
+            'deal_pipelines',
         }
 
     def get_properties(self):
