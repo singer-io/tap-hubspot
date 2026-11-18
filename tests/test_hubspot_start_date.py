@@ -180,7 +180,7 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
 
         else:
             return {
-                'start_date' : '2026-06-17T10:19:38Z'
+                'start_date' : '2026-06-18T00:00:00Z'
             }
 
     def setUp(self):
