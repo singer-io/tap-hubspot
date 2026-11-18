@@ -1394,28 +1394,30 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_schema('deal_pipelines', schema, ['id'], [bookmark_key], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
     start = get_start(STATE, 'deal_pipelines', bookmark_key)
-    max_bk_value = start
+    start_dt = utils.strptime_to_utc(start)
+    max_bk_value = start_dt
 
-    STATE = singer.write_bookmark(STATE, 'deal_pipelines', bookmark_key, max_bk_value)
+    STATE = singer.write_bookmark(STATE, 'deal_pipelines', bookmark_key, start)
     singer.write_state(STATE)
 
     LOGGER.info("sync_deal_pipelines from %s", start)
 
+    # To handle records updated between start of the table sync and the end,
+    # store the current sync start in the state and not move the bookmark past this value.
+    sync_start_time = utils.now()
     data = request(get_url('deal_pipelines')).json()
     time_extracted = utils.now()
 
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        # To handle records updated between start of the table sync and the end,
-        # store the current sync start in the state and not move the bookmark past this value.
-        sync_start_time = utils.now()
         for row in data['results']:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-            if record[bookmark_key] >= start:
+            modified_time = utils.strptime_to_utc(row[bookmark_key])
+            if modified_time >= start_dt:
                 singer.write_record("deal_pipelines", record, catalog.get('stream_alias'), time_extracted=time_extracted)
-            if record[bookmark_key] >= max_bk_value:
-                max_bk_value = record[bookmark_key]
+            if modified_time >= max_bk_value:
+                max_bk_value = modified_time
     # Don't bookmark past the start of this sync to account for updated records during the sync.
-    new_bookmark = min(utils.strptime_to_utc(max_bk_value), sync_start_time)
+    new_bookmark = min(max_bk_value, sync_start_time)
     STATE = singer.write_bookmark(STATE, 'deal_pipelines', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
