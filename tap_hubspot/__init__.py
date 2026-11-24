@@ -526,7 +526,7 @@ def _get_accessible_streams(streams):
     if any(s.tap_stream_id == 'deal_pipelines' for s in inaccessible_streams):
         LOGGER.warning(
             "The 'deal_pipelines' stream is deprecated and will be removed in a future release."
-            "It uses HubSpot's legacy %s endpoint. Please plan accordingly." % ENDPOINTS['deal_pipelines']
+            "It uses HubSpot's legacy %s endpoint. Please plan accordingly.", ENDPOINTS['deal_pipelines']
         )
     return accessible_streams
 
@@ -1399,7 +1399,7 @@ def sync_deal_pipelines(STATE, ctx):
     LOGGER.info('sync_deal_pipelines')
     LOGGER.warning(
         "The 'deal_pipelines' stream is deprecated and will be removed in a future release."
-        "It uses HubSpot's legacy %s endpoint. Please plan accordingly." % ENDPOINTS['deal_pipelines']
+        "It uses HubSpot's legacy %s endpoint. Please plan accordingly.", ENDPOINTS['deal_pipelines']
     )
     data = request(get_url('deal_pipelines')).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
