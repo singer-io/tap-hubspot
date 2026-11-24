@@ -275,6 +275,40 @@ class TestGetAccessibleStreams(unittest.TestCase):
         self.assertTrue(any("Reason:" in arg for arg in flattened_args))
         self.assertTrue(any("Missing scope deals.read" in arg for arg in flattened_args))
 
+    @patch('tap_hubspot.LOGGER.warning')
+    @patch('tap_hubspot.check_stream_access')
+    def test_inaccessible_deal_pipelines_emits_deprecation_warning(self, mock_check, mock_warning):
+        mock_check.side_effect = lambda name, return_reason=False: name != 'deal_pipelines'
+        streams = [
+            Stream('contacts', None, ['id'], 'updatedAt', 'INCREMENTAL'),
+            Stream('deal_pipelines', None, ['pipelineId'], None, 'FULL_TABLE'),
+        ]
+
+        result = _get_accessible_streams(streams)
+
+        self.assertEqual([stream.tap_stream_id for stream in result], ['contacts'])
+        warnings = [call.args[0] for call in mock_warning.call_args_list]
+        deprecation = [message for message in warnings if 'deprecated' in message]
+        self.assertEqual(len(deprecation), 1)
+        self.assertIn('deal_pipelines', deprecation[0])
+        self.assertIn(ENDPOINTS['deal_pipelines'], deprecation[0])
+
+    @patch('tap_hubspot.LOGGER.warning')
+    @patch('tap_hubspot.check_stream_access')
+    def test_accessible_deal_pipelines_does_not_emit_discovery_deprecation_warning(
+            self, mock_check, mock_warning):
+        mock_check.side_effect = lambda name, return_reason=False: name != 'deals'
+        streams = [
+            Stream('contacts', None, ['id'], 'updatedAt', 'INCREMENTAL'),
+            Stream('deals', None, ['dealId'], None, 'INCREMENTAL'),
+            Stream('deal_pipelines', None, ['pipelineId'], None, 'FULL_TABLE'),
+        ]
+
+        result = _get_accessible_streams(streams)
+
+        self.assertIn('deal_pipelines', [stream.tap_stream_id for stream in result])
+        self.assertFalse(any('deprecated' in call.args[0] for call in mock_warning.call_args_list))
+
 
 class TestDiscoverSchemasWithAccessCheck(unittest.TestCase):
     """Tests for discover_schemas with access checking integration."""
