@@ -19,7 +19,9 @@ class TestSyncDealPipelines(unittest.TestCase):
         self.assertEqual(sync_deal_pipelines(state, ctx), state)
 
         mock_warning.assert_called_once()
-        warning = mock_warning.call_args.args[0]
+        args = mock_warning.call_args.args
+        self.assertEqual(args[1:], (ENDPOINTS['deal_pipelines'],))
+        warning = args[0] % args[1:]
         self.assertIn('deal_pipelines', warning)
         self.assertIn('deprecated', warning)
         self.assertIn(ENDPOINTS['deal_pipelines'], warning)

@@ -287,11 +287,14 @@ class TestGetAccessibleStreams(unittest.TestCase):
         result = _get_accessible_streams(streams)
 
         self.assertEqual([stream.tap_stream_id for stream in result], ['contacts'])
-        warnings = [call.args[0] for call in mock_warning.call_args_list]
-        deprecation = [message for message in warnings if 'deprecated' in message]
+        deprecation = [
+            call.args for call in mock_warning.call_args_list if 'deprecated' in call.args[0]
+        ]
         self.assertEqual(len(deprecation), 1)
-        self.assertIn('deal_pipelines', deprecation[0])
-        self.assertIn(ENDPOINTS['deal_pipelines'], deprecation[0])
+        self.assertEqual(deprecation[0][1:], (ENDPOINTS['deal_pipelines'],))
+        warning = deprecation[0][0] % deprecation[0][1:]
+        self.assertIn('deal_pipelines', warning)
+        self.assertIn(ENDPOINTS['deal_pipelines'], warning)
 
     @patch('tap_hubspot.LOGGER.warning')
     @patch('tap_hubspot.check_stream_access')
