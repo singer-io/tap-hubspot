@@ -467,6 +467,11 @@ def _get_accessible_streams(streams):
     Child streams are included if their parent is accessible.
     Raises HubspotForbiddenError if no parent streams are accessible.
     """
+    LOGGER.warning(
+        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
+        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
+        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
+    )
     accessible_streams = []
     inaccessible_streams = []
 
@@ -524,12 +529,6 @@ def _get_accessible_streams(streams):
             ", ".join(s.tap_stream_id for s in inaccessible_streams),
         )
 
-    if any(s.tap_stream_id == 'deal_pipelines' for s in accessible_streams):
-        LOGGER.warning(
-            "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
-            "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
-            ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
-        )
     return accessible_streams
 
 
