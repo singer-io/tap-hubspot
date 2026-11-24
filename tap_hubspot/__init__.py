@@ -46,6 +46,7 @@ class StateFields:
     this_stream = 'this_stream'
 
 BASE_URL = "https://api.hubapi.com"
+PIPELINES_V1_SUNSET_NOTICE_URL = "https://developers.hubspot.com/changelog/pipelines-api-v1-sunset"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
@@ -523,10 +524,11 @@ def _get_accessible_streams(streams):
             ", ".join(s.tap_stream_id for s in inaccessible_streams),
         )
 
-    if any(s.tap_stream_id == 'deal_pipelines' for s in inaccessible_streams):
+    if any(s.tap_stream_id == 'deal_pipelines' for s in accessible_streams):
         LOGGER.warning(
-            "The 'deal_pipelines' stream is deprecated and will be removed in a future release. "
-            "It uses HubSpot's legacy %s endpoint. Please plan accordingly.", ENDPOINTS['deal_pipelines']
+            "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
+            "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
+            ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
         )
     return accessible_streams
 
@@ -1398,8 +1400,9 @@ def sync_deal_pipelines(STATE, ctx):
     singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
     LOGGER.warning(
-        "The 'deal_pipelines' stream is deprecated and will be removed in a future release. "
-        "It uses HubSpot's legacy %s endpoint. Please plan accordingly.", ENDPOINTS['deal_pipelines']
+        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
+        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
+        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
     )
     data = request(get_url('deal_pipelines')).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:

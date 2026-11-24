@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from tap_hubspot import ENDPOINTS, get_url, sync_deal_pipelines
+from tap_hubspot import get_url, sync_deal_pipelines
 
 
 class TestSyncDealPipelines(unittest.TestCase):
@@ -20,11 +20,10 @@ class TestSyncDealPipelines(unittest.TestCase):
 
         mock_warning.assert_called_once()
         args = mock_warning.call_args.args
-        self.assertEqual(args[1:], (ENDPOINTS['deal_pipelines'],))
         warning = args[0] % args[1:]
-        self.assertIn('deal_pipelines', warning)
-        self.assertIn('deprecated', warning)
-        self.assertIn(ENDPOINTS['deal_pipelines'], warning)
+        self.assertIn("'deal_pipelines' stream uses HubSpot's deprecated /deals/v1/pipelines endpoint", warning)
+        self.assertIn('December 4, 2026', warning)
+        self.assertIn('https://developers.hubspot.com/changelog/pipelines-api-v1-sunset', warning)
         mock_request.assert_called_once_with(get_url('deal_pipelines'))
         mock_write_schema.assert_called_once()
         mock_write_state.assert_called_once_with(state)

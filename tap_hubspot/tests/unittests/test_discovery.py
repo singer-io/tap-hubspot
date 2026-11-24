@@ -277,7 +277,7 @@ class TestGetAccessibleStreams(unittest.TestCase):
 
     @patch('tap_hubspot.LOGGER.warning')
     @patch('tap_hubspot.check_stream_access')
-    def test_inaccessible_deal_pipelines_emits_deprecation_warning(self, mock_check, mock_warning):
+    def test_inaccessible_deal_pipelines_does_not_emit_deprecation_warning(self, mock_check, mock_warning):
         mock_check.side_effect = lambda name, return_reason=False: name != 'deal_pipelines'
         streams = [
             Stream('contacts', None, ['id'], 'updatedAt', 'INCREMENTAL'),
@@ -287,18 +287,11 @@ class TestGetAccessibleStreams(unittest.TestCase):
         result = _get_accessible_streams(streams)
 
         self.assertEqual([stream.tap_stream_id for stream in result], ['contacts'])
-        deprecation = [
-            call.args for call in mock_warning.call_args_list if 'deprecated' in call.args[0]
-        ]
-        self.assertEqual(len(deprecation), 1)
-        self.assertEqual(deprecation[0][1:], (ENDPOINTS['deal_pipelines'],))
-        warning = deprecation[0][0] % deprecation[0][1:]
-        self.assertIn('deal_pipelines', warning)
-        self.assertIn(ENDPOINTS['deal_pipelines'], warning)
+        self.assertFalse(any('deprecated' in call.args[0] for call in mock_warning.call_args_list))
 
     @patch('tap_hubspot.LOGGER.warning')
     @patch('tap_hubspot.check_stream_access')
-    def test_accessible_deal_pipelines_does_not_emit_discovery_deprecation_warning(
+    def test_accessible_deal_pipelines_emits_discovery_deprecation_warning(
             self, mock_check, mock_warning):
         mock_check.side_effect = lambda name, return_reason=False: name != 'deals'
         streams = [
@@ -310,7 +303,14 @@ class TestGetAccessibleStreams(unittest.TestCase):
         result = _get_accessible_streams(streams)
 
         self.assertIn('deal_pipelines', [stream.tap_stream_id for stream in result])
-        self.assertFalse(any('deprecated' in call.args[0] for call in mock_warning.call_args_list))
+        deprecation = [
+            call.args for call in mock_warning.call_args_list if 'deprecated' in call.args[0]
+        ]
+        self.assertEqual(len(deprecation), 1)
+        warning = deprecation[0][0] % deprecation[0][1:]
+        self.assertIn("'deal_pipelines' stream uses HubSpot's deprecated /deals/v1/pipelines endpoint", warning)
+        self.assertIn('December 4, 2026', warning)
+        self.assertIn('https://developers.hubspot.com/changelog/pipelines-api-v1-sunset', warning)
 
 
 class TestDiscoverSchemasWithAccessCheck(unittest.TestCase):
