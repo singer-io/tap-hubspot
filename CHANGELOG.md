@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.7.2
+  * Added a deprecation warning for the legacy endpoint used by `deal_pipelines` in discovery and sync. [SAC-32684] [#313](https://github.com/singer-io/tap-hubspot/pull/313)
+
 ## 4.7.1
   * Exclude `contact_lists` and `list_memberships` from discovery when the `contact_lists` access probe gets HTTP 403, without retrying, instead of failing discovery for every stream. A POST 403 during sync still fails the sync [SAC-32532] [#311](https://github.com/singer-io/tap-hubspot/pull/311)
 

@@ -46,6 +46,7 @@ class StateFields:
     this_stream = 'this_stream'
 
 BASE_URL = "https://api.hubapi.com"
+PIPELINES_V1_SUNSET_NOTICE_URL = "https://developers.hubspot.com/changelog/pipelines-api-v1-sunset"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
@@ -466,6 +467,11 @@ def _get_accessible_streams(streams):
     Child streams are included if their parent is accessible.
     Raises HubspotForbiddenError if no parent streams are accessible.
     """
+    LOGGER.warning(
+        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
+        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
+        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
+    )
     accessible_streams = []
     inaccessible_streams = []
 
@@ -1392,6 +1398,11 @@ def sync_deal_pipelines(STATE, ctx):
     schema = load_schema('deal_pipelines')
     singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
+    LOGGER.warning(
+        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
+        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
+        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
+    )
     data = request(get_url('deal_pipelines')).json()
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
         for row in data:
