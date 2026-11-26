@@ -46,7 +46,6 @@ class StateFields:
     this_stream = 'this_stream'
 
 BASE_URL = "https://api.hubapi.com"
-PIPELINES_V1_SUNSET_NOTICE_URL = "https://developers.hubspot.com/changelog/pipelines-api-v1-sunset"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
@@ -467,11 +466,6 @@ def _get_accessible_streams(streams):
     Child streams are included if their parent is accessible.
     Raises HubspotForbiddenError if no parent streams are accessible.
     """
-    LOGGER.warning(
-        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
-        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
-        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
-    )
     accessible_streams = []
     inaccessible_streams = []
 
