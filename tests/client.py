@@ -447,10 +447,11 @@ class TestClient():
         """
         Get all deal_pipelines.
         """
-        url = f"{BASE_URL}/deals/v1/pipelines"
+        url = f"{BASE_URL}/crm/pipelines/2026-09/deals"
         records = []
 
         response = self.get(url)
+        response = response.get('results', [])
         records.extend(response)
 
         records = self.denest_properties('deal_pipelines', records)
@@ -1192,7 +1193,7 @@ class TestClient():
         """
         timestamp1 = str(datetime.datetime.now().timestamp()).replace(".", "")
         timestamp2 = str(datetime.datetime.now().timestamp()).replace(".", "")
-        url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals"
+        url = f"{BASE_URL}/crm/pipelines/2026-09/deals"
         data = {
             "pipelineId": timestamp1,
             "label": f"API test ticket pipeline {timestamp1}",
@@ -1725,7 +1726,7 @@ class TestClient():
         :param:
         :return:
         """
-        url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{pipeline_id}"
+        url = f"{BASE_URL}/crm/pipelines/2026-09/deals/{pipeline_id}"
 
         record_uuid = str(uuid.uuid4()).replace('-', '')[:20]
         data = {
@@ -1748,7 +1749,7 @@ class TestClient():
 
         deal_pipelines = self.get_deal_pipelines()
         record = [pipeline for pipeline in deal_pipelines
-                  if pipeline['pipelineId'] == pipeline_id][0]
+                  if pipeline['id'] == pipeline_id][0]
 
         return record
 
@@ -1924,7 +1925,7 @@ class TestClient():
         if not records:
             records = self.get_deal_pipelines()
 
-        record_ids_to_delete = [record['pipelineId'] for record in records]
+        record_ids_to_delete = [record['id'] for record in records]
         if len(record_ids_to_delete) == 1 or \
                 len(record_ids_to_delete) <= count:
             raise RuntimeError(
@@ -1936,7 +1937,7 @@ class TestClient():
                     record_id) > 16:  # not a timestamp, not made by this client
                 continue  # skip
 
-            url = f"{BASE_URL}/crm-pipelines/v1/pipelines/deals/{record_id}"
+            url = f"{BASE_URL}/crm/pipelines/2026-09/deals/{record_id}"
             self.delete(url)
 
             count -= 1

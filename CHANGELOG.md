@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.0
+  * Migrated the deal_pipelines stream to the new HubSpot CRM Pipelines API to replace the deprecated v1 endpoint ahead of its sunset. [#312](https://github.com/singer-io/tap-hubspot/pull/312)
+  * Updated the response schema to align with the new API structure.
+
 ## 4.7.2
   * Added a deprecation warning for the legacy endpoint used by `deal_pipelines` in discovery and sync. [SAC-32684] [#313](https://github.com/singer-io/tap-hubspot/pull/313)
 

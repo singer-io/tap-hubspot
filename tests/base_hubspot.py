@@ -101,9 +101,11 @@ class HubspotBaseCase(BaseCase):
                 BaseCase.PARENT_STREAM: 'companies'
             },
             "deal_pipelines": {
-                BaseCase.PRIMARY_KEYS: {"pipelineId"},
-                BaseCase.REPLICATION_METHOD: BaseCase.FULL_TABLE,
-                BaseCase.OBEYS_START_DATE: False,
+                BaseCase.PRIMARY_KEYS: {"id"},
+                BaseCase.REPLICATION_METHOD: BaseCase.INCREMENTAL,
+                BaseCase.REPLICATION_KEYS: {"updatedAt"},
+                BaseCase.API_LIMIT: 100,
+                BaseCase.OBEYS_START_DATE: True,
             },
             "deals": {
                 BaseCase.PRIMARY_KEYS: {"dealId"},

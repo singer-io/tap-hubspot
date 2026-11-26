@@ -46,7 +46,6 @@ class StateFields:
     this_stream = 'this_stream'
 
 BASE_URL = "https://api.hubapi.com"
-PIPELINES_V1_SUNSET_NOTICE_URL = "https://developers.hubspot.com/changelog/pipelines-api-v1-sunset"
 
 CONTACTS_BY_COMPANY = "contacts_by_company"
 
@@ -108,7 +107,7 @@ ENDPOINTS = {
     "deals_v3_batch_read":  "/crm/v3/objects/deals/batch/read",
     "deals_v3_properties":  "/crm/v3/properties/deals",
 
-    "deal_pipelines":       "/deals/v1/pipelines",
+    "deal_pipelines":       "/crm/pipelines/2026-09/deals",
 
     "campaigns_all":        "/email/public/v1/campaigns/by-id",
     "campaigns_detail":     "/email/public/v1/campaigns/{campaign_id}",
@@ -467,11 +466,6 @@ def _get_accessible_streams(streams):
     Child streams are included if their parent is accessible.
     Raises HubspotForbiddenError if no parent streams are accessible.
     """
-    LOGGER.warning(
-        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
-        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
-        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
-    )
     accessible_streams = []
     inaccessible_streams = []
 
@@ -1396,18 +1390,35 @@ def sync_deal_pipelines(STATE, ctx):
     catalog = ctx.get_catalog_from_id(singer.get_currently_syncing(STATE))
     mdata = metadata.to_map(catalog.get('metadata'))
     schema = load_schema('deal_pipelines')
-    singer.write_schema('deal_pipelines', schema, ['pipelineId'], catalog.get('stream_alias'))
+    bookmark_key = 'updatedAt'
+    singer.write_schema('deal_pipelines', schema, ['id'], [bookmark_key], catalog.get('stream_alias'))
     LOGGER.info('sync_deal_pipelines')
-    LOGGER.warning(
-        "The 'deal_pipelines' stream uses HubSpot's deprecated %s endpoint. "
-        "The Pipelines API V1 will be sunset on December 4, 2026. See %s",
-        ENDPOINTS['deal_pipelines'], PIPELINES_V1_SUNSET_NOTICE_URL,
-    )
+    start = get_start(STATE, 'deal_pipelines', bookmark_key)
+    start_dt = utils.strptime_to_utc(start)
+    max_bk_value = start_dt
+
+    STATE = singer.write_bookmark(STATE, 'deal_pipelines', bookmark_key, start)
+    singer.write_state(STATE)
+
+    LOGGER.info("sync_deal_pipelines from %s", start)
+
+    # To handle records updated between start of the table sync and the end,
+    # store the current sync start in the state and not move the bookmark past this value.
+    sync_start_time = utils.now()
     data = request(get_url('deal_pipelines')).json()
+    time_extracted = utils.now()
+
     with Transformer(UNIX_MILLISECONDS_INTEGER_DATETIME_PARSING) as bumble_bee:
-        for row in data:
+        for row in data['results']:
             record = bumble_bee.transform(lift_properties_and_versions(row), schema, mdata)
-            singer.write_record("deal_pipelines", record, catalog.get('stream_alias'), time_extracted=utils.now())
+            modified_time = utils.strptime_to_utc(row[bookmark_key])
+            if modified_time >= start_dt:
+                singer.write_record("deal_pipelines", record, catalog.get('stream_alias'), time_extracted=time_extracted)
+            if modified_time >= max_bk_value:
+                max_bk_value = modified_time
+    # Don't bookmark past the start of this sync to account for updated records during the sync.
+    new_bookmark = min(max_bk_value, sync_start_time)
+    STATE = singer.write_bookmark(STATE, 'deal_pipelines', bookmark_key, utils.strftime(new_bookmark))
     singer.write_state(STATE)
     return STATE
 
@@ -1521,10 +1532,10 @@ STREAMS = [
     Stream('contact_lists', sync_contact_lists, ["listId"], 'updatedAt', 'INCREMENTAL'),
     Stream('list_memberships', sync_list_memberships, ["recordId", "listId"], 'membershipTimestamp', 'INCREMENTAL', 'contact_lists'),
     Stream('engagements', sync_engagements, ["engagement_id"], 'lastUpdated', 'INCREMENTAL'),
+    Stream('deal_pipelines', sync_deal_pipelines, ['id'], 'updatedAt', 'INCREMENTAL'),
 
     # Do these last as they are full table
     Stream('campaigns', sync_campaigns, ["id"], None, 'FULL_TABLE'),
-    Stream('deal_pipelines', sync_deal_pipelines, ['pipelineId'], None, 'FULL_TABLE'),
     Stream('contacts_by_company', _sync_contacts_by_company_batch_read, ['company-id', 'contact-id'], None, 'FULL_TABLE', 'companies')
 ]
 

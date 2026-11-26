@@ -1,46 +1,135 @@
 {
-  "type": "object",
-  "properties": {
-    "pipelineId": {
-      "type": ["null", "string"]
-    },
-    "stages": {
-      "type": ["null", "array"],
-      "items": {
-        "type": ["null", "object"],
-        "properties": {
-          "stageId": {
-            "type": ["null", "string"]
-          },
-          "label": {
-            "type": ["null", "string"]
-          },
-          "probability": {
-            "type": ["null", "number"]
-          },
-          "active": {
-            "type": ["null", "boolean"]
-          },
-          "displayOrder": {
-            "type": ["null", "integer"]
-          },
-          "closedWon": {
-            "type": ["null", "boolean"]
-          }
+    "type": "object",
+    "properties": {
+        "label": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "displayOrder": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "id": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "stages": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "items": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "properties": {
+                    "label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "displayOrder": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "isClosed": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "probability": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    },
+                    "id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "createdAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "writePermissions": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "archived": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "archivedAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                }
+            }
+        },
+        "createdAt": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time"
+        },
+        "archived": {
+            "type": [
+                "boolean",
+                "null"
+            ]
+        },
+        "archivedAt": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time"
         }
-      }    
-    },
-    "label": {
-      "type": ["null", "string"]
-    },
-    "active": {
-      "type": ["null", "boolean"]
-    },
-    "displayOrder": {
-      "type": ["null", "integer"]
-    },
-    "staticDefault": {
-      "type": ["null", "boolean"]      
     }
-  }
 }

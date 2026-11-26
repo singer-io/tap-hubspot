@@ -6,7 +6,10 @@ from tap_tester import LOGGER
 
 from base import HubspotBaseTest
 
-STATIC_DATA_STREAMS = {'owners'}
+# Streams whose records rarely change (configuration data), so a 1-day start_date
+# window would filter everything out. These are synced with an older start_date in
+# TestHubspotAutomaticFieldsStaticData instead.
+STATIC_DATA_STREAMS = {'owners', 'deal_pipelines'}
 
 class TestHubspotAutomaticFields(HubspotBaseTest):
     @staticmethod

@@ -29,7 +29,7 @@ class TestHubspotStartDate(HubspotBaseTest):
         self.my_start_date = self.get_properties()['start_date']
         self.test_client = TestClient(self.my_start_date)
         # We already create test data for below skipped streams in bookmark test
-        for stream in streams_under_test - {'deals', 'contacts_by_company', 'contacts', 'companies'}:
+        for stream in streams_under_test - {'deals', 'contacts_by_company', 'contacts', 'companies', 'deal_pipelines'}:
             if stream == 'contacts_by_company':
                 companies_records = self.test_client.read('companies', since=self.my_start_date)
                 company_ids = [company['companyId'] for company in companies_records]
@@ -52,6 +52,7 @@ class TestHubspotStartDate(HubspotBaseTest):
             'owners', # static test data, covered in separate test
             'form_submissions',
             'campaigns', # static test data, covered in separate test
+            'deal_pipelines', # static test data, covered in separate test (avoid pipeline create API)
             'subscription_changes',
             'email_events',
         })
@@ -128,7 +129,7 @@ class TestHubspotStartDate(HubspotBaseTest):
                     if replication_key and stream not in {'contacts', 'subscription_changes', 'email_events'}:  # BUG_TDL-9939
 
                         # BUG_TDL-9939 replication key is not listed correctly
-                        if stream in {"campaigns", "companies", "contacts_by_company", "deal_pipelines", "deals"}:
+                        if stream in {"campaigns", "companies", "contacts_by_company", "deals"}:
                             # For deals stream, the replication key is already prefixed with 'property_'.
                             replication_key =  [replication_key[0]] if stream in ["deals", "companies"] else [f'property_{replication_key[0]}']
                             first_sync_replication_key_values = [record['data'][replication_key[0]]['value']
@@ -170,6 +171,7 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
         return {
             'owners',
             'campaigns',
+            'deal_pipelines',
         }
 
     def get_properties(self, original=True):
@@ -178,7 +180,7 @@ class TestHubspotStartDateStatic(TestHubspotStartDate):
 
         else:
             return {
-                'start_date' : '2026-02-25T00:00:00Z'
+                'start_date' : '2026-06-18T00:00:00Z'
             }
 
     def setUp(self):
