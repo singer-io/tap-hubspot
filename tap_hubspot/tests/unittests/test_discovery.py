@@ -194,16 +194,13 @@ class TestGetAccessibleStreams(unittest.TestCase):
             Stream("contacts_by_company", None, ["company-id", "contact-id"], None, "FULL_TABLE", "companies"),
         ]
 
-    @patch('tap_hubspot.LOGGER.warning')
     @patch('tap_hubspot.check_stream_access')
-    def test_all_accessible(self, mock_check, mock_warning):
+    def test_all_accessible(self, mock_check):
         """When all streams are accessible, all should be returned."""
         mock_check.return_value = True
         streams = self._make_streams()
         result = _get_accessible_streams(streams)
         self.assertEqual(len(result), 4)
-        mock_warning.assert_called_once()
-        self.assertIn('deprecated', mock_warning.call_args.args[0])
 
     @patch('tap_hubspot.check_stream_access')
     def test_partial_access(self, mock_check):
@@ -233,15 +230,13 @@ class TestGetAccessibleStreams(unittest.TestCase):
         self.assertNotIn("contacts_by_company", result_ids)
         self.assertIn("contacts", result_ids)
 
-    @patch('tap_hubspot.LOGGER.warning')
     @patch('tap_hubspot.check_stream_access')
-    def test_all_inaccessible_raises_exception(self, mock_check, mock_warning):
+    def test_all_inaccessible_raises_exception(self, mock_check):
         """If ALL parent streams are inaccessible, HubspotForbiddenError should be raised."""
         mock_check.return_value = False
         streams = self._make_streams()
         with self.assertRaises(HubspotForbiddenError):
             _get_accessible_streams(streams)
-        self.assertTrue(any('deprecated' in call.args[0] for call in mock_warning.call_args_list))
 
     @patch('tap_hubspot.check_stream_access')
     def test_check_not_called_for_child_streams(self, mock_check):
@@ -279,45 +274,6 @@ class TestGetAccessibleStreams(unittest.TestCase):
         flattened_args = [str(arg) for call in mock_warning.call_args_list for arg in call.args]
         self.assertTrue(any("Reason:" in arg for arg in flattened_args))
         self.assertTrue(any("Missing scope deals.read" in arg for arg in flattened_args))
-
-    @patch('tap_hubspot.LOGGER.warning')
-    @patch('tap_hubspot.check_stream_access')
-    def test_inaccessible_deal_pipelines_emits_deprecation_warning(self, mock_check, mock_warning):
-        mock_check.side_effect = lambda name, return_reason=False: name != 'deal_pipelines'
-        streams = [
-            Stream('contacts', None, ['id'], 'updatedAt', 'INCREMENTAL'),
-            Stream('deal_pipelines', None, ['pipelineId'], None, 'FULL_TABLE'),
-        ]
-
-        result = _get_accessible_streams(streams)
-
-        self.assertEqual([stream.tap_stream_id for stream in result], ['contacts'])
-        self.assertEqual(
-            sum('deprecated' in call.args[0] for call in mock_warning.call_args_list), 1
-        )
-
-    @patch('tap_hubspot.LOGGER.warning')
-    @patch('tap_hubspot.check_stream_access')
-    def test_accessible_deal_pipelines_emits_discovery_deprecation_warning(
-            self, mock_check, mock_warning):
-        mock_check.side_effect = lambda name, return_reason=False: name != 'deals'
-        streams = [
-            Stream('contacts', None, ['id'], 'updatedAt', 'INCREMENTAL'),
-            Stream('deals', None, ['dealId'], None, 'INCREMENTAL'),
-            Stream('deal_pipelines', None, ['pipelineId'], None, 'FULL_TABLE'),
-        ]
-
-        result = _get_accessible_streams(streams)
-
-        self.assertIn('deal_pipelines', [stream.tap_stream_id for stream in result])
-        deprecation = [
-            call.args for call in mock_warning.call_args_list if 'deprecated' in call.args[0]
-        ]
-        self.assertEqual(len(deprecation), 1)
-        warning = deprecation[0][0] % deprecation[0][1:]
-        self.assertIn("'deal_pipelines' stream uses HubSpot's deprecated /deals/v1/pipelines endpoint", warning)
-        self.assertIn('December 4, 2026', warning)
-        self.assertIn('https://developers.hubspot.com/changelog/pipelines-api-v1-sunset', warning)
 
 
 class TestDiscoverSchemasWithAccessCheck(unittest.TestCase):
